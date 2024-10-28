@@ -60,7 +60,7 @@ if not st.session_state.products.empty:
 
   
     # Выбор опции один раз для всех товаров
-    option = st.sidebar.selectbox("Выберите опцию", ["Другое", "Добавить расчет"])
+    option = st.sidebar.selectbox("Выберите опцию", ["Без расчета", "Добавить расчет"])
 
     # Создаем таблицу для ввода цены и количества
     for index, row in sorted_products.iterrows():
@@ -107,7 +107,7 @@ if not st.session_state.products.empty:
                         st.session_state.products.at[index, "Количество"] = None  # Или оставьте None
 
     # Вычисляем общую сумму и количество для выбранных товаров
-    if selected_indices:
+    if option == "Добавить расчет":
         total_sum = (st.session_state.products.loc[selected_indices, "Значение"] * 
                      st.session_state.products.loc[selected_indices, "Количество"]).sum()
         total_quantity = st.session_state.products.loc[selected_indices, "Количество"].sum()
