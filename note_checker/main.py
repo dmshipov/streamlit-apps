@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import time
 import datetime
 
 st.markdown('## Блокнот')
@@ -15,10 +14,16 @@ def clear_text():
 if 'products' not in st.session_state:
     st.session_state.products = pd.DataFrame(columns=['Товар', 'Значение', 'Количество'])
 
-def update_text():
-    # Задержка
-    time.sleep(0.5)
+ # Создаем форму
+form = st.form("Моя форма")
 
+# Текстовое поле для ввода текста
+form.text_area("Введите текст", key='text_input')
+
+products_list = []
+
+# Кнопка для преобразования в таблицу
+if form.form_submit_button("Преобразовать в таблицу"):
     # Разделение текста
     lines = st.session_state.text_input.split(' и ')
     lines = [line.strip() for line in lines]
@@ -26,24 +31,13 @@ def update_text():
     lines = [item for sublist in lines for item in sublist]
 
     # Парсинг данных
-    products_list = []
+    
     for line in lines:
         parts = line.split(' И ')
         for part in parts:
             products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 0}) 
-
-    # Обновление DataFrame в сессии
-    st.session_state.products = pd.DataFrame(products_list)
-
-# Создаем форму
-form = st.form("Моя форма")
-
-# Текстовое поле для ввода текста
-form.text_area("Введите текст", key='text_input')
-
-# Кнопка для преобразования в таблицу
-if form.form_submit_button("Преобразовать в таблицу"):
-    update_text()
+        # Обновление DataFrame в сессии
+        st.session_state.products = pd.DataFrame(products_list)
 
 # Отрисовка таблицы только если текст не пуст
 if not st.session_state.products.empty:
