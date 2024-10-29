@@ -1,0 +1,14 @@
+streamlit
+sounddevice
+soundfile
+speech_recognition
+requests
+Pillow
+pytesseract
+docx
+opencv-python
+numpy
+pdfplumber
+moviepy
+pydub
+noisereduce
