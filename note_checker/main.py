@@ -2,42 +2,59 @@ import streamlit as st
 import pandas as pd
 import time
 import datetime
+import os
 
 st.markdown('## Блокнот')
 
+# Имя файла для сохранения данных
+DATA_FILE = 'products_data.csv'
+
+# Функция для загрузки данных из файла
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    else:
+        return pd.DataFrame(columns=["Товар", "Значение", "Количество"])
+
+# Функция для сохранения данных в файл
+def save_data(data):
+    data.to_csv(DATA_FILE, index=False)
+
 # Инициализация состояния
 if 'products' not in st.session_state:
-    st.session_state.products = pd.DataFrame(columns=["Товар", "Значение", "Количество"])
-if 'initial_text' not in st.session_state:
-    st.session_state.initial_text = ""
+    st.session_state.products = load_data()
+if 'text_input' not in st.session_state:
+    st.session_state.text_input = ""
 
 # Функция для очистки текста и списка продуктов
 def clear_text():
-    st.session_state.initial_text = ""
-    st.session_state.products = pd.DataFrame(columns=["Товар", "Значение", "Количество"])
     st.session_state.text_input = ""
+    st.session_state.products = pd.DataFrame(columns=["Товар", "Значение", "Количество"])
 
 # Функция для преобразования текста
 def update_text():
     if st.session_state.text_input:
-        # Задержка перед обновлением
         time.sleep(0.5)
         lines = st.session_state.text_input.split(' и ')
-        lines = [line.strip() for line in lines]  # Entferne Leerzeichen am Anfang und Ende jeder Zeile
-        lines = [line.split('\n') for line in lines]
+        lines = [line.strip() for line in lines]
+        lines = [line.split('n') for line in lines]
         lines = [item for sublist in lines for item in sublist]
         products_list = []
-
         for line in lines:
-            products_list.append({"Товар": line, "Значение": 0.0, "Количество": 0})
+            parts = line.split(' И ')
+            for part in parts:
+                products_list.append({"Товар": part.strip(), "Значение": 0.0, "Количество": 0}) 
 
         st.session_state.products = pd.DataFrame(products_list)
+        st.session_state.checkbox_states = [False] * len(st.session_state.products)  # Обновляем состояние чекбоксов
+        save_data(st.session_state.products)  # Сохраняем данные после обновления
+    
 
 # Создаем форму
 form = st.form("Моя форма")
 
 # Текстовое поле для ввода текста
-form.text_area("Введите текст", key='text_input')
+form.text_area("Введите текст", key='text_input', value=st.session_state.text_input)
 
 # Кнопка для преобразования в таблицу
 if form.form_submit_button("Преобразовать в таблицу"):
@@ -45,23 +62,19 @@ if form.form_submit_button("Преобразовать в таблицу"):
 
 # Отрисовка таблицы только если текст не пуст
 if not st.session_state.products.empty:
-    # Элементы управления для сортировки в боковой панели
     sort_by = st.sidebar.selectbox("Сортировать по:", ["Товар", "Значение", "Количество"])
     sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
 
-    # Применяем сортировку
     if sort_by == "Товар":
-        # Сортировка по товару, сохраняем исходный порядок
         sorted_products = st.session_state.products.copy()
     else:
         sorted_products = st.session_state.products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
 
-    selected_indices = []  # Список для хранения выбранных индексов
+    selected_indices = []  
 
-  
-    # Выбор опции один раз для всех товаров
     option = st.sidebar.selectbox("Выберите опцию", ["Без расчета", "Добавить расчет"])
 
+   
     # Создаем таблицу для ввода цены и количества
     for index, row in sorted_products.iterrows():
         col1, col2 = st.columns([2, 1])  # Создаем два столбца
@@ -78,11 +91,12 @@ if not st.session_state.products.empty:
                 price = st.text_input("Значение", 
                                     key=f'price_{index}', 
                                     value="")  # Устанавливаем значение по умолчанию как пустую строку
-                
+    
                 # Преобразуем в float только если введено значение
                 if price:
                     try:
                         st.session_state.products.at[index, "Значение"] = float(price)
+                        save_data(st.session_state.products)
                     except ValueError:
                         st.error("Введите корректное значение для 'Значение'")
                         st.session_state.products.at[index, "Значение"] = None  # Или оставьте None
@@ -102,9 +116,11 @@ if not st.session_state.products.empty:
                 if quantity:
                     try:
                         st.session_state.products.at[index, "Количество"] = int(quantity)
+                        save_data(st.session_state.products)
                     except ValueError:
                         st.error("Введите корректное значение для 'Количество'")
                         st.session_state.products.at[index, "Количество"] = None  # Или оставьте None
+    
 
     # Вычисляем общую сумму и количество для выбранных товаров
     if option == "Добавить расчет":
@@ -114,6 +130,7 @@ if not st.session_state.products.empty:
 
         st.write(f"Общая сумма: {total_sum:.2f}")
         st.write(f"Общее количество: {int(total_quantity)}")
+
 
         # Кнопка для скачивания таблицы в формате Excel
         excel_file_path = "products.xlsx"
@@ -139,3 +156,4 @@ if not st.session_state.products.empty:
     # Кнопка для удаления текста и продуктов
     if st.button("Удалить все значения", on_click=clear_text):
         pass
+    
