@@ -5,33 +5,35 @@ import datetime
 
 st.markdown('## Блокнот')
 
-# Инициализация состояния
-if 'products' not in st.session_state:
-    st.session_state.products = pd.DataFrame(columns=["Товар", "Значение", "Количество"])
-if 'initial_text' not in st.session_state:
-    st.session_state.initial_text = ""
-
 # Функция для очистки текста и списка продуктов
 def clear_text():
     st.session_state.initial_text = ""
     st.session_state.products = pd.DataFrame(columns=["Товар", "Значение", "Количество"])
     st.session_state.text_input = ""
 
-# Функция для преобразования текста
-def update_text():
-    if st.session_state.text_input:
-        time.sleep(0.5)
-        lines = st.session_state.text_input.split(' и ')
-        lines = [line.strip() for line in lines]
-        lines = [line.split('\n') for line in lines]
-        lines = [item for sublist in lines for item in sublist]
-        products_list = []
-        for line in lines:
-            parts = line.split(' И ')
-            for part in parts:
-                products_list.append({"Товар": part.strip(), "Значение": 0.0, "Количество": 0}) 
+# Инициализация сессии
+if 'products' not in st.session_state:
+    st.session_state.products = pd.DataFrame(columns=['Товар', 'Значение', 'Количество'])
 
-        st.session_state.products = pd.DataFrame(products_list)
+def update_text():
+    # Задержка
+    time.sleep(0.5)
+
+    # Разделение текста
+    lines = st.session_state.text_input.split(' и ')
+    lines = [line.strip() for line in lines]
+    lines = [line.split('\n') for line in lines]
+    lines = [item for sublist in lines for item in sublist]
+
+    # Парсинг данных
+    products_list = []
+    for line in lines:
+        parts = line.split(' И ')
+        for part in parts:
+            products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 0}) 
+
+    # Обновление DataFrame в сессии
+    st.session_state.products = pd.DataFrame(products_list)
 
 # Создаем форму
 form = st.form("Моя форма")
@@ -58,7 +60,6 @@ if not st.session_state.products.empty:
 
     selected_indices = []  # Список для хранения выбранных индексов
 
-  
     # Выбор опции один раз для всех товаров
     option = st.sidebar.selectbox("Выберите опцию", ["Без расчета", "Добавить расчет"])
 
@@ -76,8 +77,7 @@ if not st.session_state.products.empty:
             if option == "Добавить расчет":  # Проверяем выбранную опцию
                 # Ввод значения с преобразованием в float
                 price = st.text_input("Значение", 
-                                    key=f'price_{index}', 
-                                    value="")  # Устанавливаем значение по умолчанию как пустую строку
+                                    key=f'price_{index}',value=str(st.session_state.products.at[index, 'Значение']))
                 
                 # Преобразуем в float только если введено значение
                 if price:
@@ -96,7 +96,7 @@ if not st.session_state.products.empty:
                 # Ввод количества с преобразованием в int
                 quantity = st.text_input("Количество", 
                                         key=f'quantity_{index}', 
-                                        value="")  # Устанавливаем значение по умолчанию как пустую строку
+                                        value=str(st.session_state.products.at[index, 'Количество']))
                 
                 # Преобразуем в int только если введено значение
                 if quantity:
@@ -114,6 +114,7 @@ if not st.session_state.products.empty:
 
         st.write(f"Общая сумма: {total_sum:.2f}")
         st.write(f"Общее количество: {int(total_quantity)}")
+
 
         # Кнопка для скачивания таблицы в формате Excel
         excel_file_path = "products.xlsx"
