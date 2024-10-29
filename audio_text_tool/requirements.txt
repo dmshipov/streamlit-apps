@@ -1,7 +1,6 @@
 streamlit
 sounddevice
 soundfile
-speech_recognition
 requests
 Pillow
 pytesseract
@@ -12,3 +11,4 @@ pdfplumber
 moviepy
 pydub
 noisereduce
+SpeechRecognition
