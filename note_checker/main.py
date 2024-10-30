@@ -1,29 +1,25 @@
 import streamlit as st
 import pandas as pd
+import time
 import datetime
 
 st.markdown('## Блокнот')
 
+# Инициализация сессии
+if 'products' not in st.session_state:
+    st.session_state.products = pd.DataFrame(columns=['Товар', 'Значение', 'Количество'])
+# Инициализация сессии
+if 'products' not in st.session_state:
+    st.session_state.products = pd.DataFrame(columns=['Товар', 'Значение', 'Количество'])
 # Функция для очистки текста и списка продуктов
 def clear_text():
     st.session_state.initial_text = ""
     st.session_state.products = pd.DataFrame(columns=["Товар", "Значение", "Количество"])
     st.session_state.text_input = ""
+def update_text():
+    # Задержка
+    time.sleep(0.5)
 
-# Инициализация сессии
-if 'products' not in st.session_state:
-    st.session_state.products = pd.DataFrame(columns=['Товар', 'Значение', 'Количество'])
-
- # Создаем форму
-form = st.form("Моя форма")
-
-# Текстовое поле для ввода текста
-form.text_area("Введите текст", key='text_input')
-
-products_list = []
-
-# Кнопка для преобразования в таблицу
-if form.form_submit_button("Преобразовать в таблицу"):
     # Разделение текста
     lines = st.session_state.text_input.split(' и ')
     lines = [line.strip() for line in lines]
@@ -31,13 +27,24 @@ if form.form_submit_button("Преобразовать в таблицу"):
     lines = [item for sublist in lines for item in sublist]
 
     # Парсинг данных
-    
+    products_list = []
     for line in lines:
         parts = line.split(' И ')
         for part in parts:
             products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 0}) 
-        # Обновление DataFrame в сессии
-        st.session_state.products = pd.DataFrame(products_list)
+
+    # Обновление DataFrame в сессии
+    st.session_state.products = pd.DataFrame(products_list)
+
+# Создаем форму
+form = st.form("Моя форма")
+
+# Текстовое поле для ввода текста
+form.text_area("Введите текст", key='text_input')
+
+# Кнопка для преобразования в таблицу
+if form.form_submit_button("Преобразовать в таблицу"):
+    update_text()
 
 # Отрисовка таблицы только если текст не пуст
 if not st.session_state.products.empty:
@@ -59,19 +66,20 @@ if not st.session_state.products.empty:
 
     # Создаем таблицу для ввода цены и количества
     for index, row in sorted_products.iterrows():
-        col1, col2 = st.columns([1, 0.2])  # Создаем два столбца
+        col1, col2 = st.columns([2, 1])  # Создаем два столбца
 
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
-            st.session_state.checkbox = st.checkbox(f"{row['Товар']}", key=f'checkbox_{index}')  # Чекбокс для выбора товара
-            if st.session_state.checkbox:
+            checkbox = st.checkbox(f"{row['Товар']}", key=f'checkbox_{index}')  # Чекбокс для выбора товара
+            if checkbox:
                 selected_indices.append(index)  # Добавляем индекс в список выбранных
 
         with col2:
             if option == "Добавить расчет":  # Проверяем выбранную опцию
                 # Ввод значения с преобразованием в float
-                price = st.session_state.text_input("Значение", 
-                                    key=f'price_{index}',value=str(st.session_state.products.at[index, 'Значение']))
+                price = st.text_input("Значение", 
+                                    key=f'price_{index}', 
+                                    value=str(st.session_state.products.at[index, 'Значение']))
                 
                 # Преобразуем в float только если введено значение
                 if price:
@@ -88,7 +96,7 @@ if not st.session_state.products.empty:
                     st.session_state.products.at[index, "Количество"] = 1
 
                 # Ввод количества с преобразованием в int
-                quantity = st.session_state.text_input("Количество", 
+                quantity = st.text_input("Количество", 
                                         key=f'quantity_{index}', 
                                         value=str(st.session_state.products.at[index, 'Количество']))
                 
@@ -101,14 +109,13 @@ if not st.session_state.products.empty:
                         st.session_state.products.at[index, "Количество"] = None  # Или оставьте None
 
     # Вычисляем общую сумму и количество для выбранных товаров
-    if option == "Добавить расчет":
+    if selected_indices:
         total_sum = (st.session_state.products.loc[selected_indices, "Значение"] * 
                      st.session_state.products.loc[selected_indices, "Количество"]).sum()
         total_quantity = st.session_state.products.loc[selected_indices, "Количество"].sum()
 
         st.write(f"Общая сумма: {total_sum:.2f}")
         st.write(f"Общее количество: {int(total_quantity)}")
-
 
         # Кнопка для скачивания таблицы в формате Excel
         excel_file_path = "products.xlsx"
