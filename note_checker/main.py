@@ -65,7 +65,7 @@ def update_text():
     for line in lines:
         parts = line.split(' И ')
         for part in parts:
-            products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 0})
+            products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 1})
 
     # Сохранение данных в базу данных
     for product in products_list:
@@ -107,8 +107,9 @@ if not products.empty:
     option = st.sidebar.selectbox("Выберите опцию", ["Без расчета", "Добавить расчет"])
 
     # Создаем таблицу для ввода цены и количества
+    # Создаем таблицу для ввода цены и количества
     for index, row in sorted_products.iterrows():
-        col1, col2 = st.columns([2, 1])  # Создаем два столбца
+        col1, col2, col3 = st.columns([2, 0.4, 0.55])  # Создаем три столбца
 
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
@@ -118,10 +119,14 @@ if not products.empty:
 
         with col2:
             if option == "Добавить расчет":  # Проверяем выбранную опцию
+                # Сохраняем новое значение в session_state
+                if f'price_{index}' not in st.session_state:
+                    st.session_state[f'price_{index}'] = str(row['Значение'])  
                 # Ввод значения с преобразованием в float
                 price = st.text_input("Значение", 
-                                    key=f'price_{index}', 
-                                    value=str(row['Значение']))
+                                key=f'price_{index}', 
+                                value=st.session_state[f'price_{index}'])
+
                 
                 # Преобразуем в float только если введено значение
                 if price:
@@ -130,13 +135,18 @@ if not products.empty:
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Значение=? WHERE id=?", (float(price), row['id']))
                         conn.commit()
+
                     except ValueError:
                         st.error("Введите корректное значение для 'Значение'")
 
+        with col3:
+            if option == "Добавить расчет":  # Проверяем выбранную опцию
                 # Ввод количества с преобразованием в int
-                quantity = st.text_input("Количество", 
-                                        key=f'quantity_{index}', 
-                                        value=str(row['Количество']))
+                quantity = st.number_input("Количество", 
+                                            min_value=0,
+                                            format="%d",
+                                            key=f'quantity_{index}', 
+                                            value=row['Количество'])
 
                 # Преобразуем в int только если введено значение
                 if quantity:
@@ -154,7 +164,7 @@ if not products.empty:
         total_sum = (products.loc[selected_indices, "Значение"] * 
                      products.loc[selected_indices, "Количество"]).sum()
         total_quantity = products.loc[selected_indices, "Количество"].sum()
-
+        
         st.write(f"Общая сумма: {total_sum:.2f}")
         st.write(f"Общее количество: {int(total_quantity)}")
 
