@@ -89,6 +89,7 @@ if form.form_submit_button("Преобразовать в таблицу"):
     st.session_state.initial_text = ""
     st.rerun()
     
+
 # Отрисовка таблицы только если текст не пуст
 if not products.empty:
     # Элементы управления для сортировки в боковой панели
@@ -106,7 +107,6 @@ if not products.empty:
     # Выбор опции один раз для всех товаров
     option = st.sidebar.selectbox("Выберите опцию", ["Без расчета", "Добавить расчет"])
 
-    # Создаем таблицу для ввода цены и количества
     # Создаем таблицу для ввода цены и количества
     for index, row in sorted_products.iterrows():
         col1, col2, col3 = st.columns([2, 0.4, 0.55])  # Создаем три столбца
@@ -131,13 +131,16 @@ if not products.empty:
                 # Преобразуем в float только если введено значение
                 if price:
                     try:
-                        products.at[index, "Значение"] = float(price)
+                        # Убираем пробелы из строки перед преобразованием
+                        price = float(price.replace(" ", "")) 
+                        products.at[index, "Значение"] = price
                         # Обновляем значение в базе данных
-                        cursor.execute("UPDATE products SET Значение=? WHERE id=?", (float(price), row['id']))
+                        cursor.execute("UPDATE products SET Значение=? WHERE id=?", (price, row['id']))
                         conn.commit()
 
                     except ValueError:
                         st.error("Введите корректное значение для 'Значение'")
+
 
         with col3:
             if option == "Добавить расчет":  # Проверяем выбранную опцию
