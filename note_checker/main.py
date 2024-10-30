@@ -8,7 +8,7 @@ st.markdown('## Блокнот')
 # Проверяем, существует ли DataFrame в session_state
 if 'products' not in st.session_state:
     st.session_state.products = pd.DataFrame(columns=['Товар', 'Значение', 'Количество'])
-    
+
 if 'text_input' not in st.session_state:
     st.session_state.text_input = ""
 
@@ -78,12 +78,6 @@ if not st.session_state.products.empty:
                 quantity = st.text_input("Количество", 
                                           key=quantity_key, 
                                           value=str(st.session_state.products.at[index, 'Количество']) if index < len(st.session_state.products) else '0')
-                
-                try:
-                    if quantity:
-                        st.session_state.products.at[index, "Количество"] = int(quantity)
-                except ValueError:
-                    st.error("Введите корректное значение для 'Количество'")
                 # Устанавливаем количество в None, если значение пустое
                 if not price:
                     st.session_state.products.at[index, "Количество"] = None
