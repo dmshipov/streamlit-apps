@@ -63,14 +63,14 @@ if not st.session_state.products.empty:
 
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
-            checkbox = st.checkbox(f"{row['Товар']}", key=f'checkbox_{index}')  # Чекбокс для выбора товара
-            if checkbox:
+            st.session_state.checkbox = st.checkbox(f"{row['Товар']}", key=f'checkbox_{index}')  # Чекбокс для выбора товара
+            if st.session_state.checkbox:
                 selected_indices.append(index)  # Добавляем индекс в список выбранных
 
         with col2:
             if option == "Добавить расчет":  # Проверяем выбранную опцию
                 # Ввод значения с преобразованием в float
-                price = st.text_input("Значение", 
+                price = st.session_state.text_input("Значение", 
                                     key=f'price_{index}',value=str(st.session_state.products.at[index, 'Значение']))
                 
                 # Преобразуем в float только если введено значение
@@ -88,7 +88,7 @@ if not st.session_state.products.empty:
                     st.session_state.products.at[index, "Количество"] = 1
 
                 # Ввод количества с преобразованием в int
-                quantity = st.text_input("Количество", 
+                quantity = st.session_state.text_input("Количество", 
                                         key=f'quantity_{index}', 
                                         value=str(st.session_state.products.at[index, 'Количество']))
                 
