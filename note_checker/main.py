@@ -1,21 +1,55 @@
+
 import streamlit as st
 import pandas as pd
 import time
 import datetime
+import sqlite3
+
 
 st.markdown('## Блокнот')
 
+# Подключение к базе данных (Создаем если не существует)
+conn = sqlite3.connect('my_data.db')
+cursor = conn.cursor()
+
+# Создание таблицы, если она еще не существует
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Товар TEXT,
+        Значение REAL,
+        Количество INTEGER
+    )
+''')
+conn.commit()
+
+# Загрузка данных из базы данных
+products = pd.read_sql_query("SELECT * FROM products", conn)
+
 # Инициализация сессии
-if 'products' not in st.session_state:
-    st.session_state.products = pd.DataFrame(columns=['Товар', 'Значение', 'Количество'])
 if 'initial_text' not in st.session_state:
     st.session_state.initial_text = ""
-    
+
 # Функция для очистки текста и списка продуктов
 def clear_text():
     st.session_state.initial_text = ""
-    st.session_state.products = pd.DataFrame(columns=["Товар", "Значение", "Количество"])
+
+    # Создание соединения с базой данных внутри функции
+    conn = sqlite3.connect('my_data.db')
+    cursor = conn.cursor()
+
+    # Очистка данных в базе данных
+    cursor.execute("DELETE FROM products")
+    conn.commit()
+
+    # Обновление DataFrame (переместим сюда)
+    products = pd.read_sql_query("SELECT * FROM products", conn)
+    st.session_state.products = products.copy()
     st.session_state.text_input = ""
+
+    # Закрытие соединения с базой данных (переместим сюда)
+    conn.close()
+
 def update_text():
     # Задержка
     time.sleep(0.5)
@@ -31,10 +65,17 @@ def update_text():
     for line in lines:
         parts = line.split(' И ')
         for part in parts:
-            products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 0}) 
+            products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 0})
 
-    # Обновление DataFrame в сессии
-    st.session_state.products = pd.DataFrame(products_list)
+    # Сохранение данных в базу данных
+    for product in products_list:
+        cursor.execute("INSERT INTO products (Товар, Значение, Количество) VALUES (?, ?, ?)",
+                        (product["Товар"], product["Значение"], product["Количество"]))
+        conn.commit()
+
+    # Обновление DataFrame
+    products = pd.read_sql_query("SELECT * FROM products", conn)
+    st.session_state.products = products.copy()
 
 # Создаем форму
 form = st.form("Моя форма")
@@ -45,19 +86,20 @@ form.text_area("Введите текст", key='text_input')
 # Кнопка для преобразования в таблицу
 if form.form_submit_button("Преобразовать в таблицу"):
     update_text()
-
+    st.session_state.initial_text = ""
+    st.rerun()
+    
 # Отрисовка таблицы только если текст не пуст
-if not st.session_state.products.empty:
+if not products.empty:
     # Элементы управления для сортировки в боковой панели
     sort_by = st.sidebar.selectbox("Сортировать по:", ["Товар", "Значение", "Количество"])
     sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
 
     # Применяем сортировку
     if sort_by == "Товар":
-        # Сортировка по товару, сохраняем исходный порядок
-        sorted_products = st.session_state.products.copy()
+        sorted_products = products.copy()
     else:
-        sorted_products = st.session_state.products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
+        sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
 
     selected_indices = []  # Список для хранения выбранных индексов
 
@@ -79,40 +121,39 @@ if not st.session_state.products.empty:
                 # Ввод значения с преобразованием в float
                 price = st.text_input("Значение", 
                                     key=f'price_{index}', 
-                                    value=str(st.session_state.products.at[index, 'Значение']))
+                                    value=str(row['Значение']))
                 
                 # Преобразуем в float только если введено значение
                 if price:
                     try:
-                        st.session_state.products.at[index, "Значение"] = float(price)
+                        products.at[index, "Значение"] = float(price)
+                        # Обновляем значение в базе данных
+                        cursor.execute("UPDATE products SET Значение=? WHERE id=?", (float(price), row['id']))
+                        conn.commit()
                     except ValueError:
                         st.error("Введите корректное значение для 'Значение'")
-                        st.session_state.products.at[index, "Значение"] = None  # Или оставьте None
-
-                # Устанавливаем количество в None, если значение пустое
-                if not price:
-                    st.session_state.products.at[index, "Количество"] = None
-                else:
-                    st.session_state.products.at[index, "Количество"] = 1
 
                 # Ввод количества с преобразованием в int
                 quantity = st.text_input("Количество", 
                                         key=f'quantity_{index}', 
-                                        value=str(st.session_state.products.at[index, 'Количество']))
-                
+                                        value=str(row['Количество']))
+
                 # Преобразуем в int только если введено значение
                 if quantity:
                     try:
-                        st.session_state.products.at[index, "Количество"] = int(quantity)
+                        products.at[index, "Количество"] = int(quantity)
+                        # Обновляем количество в базе данных
+                        cursor.execute("UPDATE products SET Количество=? WHERE id=?", (int(quantity), row['id']))
+                        conn.commit()
                     except ValueError:
                         st.error("Введите корректное значение для 'Количество'")
-                        st.session_state.products.at[index, "Количество"] = None  # Или оставьте None
+                        products.at[index, "Количество"] = None  # Или оставьте None
 
     # Вычисляем общую сумму и количество для выбранных товаров
     if selected_indices:
-        total_sum = (st.session_state.products.loc[selected_indices, "Значение"] * 
-                     st.session_state.products.loc[selected_indices, "Количество"]).sum()
-        total_quantity = st.session_state.products.loc[selected_indices, "Количество"].sum()
+        total_sum = (products.loc[selected_indices, "Значение"] * 
+                     products.loc[selected_indices, "Количество"]).sum()
+        total_quantity = products.loc[selected_indices, "Количество"].sum()
 
         st.write(f"Общая сумма: {total_sum:.2f}")
         st.write(f"Общее количество: {int(total_quantity)}")
@@ -122,7 +163,7 @@ if not st.session_state.products.empty:
 
         # Используем openpyxl вместо xlsxwriter
         with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-            st.session_state.products.to_excel(writer, index=False, sheet_name='Products')
+            products.to_excel(writer, index=False, sheet_name='Products')
 
         with open(excel_file_path, "rb") as f:
             # Получаем текущую дату в формате "YYYY-MM-DD"
@@ -141,3 +182,6 @@ if not st.session_state.products.empty:
     # Кнопка для удаления текста и продуктов
     if st.button("Удалить все значения", on_click=clear_text):
         pass
+
+# Закрытие соединения с базой данных
+conn.close()
