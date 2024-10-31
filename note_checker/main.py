@@ -104,7 +104,7 @@ if not products.empty:
 
     # Создаем таблицу для ввода цены и количества
     for index, row in sorted_products.iterrows():
-        col1, col2, col3, col4, col5 = st.columns([2, 0.5, 0.7, 0.5, 0.4])  # Создаем четыре столбца
+        col1, col2, col3, col4, col5 = st.columns([2, 0.5, 0.7, 0.5, 0.63])  # Создаем четыре столбца
 
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
@@ -179,7 +179,7 @@ if not products.empty:
         # Чекбокс для удаления строки
         with col5:
             st.markdown("<br>", unsafe_allow_html=True)
-            delete_checkbox = st.button("del", key=f'delete_{index}')
+            delete_checkbox = st.button("Удалить позицию", key=f'delete_{index}')
             if delete_checkbox:
                 # Удаляем строку из DataFrame
                 products.drop(index, inplace=True)
@@ -201,30 +201,31 @@ if not products.empty:
         st.write(f"Общая сумма: {total_sum:.2f}")
         st.write(f"Общее количество: {int(total_quantity)}")
         st.write(f"Общий вес: {total_weight} грамм")  # Вывод общей суммы веса
-        # Кнопка для скачивания таблицы в формате Excel
-        excel_file_path = "products.xlsx"
 
-        # Используем openpyxl вместо xlsxwriter
-        with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-            products.to_excel(writer, index=False, sheet_name='Products')
-
-        with open(excel_file_path, "rb") as f:
-            # Получаем текущую дату в формате "YYYY-MM-DD"
-            current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-            
-            # Формируем имя файла с датой
-            file_name = f"products_{current_date}.xlsx"
-            
-            st.download_button(
-                label="Скачать таблицу в формате Excel",
-                data=f,
-                file_name=file_name,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
 
     # Кнопка для удаления текста и продуктов
-    if st.button("Удалить все значения", on_click=clear_text):
+    if st.button("Удалить все позиции", on_click=clear_text):
         pass
+
+    # Кнопка для скачивания таблицы в формате Excel
+    excel_file_path = "products.xlsx"
+    # Используем openpyxl вместо xlsxwriter
+    with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
+        products.to_excel(writer, index=False, sheet_name='Products')
+
+    with open(excel_file_path, "rb") as f:
+        # Получаем текущую дату в формате "YYYY-MM-DD"
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        
+        # Формируем имя файла с датой
+        file_name = f"products_{current_date}.xlsx"
+        
+        st.download_button(
+            label="Скачать таблицу в формате Excel",
+            data=f,
+            file_name=file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 # Закрытие соединения с базой данных
 conn.close()
