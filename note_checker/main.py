@@ -80,7 +80,7 @@ form = st.form("Моя форма")
 form.text_area("Введите текст", key='text_input')
 
 # Кнопка для преобразования в таблицу
-if form.form_submit_button("Преобразовать в таблицу"):
+if form.form_submit_button("Преобразовать"):
     update_text()
     st.rerun()
     
@@ -156,21 +156,7 @@ if not products.empty:
                     except ValueError:
                         st.error("Введите корректное значение для 'Количество'")
                         products.at[index, "Количество"] = None  # Или оставьте None
-               # Чекбокс для удаления строки
-        with col5:
-            st.markdown("<br>", unsafe_allow_html=True)
-            delete_checkbox = st.button("del", key=f'delete_{index}')
-            if delete_checkbox:
-                # Удаляем строку из DataFrame
-                products.drop(index, inplace=True)
-                # Удаляем запись из базы данных
-                cursor.execute("DELETE FROM products WHERE id=?", (row['id'],))
-                conn.commit()
-                # Обновляем данные в st.session_state
-                st.session_state.products = products
-                # Перезагружаем компонент DataFrame
-                st.rerun()
-
+              
         with col4:
             if option == "C расчетом веса" or option == "Все расчеты":  # Проверяем выбранную опцию
                 # Ввод веса с преобразованием в int
@@ -190,7 +176,20 @@ if not products.empty:
                     except ValueError:
                         st.error("Введите корректное значение для 'Вес'")
                         products.at[index, "Вес"] = None  # Или оставьте None
-
+        # Чекбокс для удаления строки
+        with col5:
+            st.markdown("<br>", unsafe_allow_html=True)
+            delete_checkbox = st.button("del", key=f'delete_{index}')
+            if delete_checkbox:
+                # Удаляем строку из DataFrame
+                products.drop(index, inplace=True)
+                # Удаляем запись из базы данных
+                cursor.execute("DELETE FROM products WHERE id=?", (row['id'],))
+                conn.commit()
+                # Обновляем данные в st.session_state
+                st.session_state.products = products
+                # Перезагружаем компонент DataFrame
+                st.rerun()
 
     # Вычисляем общую сумму и количество для выбранных товаров
     if selected_indices:
