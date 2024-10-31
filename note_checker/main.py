@@ -71,7 +71,7 @@ def update_text():
     # Обновление DataFrame
     products = pd.read_sql_query("SELECT * FROM products", conn)
     st.session_state.products = products.copy()
-    st.selectbox("Выберите опцию", ["Без расчета", "C расчетом", "C расчетом и весом"])
+    
 
 # Создаем форму
 form = st.form("Моя форма")
@@ -83,7 +83,6 @@ form.text_area("Введите текст", key='text_input')
 if form.form_submit_button("Преобразовать"):
     update_text()
     st.rerun()
-    
 
 # Отрисовка таблицы только если текст не пуст
 if not products.empty:
@@ -104,7 +103,7 @@ if not products.empty:
 
     # Создаем таблицу для ввода цены и количества
     for index, row in sorted_products.iterrows():
-        col1, col2, col3, col4, col5 = st.columns([2, 0.5, 0.7, 0.5, 0.63])  # Создаем четыре столбца
+        col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])  # Создаем четыре столбца
 
         with col1:
             st.markdown("<br>", unsafe_allow_html=True)
