@@ -37,15 +37,16 @@ def authenticate(username, password):
     return cursor.fetchone()
 
 def register(username, password):
+    if not username or not password:
+        st.error("Пожалуйста, заполните все поля.")
+        return
     try:
         cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
-        conn.commit()
-        st.rerun()
-        
-        
+        conn.commit()        
     except sqlite3.IntegrityError:
         st.error("Пользователь с таким именем уже существует.")
-
+    else:
+        st.success("Регистрация прошла успешно!")
 st.markdown('## Блокнот')
 
 if 'username' not in st.session_state:
@@ -75,20 +76,13 @@ if st.session_state.username is None:
         
         if register_button:
             register(new_username, new_password)
+
             
 else:
     st.write(f"Добро пожаловать, {st.session_state.username}!")
 
     # Основная логика работы с продуктами
     products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-
-    def clear_text():
-        st.session_state.initial_text = ""
-        cursor.execute("DELETE FROM products WHERE username=?", (st.session_state.username,))
-        conn.commit()
-        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-        st.session_state.products = products.copy()
-        st.session_state.text_input = ""
 
     def update_text():
         lines = st.session_state.text_input.split(' и ')
@@ -141,7 +135,7 @@ else:
 
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
-            col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])  # Создаем четыре столбца
+            col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1.1])  # Создаем четыре столбца
 
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -241,11 +235,13 @@ else:
 
 
         # Кнопка для удаления текста и продуктов
-        if st.button("Удалить все позиции", on_click=clear_text):
-            pass
+        if st.button("Удалить все позиции"):
+            cursor.execute("DELETE FROM products")
+            conn.commit()
+            st.rerun()
 
         # Кнопка для скачивания таблицы в формате Excel
-        excel_file_path = "products.xlsx"
+        excel_file_path = f"{st.session_state.username}.xlsx"
         # Используем openpyxl вместо xlsxwriter
         with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
             products.to_excel(writer, index=False, sheet_name='Products')
@@ -255,7 +251,7 @@ else:
             current_date = datetime.datetime.now().strftime("%Y-%m-%d")
             
             # Формируем имя файла с датой
-            file_name = f"products_{current_date}.xlsx"
+            file_name = f"{st.session_state.username}_{current_date}.xlsx"
             
             st.download_button(
                 label="Скачать таблицу в формате Excel",
