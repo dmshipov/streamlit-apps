@@ -62,10 +62,24 @@ st.markdown('## Блокнот')
 if 'username' not in st.session_state:
     st.session_state.username = None
 
-# Проверка, есть ли куки
+# Проверяем, есть ли куки
 query_params = st.query_params
 if 'username' in query_params:
-    st.session_state.username = query_params['username'][0]  # Доступ к значению куки
+    username = query_params['username'][0]  # Доступ к значению куки
+
+    # Проверяем, существует ли пользователь с таким именем в базе данных
+    cursor.execute("SELECT * FROM users WHERE username=?", (username,))
+    user = cursor.fetchone()
+
+    if user:
+        # Если пользователь существует, то авторизуем его
+        st.session_state.username = username
+        st.success("Вы успешно авторизованы!")
+        st.rerun()
+    else:
+        # Если пользователь не существует, то показываем форму входа
+        st.session_state.username = None
+        st.error("Неправильный логин или пароль.")
 
 
 # Формы для аутентификации
