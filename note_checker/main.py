@@ -135,7 +135,7 @@ else:
 
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
-            col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1.1])  # Создаем четыре столбца
+            col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])  # Создаем четыре столбца
 
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -210,7 +210,7 @@ else:
             # Чекбокс для удаления строки
             with col5:
                 st.markdown("<br>", unsafe_allow_html=True)
-                delete_checkbox = st.button("Удалить позицию", key=f'delete_{index}')
+                delete_checkbox = st.button("Удалить", key=f'delete_{index}')
                 if delete_checkbox:
                     # Удаляем строку из DataFrame
                     products.drop(index, inplace=True)
