@@ -240,18 +240,17 @@ else:
             conn.commit()
             st.rerun()
 
-        # Кнопка для скачивания таблицы в формате Excel
         excel_file_path = f"{st.session_state.username}.xlsx"
         # Используем openpyxl вместо xlsxwriter
         with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
             products.to_excel(writer, index=False, sheet_name='Products')
 
         with open(excel_file_path, "rb") as f:
-            # Получаем текущую дату в формате "YYYY-MM-DD"
-            current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+            # Получаем текущую дату и время в формате "YYYY-MM-DD_HH-MM-SS"
+            current_datetime = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             
-            # Формируем имя файла с датой
-            file_name = f"{st.session_state.username}_{current_date}.xlsx"
+            # Формируем имя файла с датой и временем
+            file_name = f"{st.session_state.username}_{current_datetime}.xlsx"
             
             st.download_button(
                 label="Скачать таблицу в формате Excel",
