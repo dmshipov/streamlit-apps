@@ -12,4 +12,4 @@ moviepy
 pydub
 noisereduce
 SpeechRecognition
-PyAudio
+pyaudio
