@@ -3,5 +3,4 @@ pandas
 openpyxl
 datetime
 sqlalchemy
-base64
 uuid
