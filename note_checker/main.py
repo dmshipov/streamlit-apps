@@ -233,7 +233,8 @@ else:
 
                     # Отображение изображения, если оно уже есть
                     try:
-                        st.image(row["Изображение"], width=200)
+                        if row["Изображение"] is not None:
+                            st.image(row["Изображение"], width=200)
                     except KeyError:
                         st.warning("Изображение не найдено")
 
