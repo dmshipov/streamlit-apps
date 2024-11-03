@@ -1,4 +1,5 @@
 import streamlit as st
+import sounddevice as sd
 import soundfile as sf
 import speech_recognition as sr
 import io
@@ -7,18 +8,25 @@ import requests
 from PIL import Image
 import pytesseract
 from io import BytesIO
+from docx import Document
+import cv2
+import numpy as np
 import pdfplumber
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
 import noisereduce as nr
-import io
-import os
-import soundfile as sf
-import speech_recognition as sr
-from pydub import AudioSegment
-from moviepy.editor import VideoFileClip
-from noisereduce import reduce_noise 
-   
+
+
+def record_audio(duration, samplerate=44100):
+    st.session_state.recording = True
+    st.session_state.status_msg = "Началась запись..."
+    # Начинаем запись
+    audio_data = sd.rec(int(samplerate * duration), samplerate=samplerate, channels=1)
+    sd.wait()
+    st.session_state.recording = False
+    st.session_state.status_msg = "Запись завершена!"
+    return audio_data
+
 def recognize_speech(audio_data, samplerate, language="ru-RU"):
     with io.BytesIO() as f:
         sf.write(f, audio_data, samplerate, format='WAV')
@@ -55,7 +63,7 @@ def preprocess_audio(audio_file_path):
 
 def recognize_from_file(file, language="ru-RU"):
     recognizer = sr.Recognizer()
-   
+
     try:
         with sr.AudioFile(file) as source:
             audio_length = source.DURATION
@@ -63,8 +71,8 @@ def recognize_from_file(file, language="ru-RU"):
             text = ""
 
             for start_time in range(0, int(audio_length), step):
-                # Используем record с параметрами
-                audio = recognizer.record(source, duration=step, offset=start_time)
+                # Вместо source.seek(start_time) используем record с параметрами
+                audio = recognizer.record(source, duration=step)
 
                 try:
                     fragment_text = recognizer.recognize_google(audio, language=language)
@@ -82,7 +90,6 @@ def recognize_from_file(file, language="ru-RU"):
         return f"Ошибка сервиса распознавания речи: {e}"
     except Exception as e:
         return f"Произошла ошибка: {e}"
-
     
 def extract_audio_from_video(video_file):
     audio_file = "extracted_audio.wav"
@@ -96,7 +103,7 @@ def history_reset_function():
 
 
 
-file_type = st.sidebar.radio("Выберите функцию:", ("Конвертация аудио в текст", "Конвертация изображения в текст"))
+file_type = st.sidebar.radio("Выберите функцию:", ("Голосовой набор текста", "Конвертация аудио в текст", "Конвертация изображения в текст"))
 
 if file_type == "Конвертация аудио в текст":
     st.markdown("## Конвертация аудио в текст")
@@ -132,12 +139,17 @@ if file_type == "Конвертация аудио в текст":
 
 if file_type == "Конвертация изображения в текст":
     st.markdown("## Конвертация изображения в текст")
-    uploaded_image = st.file_uploader("Загрузите изображение для преобразования в текст", type=["jpg", "jpeg", "png"])
+    def preprocess_image(image, blur_value, threshold_value):
+        """Функция для предварительной обработки изображения."""
+        gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+        gray = cv2.medianBlur(gray, blur_value)
+        _, thresh = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        return Image.fromarray(thresh)
 
     
 
     # Sidebar parameters
-    blur_value = st.sidebar.slider("Выберите уровень размытия", min_value=1, max_value=15, value=3, step=2)
+    blur_value = st.sidebar.slider("Выберите уровень размытия", min_value=1, max_value=15, value=1, step=2)
     threshold_value = st.sidebar.slider("Выберите порог для обработки", min_value=0, max_value=255, value=100)
 
     # Выбор языка
@@ -162,6 +174,9 @@ if file_type == "Конвертация изображения в текст":
                 image = Image.open(image_input)
         except Exception as e:
             st.error(f"Ошибка при загрузке изображения: {e}")
+        else:
+            image = preprocess_image(image, blur_value, threshold_value)  # Предварительная обработка
+            st.image(image, caption="Загруженное изображение", use_column_width=True)
 
             recognized_text = pytesseract.image_to_string(image, lang=lang, config='--psm 6')
             st.write(recognized_text)
@@ -180,6 +195,7 @@ if file_type == "Конвертация изображения в текст":
 
             img = page.to_image()
             img_pil = img.original.convert("RGB")
+            img_processed = preprocess_image(img_pil, blur_value, threshold_value)  # Предварительная обработка
             st.image(img_processed, caption=f"Страница {i + 1}", use_column_width=True)
             recognized_text = pytesseract.image_to_string(img_processed, lang=lang, config='--psm 6')
             st.write(recognized_text)
@@ -193,6 +209,7 @@ if file_type == "Конвертация изображения в текст":
 
         else:
             image = Image.open(uploaded_file)
+            image = preprocess_image(image, blur_value, threshold_value)  # Предварительная обработка
             st.image(image, caption="Загруженное изображение", use_column_width=True)
 
             recognized_text = pytesseract.image_to_string(image, lang=lang, config='--psm 6')
@@ -215,3 +232,72 @@ if file_type == "Конвертация изображения в текст":
                 file_name='recognized_text.txt',
                 mime='text/plain'
             )
+
+        if st.button("Сохранить в DOCX"):
+            doc = Document()
+            doc.add_paragraph(full_text if uploaded_file.type == "application/pdf" else recognized_text)
+            for i, table in enumerate(tables):
+                doc.add_paragraph(f"Таблица {i + 1}")
+                table_in_docx = doc.add_table(rows=len(table), cols=len(table[0]))
+                for row_index, row in enumerate(table):
+                    cells = table_in_docx.rows[row_index].cells
+                    for cell_index, cell in enumerate(row):
+                        cells[cell_index].text = str(cell)
+
+            doc.save('recognized_text.docx')
+
+            st.download_button(
+                label="Скачать DOCX",
+                data=open('recognized_text.docx', 'rb').read(),
+                file_name='recognized_text.docx',
+                mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+
+# Проверка на тип вводимого файла
+if file_type == "Голосовой набор текста":
+    st.markdown('## Голосовой набор текста')
+    
+    # Инициализация состояния
+    if 'status_msg' not in st.session_state:
+        st.session_state.status_msg = ""
+    if 'recording' not in st.session_state:
+        st.session_state.recording = False
+    if 'checked_lines' not in st.session_state:
+        st.session_state.checked_lines = []
+    if 'initial_text' not in st.session_state:
+        st.session_state.initial_text = ""
+
+    # Создаем форму
+    form = st.form("Моя форма")
+    
+    # Кнопка для голосового ввода
+    duration = st.slider("Выберите длительность записи (в секундах)", 1, 60, 3, step=1)
+
+    if form.form_submit_button("Начать голосовой набор"):
+        with st.spinner("Запись..."):
+            audio_data = record_audio(duration)
+            if audio_data is not None:
+                recognized_text = recognize_speech(audio_data, 44100)
+                if recognized_text is not None:
+                    # Обновляем текст в st.session_state
+                    st.session_state.initial_text += recognized_text + "\n"
+
+    # Создаем text_area ВНЕ формы
+    text_area = st.text_area("Распознанный текст", st.session_state.initial_text)
+
+    # Кнопка для удаления текста
+    if text_area:
+        st.button("Удалить текст", on_click=history_reset_function)
+
+    # Отрисовка чекбоксов
+    lines = st.session_state.initial_text.splitlines()
+    checked_lines = st.session_state.checked_lines
+
+    for index, line in enumerate(lines):
+        is_checked = line in checked_lines
+        checkbox = st.checkbox(line, value=is_checked, key=f'checkbox_{index}')  # Используем текущий статус чекбокса
+
+        if checkbox and line not in checked_lines:
+            checked_lines.append(line)
+        elif not checkbox and line in checked_lines:
+            checked_lines.remove(line)
