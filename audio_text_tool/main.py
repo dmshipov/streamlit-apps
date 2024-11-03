@@ -11,7 +11,14 @@ import pdfplumber
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
 import noisereduce as nr
-
+import io
+import os
+import soundfile as sf
+import speech_recognition as sr
+from pydub import AudioSegment
+from moviepy.editor import VideoFileClip
+from noisereduce import reduce_noise 
+   
 def recognize_speech(audio_data, samplerate, language="ru-RU"):
     with io.BytesIO() as f:
         sf.write(f, audio_data, samplerate, format='WAV')
@@ -48,7 +55,7 @@ def preprocess_audio(audio_file_path):
 
 def recognize_from_file(file, language="ru-RU"):
     recognizer = sr.Recognizer()
-
+   
     try:
         with sr.AudioFile(file) as source:
             audio_length = source.DURATION
@@ -56,8 +63,8 @@ def recognize_from_file(file, language="ru-RU"):
             text = ""
 
             for start_time in range(0, int(audio_length), step):
-                # Вместо source.seek(start_time) используем record с параметрами
-                audio = recognizer.record(source, duration=step)
+                # Используем record с параметрами
+                audio = recognizer.record(source, duration=step, offset=start_time)
 
                 try:
                     fragment_text = recognizer.recognize_google(audio, language=language)
@@ -75,6 +82,7 @@ def recognize_from_file(file, language="ru-RU"):
         return f"Ошибка сервиса распознавания речи: {e}"
     except Exception as e:
         return f"Произошла ошибка: {e}"
+
     
 def extract_audio_from_video(video_file):
     audio_file = "extracted_audio.wav"
@@ -124,6 +132,7 @@ if file_type == "Конвертация аудио в текст":
 
 if file_type == "Конвертация изображения в текст":
     st.markdown("## Конвертация изображения в текст")
+    uploaded_image = st.file_uploader("Загрузите изображение для преобразования в текст", type=["jpg", "jpeg", "png"])
 
     
 
@@ -169,9 +178,10 @@ if file_type == "Конвертация изображения в текст":
             for table in extracted_tables:
                 tables.append(table)
 
-    
-            st.image(caption=f"Страница {i + 1}", use_column_width=True)
-            recognized_text = pytesseract.image_to_string(lang=lang, config='--psm 6')
+            img = page.to_image()
+            img_pil = img.original.convert("RGB")
+            st.image(img_processed, caption=f"Страница {i + 1}", use_column_width=True)
+            recognized_text = pytesseract.image_to_string(img_processed, lang=lang, config='--psm 6')
             st.write(recognized_text)
 
     if uploaded_file is not None:
