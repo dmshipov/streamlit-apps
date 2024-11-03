@@ -3,6 +3,7 @@ pandas
 openpyxl
 datetime
 sqlalchemy
+opencv-python
 soundfile
 requests
 Pillow
@@ -15,4 +16,3 @@ pydub
 noisereduce
 SpeechRecognition
 python-docx
-opencv-python
