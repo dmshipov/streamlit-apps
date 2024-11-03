@@ -3,12 +3,12 @@ pandas
 openpyxl
 datetime
 sqlalchemy
+opencv-python
 soundfile
 requests
 Pillow
 pytesseract
 docx
-opencv-python
 numpy
 pdfplumber
 moviepy
