@@ -1,8 +1,8 @@
+
 import streamlit as st
 import pandas as pd
 import datetime
 import sqlite3
-import hashlib
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -33,54 +33,24 @@ conn.commit()
 
 # Система аутентификации
 def authenticate(username, password):
-    cursor.execute("SELECT * FROM users WHERE username=?", (username,))
-    user = cursor.fetchone()
-    if user:
-        # Проверяем, совпадает ли хеш пароля с паролем в базе данных
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        if hashed_password == user[2]:
-            return user
-    return None
+    cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
+    return cursor.fetchone()
 
 def register(username, password):
     if not username or not password:
         st.error("Пожалуйста, заполните все поля.")
         return
     try:
-        # Хешируем пароль перед сохранением в базе данных
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
+        cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
         conn.commit()        
     except sqlite3.IntegrityError:
         st.error("Пользователь с таким именем уже существует.")
     else:
         st.success("Регистрация прошла успешно!")
-
 st.markdown('## Блокнот')
 
-# Проверка, авторизован ли пользователь
 if 'username' not in st.session_state:
     st.session_state.username = None
-
-# Проверяем, есть ли куки
-query_params = st.query_params
-if 'username' in query_params:
-    username = query_params['username'][0]  # Доступ к значению куки
-
-    # Проверяем, существует ли пользователь с таким именем в базе данных
-    cursor.execute("SELECT * FROM users WHERE username=?", (username,))
-    user = cursor.fetchone()
-
-    if user:
-        # Если пользователь существует, то авторизуем его
-        st.session_state.username = username
-        st.success("Вы успешно авторизованы!")
-        st.rerun()
-    else:
-        # Если пользователь не существует, то показываем форму входа
-        st.session_state.username = None
-        st.error("Неправильный логин или пароль.")
-
 
 # Формы для аутентификации
 if st.session_state.username is None:
@@ -92,13 +62,9 @@ if st.session_state.username is None:
         if submit_button:
             user = authenticate(username, password)
             
-        if submit_button:
-            user = authenticate(username, password)
             if user:
                 st.session_state.username = username
                 st.success("Вы успешно вошли!")
-                st.rerun()
-                st.experimental_set_query_params(username=username)  # Эта строка остается неизменной
                 st.rerun()
             else:
                 st.error("Неправильный логин или пароль.")
@@ -138,7 +104,7 @@ else:
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
     
-    
+
     # Создаем форму
     form = st.form("Моя форма")
 
@@ -149,7 +115,6 @@ else:
     if form.form_submit_button("Преобразовать"):
         update_text()
         st.rerun()
-
 
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
