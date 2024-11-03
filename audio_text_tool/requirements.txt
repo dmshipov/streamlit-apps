@@ -4,8 +4,6 @@ soundfile
 requests
 Pillow
 pytesseract
-opencv-python
-numpy
 pdfplumber
 moviepy
 pydub

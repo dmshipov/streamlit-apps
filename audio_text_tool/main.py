@@ -7,8 +7,6 @@ import requests
 from PIL import Image
 import pytesseract
 from io import BytesIO
-import cv2
-import numpy as np
 import pdfplumber
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
@@ -127,12 +125,6 @@ if file_type == "Конвертация аудио в текст":
 
 if file_type == "Конвертация изображения в текст":
     st.markdown("## Конвертация изображения в текст")
-    def preprocess_image(image, blur_value, threshold_value):
-        """Функция для предварительной обработки изображения."""
-        gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
-        gray = cv2.medianBlur(gray, blur_value)
-        _, thresh = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        return Image.fromarray(thresh)
 
     
 
@@ -162,9 +154,6 @@ if file_type == "Конвертация изображения в текст":
                 image = Image.open(image_input)
         except Exception as e:
             st.error(f"Ошибка при загрузке изображения: {e}")
-        else:
-            image = preprocess_image(image, blur_value, threshold_value)  # Предварительная обработка
-            st.image(image, caption="Загруженное изображение", use_column_width=True)
 
             recognized_text = pytesseract.image_to_string(image, lang=lang, config='--psm 6')
             st.write(recognized_text)
@@ -183,7 +172,6 @@ if file_type == "Конвертация изображения в текст":
 
             img = page.to_image()
             img_pil = img.original.convert("RGB")
-            img_processed = preprocess_image(img_pil, blur_value, threshold_value)  # Предварительная обработка
             st.image(img_processed, caption=f"Страница {i + 1}", use_column_width=True)
             recognized_text = pytesseract.image_to_string(img_processed, lang=lang, config='--psm 6')
             st.write(recognized_text)
@@ -197,7 +185,6 @@ if file_type == "Конвертация изображения в текст":
 
         else:
             image = Image.open(uploaded_file)
-            image = preprocess_image(image, blur_value, threshold_value)  # Предварительная обработка
             st.image(image, caption="Загруженное изображение", use_column_width=True)
 
             recognized_text = pytesseract.image_to_string(image, lang=lang, config='--psm 6')
