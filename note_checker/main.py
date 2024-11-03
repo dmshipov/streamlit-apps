@@ -3,7 +3,9 @@ import streamlit as st
 import pandas as pd
 import datetime
 import sqlite3
-
+import base64
+import uuid
+key = str(uuid.uuid4())
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
 cursor = conn.cursor()
@@ -131,11 +133,11 @@ else:
         selected_indices = []  # Список для хранения выбранных индексов
 
         # Выбор опции один раз для всех товаров
-        option = st.selectbox("Выберите опцию", ["Без расчета", "C расчетом суммы", "C расчетом количества", "C расчетом веса", "Все расчеты"])
+        option = st.selectbox("Выберите опцию", ["Без расчета", "C расчетом суммы", "C расчетом количества", "C расчетом веса", "C изображением", "Все расчеты"])
 
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
-            col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1.1])  # Создаем четыре столбца
+            col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 1.1])  # Создаем четыре столбца
 
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -207,8 +209,28 @@ else:
                         except ValueError:
                             st.error("Введите корректное значение для 'Вес'")
                             products.at[index, "Вес"] = None  # Или оставьте None
-            # Чекбокс для удаления строки
             with col5:
+                if option == "C изображением" or option == "Все расчеты":
+                    # Загрузка изображения
+                    if st.session_state.get('add_image', False):
+                        image = st.camera_input("Сделать фото", key="image_input_1") 
+                        if image:
+                            # Преобразуем изображение в байтовый поток
+                            image_bytes = image.getvalue()
+                            # Кодируем изображение в base64
+                            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                            # Добавляем изображение в DataFrame
+                            products.at[index, "Изображение"] = image_base64
+                            # Отображаем изображение после загрузки
+                            st.image(image.getvalue(), width=200)
+                        st.session_state['add_image'] = False
+                    else:
+                        # Кнопка для загрузки изображения
+                        import uuid
+                        key = str(uuid.uuid4())
+                        st.button("Добавить изображение", on_click=lambda: st.session_state.update(add_image=True), key=key)
+            # Чекбокс для удаления строки
+            with col6:
                 st.markdown("<br>", unsafe_allow_html=True)
                 delete_checkbox = st.button("Удалить позицию", key=f'delete_{index}')
                 if delete_checkbox:
