@@ -12,4 +12,3 @@ moviepy
 pydub
 noisereduce
 SpeechRecognition
-PyAudio==0.2.11
