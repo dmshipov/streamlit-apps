@@ -234,9 +234,12 @@ else:
                         st.button("Добавить изображение", on_click=lambda: st.session_state.update(add_image=True), key=key)
 
                     # Отображение изображения, если оно уже есть
-                    if row["Изображение"]:
-                        st.image(row["Изображение"], width=200) 
-                        
+                    try:
+                        if row["Изображение"]:
+                            st.image(row["Изображение"], width=200)
+                    except KeyError:
+                        st.warning("Изображение не найдено")  # Или выводи сообщение об ошибке 
+
             # Чекбокс для удаления строки
             with col6:
                 st.markdown("<br>", unsafe_allow_html=True)
