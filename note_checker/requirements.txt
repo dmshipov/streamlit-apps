@@ -16,3 +16,5 @@ noisereduce
 SpeechRecognition
 python-docx
 opencv-python
+base64
+uuid
