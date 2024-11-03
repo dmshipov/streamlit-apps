@@ -221,7 +221,7 @@ else:
                             image_base64 = base64.b64encode(image_bytes).decode('utf-8')
                             # Добавляем изображение в DataFrame
                             products.at[index, "Изображение"] = image_base64
-                            # Отображаем изображение после загрузки
+                            # **Отображаем изображение сразу после получения**
                             st.image(image.getvalue(), width=200)
                         st.session_state['add_image'] = False
                     else:
