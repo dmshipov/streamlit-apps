@@ -3,6 +3,8 @@ import pandas as pd
 import datetime
 import sqlite3
 import uuid
+from io import BytesIO
+from PIL import Image
 
 key = str(uuid.uuid4())
 # Создаем соединение с базой данных
@@ -217,10 +219,17 @@ else:
                         if image:
                             # Преобразуем изображение в байтовый поток
                             image_bytes = image.getvalue()
+
+                            # Убедись, что тип данных столбца "Изображение"  -  bytes
+                            products['Изображение'] = products['Изображение'].astype('object')
+
                             # Сохраняем изображение в DataFrame
                             products.at[index, "Изображение"] = image_bytes
+
                             # Отображаем изображение сразу после получения
-                            st.image(image.getvalue(), width=200)
+                            image = Image.open(BytesIO(image_bytes))
+                            st.image(image, width=200)
+
                             # Обновляем изображение в базе данных
                             cursor.execute("UPDATE products SET Изображение=? WHERE id=?", (image_bytes, row['id']))
                             conn.commit()
@@ -231,17 +240,20 @@ else:
                         key = str(uuid.uuid4())
                         st.button("Добавить изображение", on_click=lambda: st.session_state.update(add_image=True), key=key)
 
-                     # Отображение изображения, если оно уже есть
+                    # Отображение изображения, если оно уже есть
                     try:
                         # Используем проверку index и products.loc
                         if index in products.index and products.loc[index, "Изображение"] is not None:
-                            st.image(products.loc[index, "Изображение"], width=200)
+                            # Преобразуй байтовый поток в изображение
+                            from io import BytesIO
+                            from PIL import Image
+                            image = Image.open(BytesIO(products.loc[index, "Изображение"]))
+                            st.image(image, width=200)
                             # Добавьте print для отладки
                             print(f"Изображение для index {index}: {products.loc[index, 'Изображение']}")
                     except KeyError:
                         st.warning("Изображение не найдено")
                         print(f"Ошибка: Изображение не найдено для index {index}")
-
             # Чекбокс для удаления строки
             with col6:
                 st.markdown("<br>", unsafe_allow_html=True)
