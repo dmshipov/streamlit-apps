@@ -34,7 +34,12 @@ cursor.execute('''
 ''')
 
 conn.commit()
-
+# Функция для загрузки изображения
+def load_image(image_file):
+    image = Image.open(image_file)
+    img_byte_arr = io.BytesIO()
+    image.save(img_byte_arr, format='PNG')  # Или другой формат
+    return img_byte_arr.getvalue()
 # Система аутентификации
 def authenticate(username, password):
     cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
@@ -211,50 +216,16 @@ else:
                         except ValueError:
                             st.error("Введите корректное значение для 'Вес'")
                             products.at[index, "Вес"] = None  # Или оставьте None
-            with col5:
+            with col5:  # Новый столбец для загрузки фото с камеры
                 if option == "C изображением" or option == "Все расчеты":
-                    # Загрузка изображения
-                    if st.session_state.get('add_image', False):
-                        image = st.camera_input("Сделать фото", key="image_input_1") 
-                        if image:
-                            # Преобразуем изображение в байтовый поток
-                            image_bytes = image.getvalue()
-
-                            # Убедись, что тип данных столбца "Изображение"  -  bytes
-                            products['Изображение'] = products['Изображение'].astype('object')
-
-                            # Сохраняем изображение в DataFrame
-                            products.at[index, "Изображение"] = image_bytes
-
-                            # Отображаем изображение сразу после получения
-                            image = Image.open(BytesIO(image_bytes))
-                            st.image(image, width=200)
-
-                            # Обновляем изображение в базе данных
-                            cursor.execute("UPDATE products SET Изображение=? WHERE id=?", (image_bytes, row['id']))
-                            conn.commit()
-                        st.session_state['add_image'] = False
-                    else:
-                        # Кнопка для загрузки изображения
-                        import uuid
-                        key = str(uuid.uuid4())
-                        st.button("Добавить изображение", on_click=lambda: st.session_state.update(add_image=True), key=key)
-
-                    # Отображение изображения, если оно уже есть
-                    try:
-                        # Используем проверку index и products.loc
-                        if index in products.index and products.loc[index, "Изображение"] is not None:
-                            # Преобразуй байтовый поток в изображение
-                            from io import BytesIO
-                            from PIL import Image
-                            image = Image.open(BytesIO(products.loc[index, "Изображение"]))
-                            st.image(image, width=200)
-                            # Добавьте print для отладки
-                            print(f"Изображение для index {index}: {products.loc[index, 'Изображение']}")
-                    except KeyError:
-                        st.warning("Изображение не найдено")
-                        print(f"Ошибка: Изображение не найдено для index {index}")
-            # Чекбокс для удаления строки
+                    image_file = st.camera_input("Фото", key=f'image_{index}')
+                    if image_file is not None:
+                        # Сохраняем изображение в базу данных (предполагается, что вы используете BLOB)
+                        image_bytes = image_file.read()
+                        products.at[index, "Изображение"] = image_bytes
+                        
+                        cursor.execute("UPDATE products SET Изображение=? WHERE id=?", (image_bytes, row['id']))
+                        conn.commit()
             with col6:
                 st.markdown("<br>", unsafe_allow_html=True)
                 delete_checkbox = st.button("Удалить позицию", key=f'delete_{index}')
