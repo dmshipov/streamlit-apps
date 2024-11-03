@@ -1,4 +1,4 @@
-streamlit
+streamlit==1.8.1
 sounddevice
 soundfile
 requests
@@ -9,6 +9,6 @@ moviepy
 pydub
 noisereduce
 SpeechRecognition
-opencv-python-headless==4.5.4.60
-numpy==1.15.4
+opencv-python==4.5.4.60
+numpy==1.22.3
 
