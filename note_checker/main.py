@@ -219,12 +219,11 @@ else:
                             image_bytes = image.getvalue()
                             # Сохраняем изображение в DataFrame
                             products.at[index, "Изображение"] = image_bytes
-                            # **Отображаем изображение сразу после получения**
+                            # Отображаем изображение сразу после получения
                             st.image(image.getvalue(), width=200)
                             # Обновляем изображение в базе данных
                             cursor.execute("UPDATE products SET Изображение=? WHERE id=?", (image_bytes, row['id']))
                             conn.commit()
-
                         st.session_state['add_image'] = False
                     else:
                         # Кнопка для загрузки изображения
@@ -234,10 +233,9 @@ else:
 
                     # Отображение изображения, если оно уже есть
                     try:
-                        if row["Изображение"]:
-                            st.image(row["Изображение"], width=200)
+                        st.image(row["Изображение"], width=200)
                     except KeyError:
-                        st.warning("Изображение не найдено")  # Или выводи сообщение об ошибке 
+                        st.warning("Изображение не найдено")
 
             # Чекбокс для удаления строки
             with col6:
