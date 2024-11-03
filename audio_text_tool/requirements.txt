@@ -10,5 +10,5 @@ pydub
 noisereduce
 SpeechRecognition
 opencv-python-headless==4.5.4.60
-numpy
+numpy==1.15.4
 
