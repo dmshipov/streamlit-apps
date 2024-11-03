@@ -231,12 +231,16 @@ else:
                         key = str(uuid.uuid4())
                         st.button("Добавить изображение", on_click=lambda: st.session_state.update(add_image=True), key=key)
 
-                    # Отображение изображения, если оно уже есть
+                     # Отображение изображения, если оно уже есть
                     try:
-                        if row["Изображение"] is not None:
-                            st.image(row["Изображение"], width=200)
+                        # Используем проверку index и products.loc
+                        if index in products.index and products.loc[index, "Изображение"] is not None:
+                            st.image(products.loc[index, "Изображение"], width=200)
+                            # Добавьте print для отладки
+                            print(f"Изображение для index {index}: {products.loc[index, 'Изображение']}")
                     except KeyError:
                         st.warning("Изображение не найдено")
+                        print(f"Ошибка: Изображение не найдено для index {index}")
 
             # Чекбокс для удаления строки
             with col6:
