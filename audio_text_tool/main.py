@@ -7,7 +7,6 @@ import requests
 from PIL import Image
 import pytesseract
 from io import BytesIO
-from docx import Document
 import cv2
 import numpy as np
 import pdfplumber
@@ -220,24 +219,4 @@ if file_type == "Конвертация изображения в текст":
                 data=open('recognized_text.txt', 'rb').read(),
                 file_name='recognized_text.txt',
                 mime='text/plain'
-            )
-
-        if st.button("Сохранить в DOCX"):
-            doc = Document()
-            doc.add_paragraph(full_text if uploaded_file.type == "application/pdf" else recognized_text)
-            for i, table in enumerate(tables):
-                doc.add_paragraph(f"Таблица {i + 1}")
-                table_in_docx = doc.add_table(rows=len(table), cols=len(table[0]))
-                for row_index, row in enumerate(table):
-                    cells = table_in_docx.rows[row_index].cells
-                    for cell_index, cell in enumerate(row):
-                        cells[cell_index].text = str(cell)
-
-            doc.save('recognized_text.docx')
-
-            st.download_button(
-                label="Скачать DOCX",
-                data=open('recognized_text.docx', 'rb').read(),
-                file_name='recognized_text.docx',
-                mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             )

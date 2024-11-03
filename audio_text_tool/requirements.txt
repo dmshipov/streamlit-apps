@@ -4,7 +4,6 @@ soundfile
 requests
 Pillow
 pytesseract
-docx
 opencv-python
 numpy
 pdfplumber
