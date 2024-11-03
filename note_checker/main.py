@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import datetime
 import sqlite3
-import base64
 import uuid
 
 key = str(uuid.uuid4())
@@ -97,7 +96,7 @@ else:
         for line in lines:
             parts = line.split(' И ')
             for part in parts:
-                products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0})
+                products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0, 'Изображение': None})
 
         for product in products_list:
             cursor.execute("INSERT INTO products (username, Товар, Значение, Количество, Вес, Изображение) VALUES (?, ?, ?, ?, ?, ?)",
