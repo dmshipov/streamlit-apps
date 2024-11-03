@@ -14,7 +14,8 @@ import pdfplumber
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
 import noisereduce as nr
-
+# Установи  opencv-python 
+subprocess.check_call(['pip', 'install', 'opencv-python'])
 def recognize_speech(audio_data, samplerate, language="ru-RU"):
     with io.BytesIO() as f:
         sf.write(f, audio_data, samplerate, format='WAV')
