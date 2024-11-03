@@ -27,7 +27,8 @@ cursor.execute('''
         Товар TEXT,
         Значение INTEGER,
         Количество INTEGER,
-        Вес INTEGER
+        Вес INTEGER,
+        Изображение BLOB
     )
 ''')
 
@@ -99,8 +100,8 @@ else:
                 products_list.append({"Товар": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0})
 
         for product in products_list:
-            cursor.execute("INSERT INTO products (username, Товар, Значение, Количество, Вес) VALUES (?, ?, ?, ?, ?)",
-                           (st.session_state.username, product["Товар"], product["Значение"], product["Количество"], product['Вес']))
+            cursor.execute("INSERT INTO products (username, Товар, Значение, Количество, Вес, Изображение) VALUES (?, ?, ?, ?, ?, ?)",
+                           (st.session_state.username, product["Товар"], product["Значение"], product["Количество"], product['Вес'], product['Изображение']))
         conn.commit()
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
@@ -217,18 +218,25 @@ else:
                         if image:
                             # Преобразуем изображение в байтовый поток
                             image_bytes = image.getvalue()
-                            # Кодируем изображение в base64
-                            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                            # Добавляем изображение в DataFrame
-                            products.at[index, "Изображение"] = image_base64
+                            # Сохраняем изображение в DataFrame
+                            products.at[index, "Изображение"] = image_bytes
                             # **Отображаем изображение сразу после получения**
                             st.image(image.getvalue(), width=200)
+                            # Обновляем изображение в базе данных
+                            cursor.execute("UPDATE products SET Изображение=? WHERE id=?", (image_bytes, row['id']))
+                            conn.commit()
+
                         st.session_state['add_image'] = False
                     else:
                         # Кнопка для загрузки изображения
                         import uuid
                         key = str(uuid.uuid4())
                         st.button("Добавить изображение", on_click=lambda: st.session_state.update(add_image=True), key=key)
+
+                    # Отображение изображения, если оно уже есть
+                    if row["Изображение"]:
+                        st.image(row["Изображение"], width=200) 
+                        
             # Чекбокс для удаления строки
             with col6:
                 st.markdown("<br>", unsafe_allow_html=True)
