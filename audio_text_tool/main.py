@@ -169,10 +169,9 @@ if file_type == "Конвертация изображения в текст":
             for table in extracted_tables:
                 tables.append(table)
 
-            img = page.to_image()
-            img_pil = img.original.convert("RGB")
-            st.image(img_processed, caption=f"Страница {i + 1}", use_column_width=True)
-            recognized_text = pytesseract.image_to_string(img_processed, lang=lang, config='--psm 6')
+    
+            st.image(caption=f"Страница {i + 1}", use_column_width=True)
+            recognized_text = pytesseract.image_to_string(lang=lang, config='--psm 6')
             st.write(recognized_text)
 
     if uploaded_file is not None:
