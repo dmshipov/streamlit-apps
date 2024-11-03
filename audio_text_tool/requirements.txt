@@ -9,3 +9,4 @@ moviepy
 pydub
 noisereduce
 SpeechRecognition
+opencv-python-headless==4.5.4.60
