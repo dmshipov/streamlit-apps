@@ -220,7 +220,7 @@ else:
                         st.image(products.at[index, "Фото"], caption='Фото', use_column_width=True)
                         
                         # Добавляем кнопку "Удалить фото"
-                        if st.button("Удалить фото", key=f"delete_photo_{index}"):
+                        if st.button("Удалить фото", key=f"delete_photo_{index}", camera_id=0):
                             products.at[index, "Фото"] = None
                             cursor.execute("UPDATE products SET Фото=? WHERE id=?", (None, row['id']))
                             conn.commit()
