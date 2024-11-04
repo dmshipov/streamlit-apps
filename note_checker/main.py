@@ -214,7 +214,7 @@ else:
                             st.error("Введите корректное значение для 'Вес'")
                             products.at[index, "Вес"] = None  # Или оставьте None
             with col5:  # Новый столбец для загрузки фото с камеры
-                if option == "Фото" or option == "Все расчеты":
+                if option == "Фото" or option == "Все":
                     if products.at[index, "Фото"] is not None:
                         # Если фото в базе данных, отображаем его
                         st.image(products.at[index, "Фото"], caption='Фото', use_column_width=True)
