@@ -109,7 +109,7 @@ else:
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
-    
+        
 
     # Создаем форму
     form = st.form("Моя форма")
@@ -118,7 +118,7 @@ else:
     form.text_area("Введите текст", key='text_input')
 
     # Кнопка для преобразования в таблицу
-    if form.form_submit_button("Преобразовать"):
+    if form.form_submit_button("+Добавить строку"):
         update_text()
         st.rerun()
 
@@ -135,13 +135,36 @@ else:
             sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
 
         selected_indices = []  # Список для хранения выбранных индексов
+        
+       # Чекбоксы для каждой функции
+        col1, col2, col3, col4, col5 = st.columns(5) # Создаем 5 колонок для чекбоксов
 
-        # Выбор опции один раз для всех Наименованиеов
-        option = st.selectbox("Выберите опцию", ["   ", "Значение", "Количество", "Вес", "Фото", "Все"])
+
+        with col1:
+            checkbox_price = st.checkbox("Значение", key="checkbox_price")
+        with col2:
+            checkbox_quantity = st.checkbox("Количество", key="checkbox_quantity")
+        with col3:
+            checkbox_weight = st.checkbox("Вес", key="checkbox_weight")
+        with col4:
+            checkbox_photo = st.checkbox("Фото", key="checkbox_photo")
+        with col5:
+            checkbox_all = st.checkbox("Все", key="checkbox_all")
+        
+        # Если checkbox_all активен, сбросить состояние других чекбоксов
+        if checkbox_all:
+            checkbox_price = False
+            checkbox_quantity = False
+            checkbox_weight = False
+            checkbox_photo = False
+
+        # Добавляем линию снизу блоков чекбоксов
+        st.write("---")
 
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
-            col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 1.1])  # Создаем четыре столбца
+            # Создаем четыре столбца
+            col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 1.1])  
 
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -149,8 +172,16 @@ else:
                 if checkbox:
                     selected_indices.append(index)  # Добавляем индекс в список выбранных
 
+                    # Поле для редактирования "Наименование"
+                    new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
+                    if new_name != row['Наименование']:
+                        products.at[index, "Наименование"] = new_name
+                        # Обновляем значение в базе данных
+                        cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
+                        conn.commit()
+
             with col2:
-                if option == "Значение" or option == "Все":  # Проверяем выбранную опцию
+                if checkbox_price or checkbox_all:  # Проверяем выбранную опцию
                     # Сохраняем новое значение в session_state
                     if f'price_{index}' not in st.session_state:
                         st.session_state[f'price_{index}'] = str(row['Значение'])  
@@ -175,7 +206,7 @@ else:
 
 
             with col3:
-                if option == "Количество" or option == "Все":  # Проверяем выбранную опцию
+                if checkbox_quantity or checkbox_all:  # Проверяем выбранную опцию
                     # Ввод количества с преобразованием в int
                     quantity = st.number_input("Количество", 
                                                 min_value=0,
@@ -195,7 +226,7 @@ else:
                             products.at[index, "Количество"] = None  # Или оставьте None
                 
             with col4:
-                if option == "Вес" or option == "Все":  # Проверяем выбранную опцию
+                if checkbox_weight or checkbox_all: # Проверяем выбранную опцию
                     # Ввод веса с преобразованием в int
                     weight = st.number_input("Вес в гр.", 
                                             min_value=0,
@@ -214,7 +245,7 @@ else:
                             st.error("Введите корректное значение для 'Вес'")
                             products.at[index, "Вес"] = None  # Или оставьте None
             with col5:  # Новый столбец для загрузки фото с камеры
-                if option == "Фото" or option == "Все":
+                if checkbox_photo or checkbox_all:
                     if products.at[index, "Фото"] is not None:
                         # Если фото в базе данных, отображаем его
                         st.image(products.at[index, "Фото"], caption='Фото', use_column_width=True)
