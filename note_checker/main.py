@@ -124,6 +124,7 @@ else:
 
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
+        st.sidebar.markdown("### Фильтр таблицы")
         # Элементы управления для сортировки в боковой панели
         sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес"])
         sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
@@ -137,9 +138,10 @@ else:
         selected_indices = []  # Список для хранения выбранных индексов
        
         # Надпись в sidebar
-        st.sidebar.write("Выберите функцию")
+        st.sidebar.markdown("### Вывести столбец")
         
-        # Чекбоксы для каждой функции     
+        # Чекбоксы для каждой функции 
+            
         checkbox_price = st.sidebar.checkbox("Значение", key="checkbox_price")
      
         checkbox_quantity = st.sidebar.checkbox("Количество", key="checkbox_quantity")
