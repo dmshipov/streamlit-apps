@@ -3,16 +3,4 @@ pandas
 openpyxl
 datetime
 sqlalchemy
-soundfile
-requests
-Pillow
-pytesseract
-docx
-numpy
-pdfplumber
-moviepy
-pydub
-noisereduce
-SpeechRecognition
-python-docx
-opencv-python
+uuid
