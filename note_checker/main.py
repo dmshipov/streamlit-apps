@@ -133,33 +133,22 @@ else:
             sorted_products = products.copy()
         else:
             sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
-
+     
         selected_indices = []  # Список для хранения выбранных индексов
+       
+        # Надпись в sidebar
+        st.sidebar.write("Выберите функцию")
         
-       # Чекбоксы для каждой функции
-        col1, col2, col3, col4, col5 = st.columns(5) # Создаем 5 колонок для чекбоксов
+        # Чекбоксы для каждой функции     
+        checkbox_price = st.sidebar.checkbox("Значение", key="checkbox_price")
+     
+        checkbox_quantity = st.sidebar.checkbox("Количество", key="checkbox_quantity")
+       
+        checkbox_weight = st.sidebar.checkbox("Вес", key="checkbox_weight")
+       
+        checkbox_photo = st.sidebar.checkbox("Фото", key="checkbox_photo")
 
-
-        with col1:
-            checkbox_price = st.checkbox("Значение", key="checkbox_price")
-        with col2:
-            checkbox_quantity = st.checkbox("Количество", key="checkbox_quantity")
-        with col3:
-            checkbox_weight = st.checkbox("Вес", key="checkbox_weight")
-        with col4:
-            checkbox_photo = st.checkbox("Фото", key="checkbox_photo")
-        with col5:
-            checkbox_all = st.checkbox("Все", key="checkbox_all")
-        
-        # Если checkbox_all активен, сбросить состояние других чекбоксов
-        if checkbox_all:
-            checkbox_price = False
-            checkbox_quantity = False
-            checkbox_weight = False
-            checkbox_photo = False
-
-        # Добавляем линию снизу блоков чекбоксов
-        st.write("---")
+        checkbox_all = st.sidebar.checkbox("Все", key="checkbox_all")
 
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
