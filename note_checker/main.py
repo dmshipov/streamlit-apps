@@ -115,7 +115,7 @@ else:
     form = st.form("Моя форма")
 
     # Текстовое поле для ввода текста
-    form.text_area("Введите текст для добавления", key='text_input')
+    form.text_area("Введите текст для новой строки", key='text_input')
 
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить позицию"):
