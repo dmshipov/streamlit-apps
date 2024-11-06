@@ -26,7 +26,8 @@ cursor.execute('''
         Значение INTEGER,
         Количество INTEGER,
         Вес INTEGER,
-        Фото BLOB
+        Фото BLOB,
+        Дата DATE
     )
 ''')
 
@@ -100,12 +101,13 @@ else:
         for line in lines:
             parts = line.split(' И ')
             for part in parts:
-                products_list.append({"Наименование": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0, 'Фото': None})
+                products_list.append({"Наименование": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0, "Фото": None, "Дата": None})
 
         for product in products_list:
-            cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото) VALUES (?, ?, ?, ?, ?, ?)",
-                           (st.session_state.username, product["Наименование"], product["Значение"], product["Количество"], product['Вес'], product['Фото']))
-        conn.commit()
+            # Добавляем данные в базу с помощью execute и параметров
+            cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
+                (st.session_state.username, product["Наименование"], product["Значение"], product["Количество"], product['Вес'], product['Фото']))
+            conn.commit()
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
@@ -126,7 +128,7 @@ else:
     if not products.empty:
         st.sidebar.markdown("### Фильтр таблицы")
         # Элементы управления для сортировки в боковой панели
-        sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес"])
+        sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес", "Дата"])
         sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
 
         # Применяем сортировку
@@ -159,13 +161,29 @@ else:
 
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
-                checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}')  # Чекбокс для выбора Наименованиеа
+                # Проверяем, есть ли "+" в поле ввода
+                if "+" in row['Наименование']:
+                    checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}', value=True)
+                else:
+                    checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}')  # Чекбокс для выбора Наименованиеа
+
                 if checkbox:
                     selected_indices.append(index)  # Добавляем индекс в список выбранных
 
                     # Поле для редактирования "Наименование"
                     new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
+                    if checkbox and "+" not in new_name:
+                        new_name = "+" + new_name 
+
                     if new_name != row['Наименование']:
+                        products.at[index, "Наименование"] = new_name
+                        # Обновляем значение в базе данных
+                        cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
+                        conn.commit()
+                else:
+                    # Удаляем "+" если чекбокс не выбран
+                    if "+" in row['Наименование']:
+                        new_name = row['Наименование'].replace("+", "")
                         products.at[index, "Наименование"] = new_name
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
