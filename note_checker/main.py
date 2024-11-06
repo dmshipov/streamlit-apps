@@ -26,7 +26,8 @@ cursor.execute('''
         Значение INTEGER,
         Количество INTEGER,
         Вес INTEGER,
-        Фото BLOB
+        Фото BLOB,
+        Дата DATE
     )
 ''')
 
@@ -100,12 +101,13 @@ else:
         for line in lines:
             parts = line.split(' И ')
             for part in parts:
-                products_list.append({"Наименование": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0, 'Фото': None})
+                products_list.append({"Наименование": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0, "Фото": None, "Дата": None})
 
         for product in products_list:
-            cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото) VALUES (?, ?, ?, ?, ?, ?)",
-                           (st.session_state.username, product["Наименование"], product["Значение"], product["Количество"], product['Вес'], product['Фото']))
-        conn.commit()
+            # Добавляем данные в базу с помощью execute и параметров
+            cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
+                (st.session_state.username, product["Наименование"], product["Значение"], product["Количество"], product['Вес'], product['Фото']))
+            conn.commit()
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
@@ -115,17 +117,18 @@ else:
     form = st.form("Моя форма")
 
     # Текстовое поле для ввода текста
-    form.text_area("Введите текст", key='text_input')
+    form.text_area("Введите текст для новой позиции", key='text_input')
 
     # Кнопка для преобразования в таблицу
-    if form.form_submit_button("+Добавить строку"):
+    if form.form_submit_button("+Добавить"):
         update_text()
         st.rerun()
 
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
+        st.sidebar.markdown("### Фильтр таблицы")
         # Элементы управления для сортировки в боковой панели
-        sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес"])
+        sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес", "Дата"])
         sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
 
         # Применяем сортировку
@@ -133,48 +136,23 @@ else:
             sorted_products = products.copy()
         else:
             sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
-
+     
         selected_indices = []  # Список для хранения выбранных индексов
-            # Добавляем состояние для checkbox-ов в `st.session_state`
-        if 'checkbox_price' not in st.session_state:
-            st.session_state.checkbox_price = False
-
-        if 'checkbox_quantity' not in st.session_state:
-            st.session_state.checkbox_quantity = False
-
-        if 'checkbox_weight' not in st.session_state:
-            st.session_state.checkbox_weight = False
-
-        if 'checkbox_photo' not in st.session_state:
-            st.session_state.checkbox_photo = False
-
-        if 'checkbox_all' not in st.session_state:
-            st.session_state.checkbox_all = False
-
-       # Чекбоксы для каждой функции
-        col1, col2, col3, col4, col5 = st.columns(5) # Создаем 5 колонок для чекбоксов
-
-
-        with col1:
-            checkbox_price = st.checkbox("Значение", key="checkbox_price")
-        with col2:
-            checkbox_quantity = st.checkbox("Количество", key="checkbox_quantity")
-        with col3:
-            checkbox_weight = st.checkbox("Вес", key="checkbox_weight")
-        with col4:
-            checkbox_photo = st.checkbox("Фото", key="checkbox_photo")
-        with col5:
-            checkbox_all = st.checkbox("Все", key="checkbox_all")
+       
+        # Надпись в sidebar
+        st.sidebar.markdown("### Вывести столбец")
         
-        # Если checkbox_all активен, сбросить состояние других чекбоксов
-            if checkbox_all:
-                checkbox_price = False
-                checkbox_quantity = False
-                checkbox_weight = False
-                checkbox_photo = False
+        # Чекбоксы для каждой функции 
+            
+        checkbox_price = st.sidebar.checkbox("Значение", key="checkbox_price")
+     
+        checkbox_quantity = st.sidebar.checkbox("Количество", key="checkbox_quantity")
+       
+        checkbox_weight = st.sidebar.checkbox("Вес", key="checkbox_weight")
+       
+        checkbox_photo = st.sidebar.checkbox("Фото", key="checkbox_photo")
 
-        # Добавляем линию снизу блоков чекбоксов
-        st.write("---")
+        checkbox_all = st.sidebar.checkbox("Все", key="checkbox_all")
 
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
@@ -183,13 +161,29 @@ else:
 
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
-                checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}')  # Чекбокс для выбора Наименованиеа
+                # Проверяем, есть ли "+" в поле ввода
+                if "+" in row['Наименование']:
+                    checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}', value=True)
+                else:
+                    checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}')  # Чекбокс для выбора Наименованиеа
+
                 if checkbox:
                     selected_indices.append(index)  # Добавляем индекс в список выбранных
 
                     # Поле для редактирования "Наименование"
                     new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
+                    if checkbox and "+" not in new_name:
+                        new_name = "+" + new_name 
+
                     if new_name != row['Наименование']:
+                        products.at[index, "Наименование"] = new_name
+                        # Обновляем значение в базе данных
+                        cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
+                        conn.commit()
+                else:
+                    # Удаляем "+" если чекбокс не выбран
+                    if "+" in row['Наименование']:
+                        new_name = row['Наименование'].replace("+", "")
                         products.at[index, "Наименование"] = new_name
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
@@ -327,7 +321,7 @@ else:
             # Формируем имя файла с датой и временем
             file_name = f"{st.session_state.username}_{current_datetime}.xlsx"
             
-            st.download_button(
+            st.sidebar.download_button(
                 label="Скачать таблицу в формате Excel",
                 data=f,
                 file_name=file_name,
