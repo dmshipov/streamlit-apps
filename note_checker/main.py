@@ -115,10 +115,10 @@ else:
     form = st.form("Моя форма")
 
     # Текстовое поле для ввода текста
-    form.text_area("Введите текст", key='text_input')
+    form.text_area("Введите текст для добавления", key='text_input')
 
     # Кнопка для преобразования в таблицу
-    if form.form_submit_button("+Добавить строку"):
+    if form.form_submit_button("+Добавить позицию"):
         update_text()
         st.rerun()
 
@@ -303,7 +303,7 @@ else:
             # Формируем имя файла с датой и временем
             file_name = f"{st.session_state.username}_{current_datetime}.xlsx"
             
-            st.download_button(
+            st.sidebar.download_button(
                 label="Скачать таблицу в формате Excel",
                 data=f,
                 file_name=file_name,
