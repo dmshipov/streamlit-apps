@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import Image
+import time
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -92,6 +93,7 @@ else:
     products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
 
     def update_text():
+        time.sleep(0.5)
         lines = st.session_state.text_input.split(' и ')
         lines = [line.strip() for line in lines]
         lines = [line.split('\n') for line in lines]
