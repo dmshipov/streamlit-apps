@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import Image
-
+import time
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -137,6 +137,7 @@ else:
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
         update_text()
+        time.sleep(0.5)
         st.rerun()
         
 
