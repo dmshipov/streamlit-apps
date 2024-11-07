@@ -319,7 +319,7 @@ else:
         excel_file_path = f"{st.session_state.username}.xlsx"
         # Используем openpyxl вместо xlsxwriter
         with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-            products[["Наименование", "Значение", "Количество", "Вес"]].to_excel(writer, index=False, sheet_name='Products')
+            products[["Наименование", "Значение", "Количество", "Вес", "Дата"]].to_excel(writer, index=False, sheet_name='Products')
 
         with open(excel_file_path, "rb") as f:
             # Получаем текущую дату и время в формате "YYYY-MM-DD_HH-MM-SS"
