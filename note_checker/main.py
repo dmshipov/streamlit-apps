@@ -142,8 +142,8 @@ else:
         # Надпись в sidebar
         st.sidebar.markdown("### Вывести столбец")
         
-        # Чекбоксы для каждой функции 
-            
+        # Чекбоксы для каждой функции
+        
         checkbox_price = st.sidebar.checkbox("Значение", key="checkbox_price")
      
         checkbox_quantity = st.sidebar.checkbox("Количество", key="checkbox_quantity")
@@ -174,12 +174,18 @@ else:
                     new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
                     if checkbox and "+" not in new_name:
                         new_name = "+" + new_name 
-
+                        products.at[index, "Наименование"] = new_name
+                        # Обновляем значение в базе данных
+                        cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
+                        conn.commit()
+                        st.rerun()
+                        
                     if new_name != row['Наименование']:
                         products.at[index, "Наименование"] = new_name
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
                         conn.commit()
+                        st.rerun()
                 else:
                     # Удаляем "+" если чекбокс не выбран
                     if "+" in row['Наименование']:
@@ -188,6 +194,7 @@ else:
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
                         conn.commit()
+                        st.rerun()
 
             with col2:
                 if checkbox_price or checkbox_all:  # Проверяем выбранную опцию
