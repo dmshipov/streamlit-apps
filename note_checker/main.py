@@ -4,6 +4,7 @@ import datetime
 import sqlite3
 from PIL import Image
 
+
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
 cursor = conn.cursor()
@@ -32,12 +33,8 @@ cursor.execute('''
 ''')
 
 conn.commit()
-# Функция для загрузки изображения
-def load_image(image_file):
-    image = Image.open(image_file)
-    img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format='PNG')  # Или другой формат
-    return img_byte_arr.getvalue()
+
+
 # Система аутентификации
 def authenticate(username, password):
     cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
@@ -91,6 +88,9 @@ else:
     # Основная логика работы с продуктами
     products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
 
+    # Преобразование столбца 'Дата' в тип datetime.datetime (с секундами)
+    products['Дата'] = pd.to_datetime(products['Дата'])
+
     def update_text():
         lines = st.session_state.text_input.split(' и ')
         lines = [line.strip() for line in lines]
@@ -117,8 +117,8 @@ else:
     form = st.form("Моя форма")
 
     # Текстовое поле для ввода текста
-    text_input = form.text_area("Введите текст для новой позиции", key='text_input')
-
+    form.text_area("Введите текст для новой позиции", key='text_input')
+    
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
         update_text()
@@ -126,17 +126,35 @@ else:
 
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
+        
         st.sidebar.markdown("### Фильтр таблицы")
         # Элементы управления для сортировки в боковой панели
         sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес", "Дата"])
-        sort_order = st.sidebar.radio("Порядок сортировки:", ["По возрастанию", "По убыванию"])
+        sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
 
         # Применяем сортировку
-        if sort_by == "Наименование":
-            sorted_products = products.copy()
+        if sort_by == "id":
+            sorted_products = products.sort_values(by='id', ascending=(sort_order == "По возрастанию"))
+        elif sort_by == "Наименование":
+            sorted_products = products.sort_values(by='Наименование', ascending=(sort_order == "По возрастанию"))
         else:
             sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
-     
+        
+        
+        start_date = st.sidebar.date_input("Start Date")
+        end_date = st.sidebar.date_input("End Date")
+
+
+        # Фильтр по дате
+        st.sidebar.header("Фильтр по дате")
+        start_datetime = datetime.datetime.combine(start_date, datetime.time(0, 0, 0)) if start_date else None
+        end_datetime = datetime.datetime.combine(end_date, datetime.time(23, 59, 59)) if end_date else None
+
+
+        # Фильтруем по дате, если задан диапазон
+        if start_datetime and end_datetime:
+            products = products[(products['Дата'] >= start_datetime) & (products['Дата'] <= end_datetime)]
+
         selected_indices = []  # Список для хранения выбранных индексов
        
         # Надпись в sidebar
