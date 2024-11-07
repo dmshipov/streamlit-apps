@@ -125,7 +125,7 @@ else:
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
-        
+        st.rerun()
 
     # Создаем форму
     form = st.form("Моя форма")
@@ -136,7 +136,7 @@ else:
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
         update_text()
-        st.rerun()
+        
 
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
