@@ -120,7 +120,7 @@ else:
     form.text_area("Введите текст для новой позиции", key='text_input')
 
     # Кнопка для преобразования в таблицу
-    if form.form_submit_button("+Добавить"):
+    if form.form_submit_button("Добавить"):
         update_text()
         st.rerun()
 
