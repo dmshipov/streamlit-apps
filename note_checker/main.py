@@ -118,7 +118,7 @@ else:
 
     # Текстовое поле для ввода текста
     form.text_area("Введите текст для новой позиции", key='text_input')
-
+    st.rerun()
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
         update_text()
@@ -143,7 +143,7 @@ else:
         st.sidebar.markdown("### Вывести столбец")
         
         # Чекбоксы для каждой функции
-        
+
         checkbox_price = st.sidebar.checkbox("Значение", key="checkbox_price")
      
         checkbox_quantity = st.sidebar.checkbox("Количество", key="checkbox_quantity")
