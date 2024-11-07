@@ -94,6 +94,7 @@ else:
     def update_text():
         # Получаем текущее значение ввода
         input_value = st.session_state.text_input
+        
         # Проверяем, не пусто ли оно
         products_list = []  # Инициализируем список заранее
         if input_value:
@@ -116,13 +117,13 @@ else:
                             "Фото": None,
                             "Дата": None
                         })
-                        
+        
         for product in products_list:
             # Добавляем данные в базу с помощью execute и параметров
             cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
                 (st.session_state.username, product["Наименование"], product["Значение"], product["Количество"], product['Вес'], product['Фото']))
             conn.commit()
-
+            
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
         st.rerun()
@@ -136,6 +137,7 @@ else:
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
         update_text()
+        st.rerun()
         
 
     # Отрисовка таблицы только если текст не пуст
