@@ -95,6 +95,7 @@ else:
         # Получаем текущее значение ввода
         input_value = st.session_state.text_input
         # Проверяем, не пусто ли оно
+        products_list = []  # Инициализируем список заранее
         if input_value:
             # Обработка введенных данных
             lines = input_value.split(' и ')
@@ -102,7 +103,6 @@ else:
             lines = [line.split('\n') for line in lines]
             lines = [item for sublist in lines for item in sublist]
 
-            products_list = []
             for line in lines:
                 parts = line.split(' И ')
                 for part in parts:
@@ -116,7 +116,7 @@ else:
                             "Фото": None,
                             "Дата": None
                         })
-
+                        
         for product in products_list:
             # Добавляем данные в базу с помощью execute и параметров
             cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
