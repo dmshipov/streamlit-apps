@@ -92,16 +92,30 @@ else:
     products['Дата'] = pd.to_datetime(products['Дата'])
 
     def update_text():
-        lines = st.session_state.text_input.split(' и ')
-        lines = [line.strip() for line in lines]
-        lines = [line.split('\n') for line in lines]
-        lines = [item for sublist in lines for item in sublist]
+        # Получаем текущее значение ввода
+        input_value = st.session_state.text_input
+        # Проверяем, не пусто ли оно
+        if input_value:
+            # Обработка введенных данных
+            lines = input_value.split(' и ')
+            lines = [line.strip() for line in lines]
+            lines = [line.split('\n') for line in lines]
+            lines = [item for sublist in lines for item in sublist]
 
-        products_list = []
-        for line in lines:
-            parts = line.split(' И ')
-            for part in parts:
-                products_list.append({"Наименование": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0, "Фото": None, "Дата": None})
+            products_list = []
+            for line in lines:
+                parts = line.split(' И ')
+                for part in parts:
+                    part_cleaned = part.strip()
+                    if part_cleaned:  # Добавляем только непустые строки
+                        products_list.append({
+                            "Наименование": part_cleaned,
+                            "Значение": 0,
+                            "Количество": 1,
+                            "Вес": 0,
+                            "Фото": None,
+                            "Дата": None
+                        })
 
         for product in products_list:
             # Добавляем данные в базу с помощью execute и параметров
