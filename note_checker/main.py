@@ -120,7 +120,7 @@ else:
     form.text_area("Введите текст для новой позиции", key='text_input')
 
     # Кнопка для преобразования в таблицу
-    if form.form_submit_button("Добавить"):
+    if form.form_submit_button("+Добавить"):
         update_text()
         st.rerun()
 
@@ -162,7 +162,7 @@ else:
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
                 # Проверяем, есть ли "+" в поле ввода
-                if "-" in row['Наименование']:
+                if "+" in row['Наименование']:
                     checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}', value=True)
                 else:
                     checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}')  # Чекбокс для выбора Наименованиеа
@@ -172,8 +172,8 @@ else:
 
                     # Поле для редактирования "Наименование"
                     new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
-                    if checkbox and "-" not in new_name:
-                        new_name = "-" + new_name 
+                    if checkbox and "+" not in new_name:
+                        new_name += "+" 
 
                     if new_name != row['Наименование']:
                         products.at[index, "Наименование"] = new_name
@@ -182,8 +182,8 @@ else:
                         conn.commit()
                 else:
                     # Удаляем "+" если чекбокс не выбран
-                    if "-" in row['Наименование']:
-                        new_name = row['Наименование'].replace("-", "")
+                    if "+" in row['Наименование']:
+                        new_name = row['Наименование'].replace("+", "")
                         products.at[index, "Наименование"] = new_name
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
