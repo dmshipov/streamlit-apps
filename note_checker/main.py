@@ -173,7 +173,8 @@ else:
                     # Поле для редактирования "Наименование"
                     new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
                     if checkbox and "+" not in new_name:
-                        new_name += "+" 
+                        new_name += "+"
+                        st.session_state[f'new_name_{index}'] = new_name 
 
                     if new_name != row['Наименование']:
                         products.at[index, "Наименование"] = new_name
