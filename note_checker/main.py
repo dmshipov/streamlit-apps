@@ -3,7 +3,6 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import Image
-import time
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -93,7 +92,6 @@ else:
     products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
 
     def update_text():
-        time.sleep(0.5)
         lines = st.session_state.text_input.split(' и ')
         lines = [line.strip() for line in lines]
         lines = [line.split('\n') for line in lines]
@@ -164,7 +162,7 @@ else:
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
                 # Проверяем, есть ли "+" в поле ввода
-                if "+" in row['Наименование']:
+                if "(+)" in row['Наименование']:
                     checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}', value=True)
                 else:
                     checkbox = st.checkbox(f"{row['Наименование']}", key=f'checkbox_{index}')  # Чекбокс для выбора Наименованиеа
@@ -174,8 +172,8 @@ else:
 
                     # Поле для редактирования "Наименование"
                     new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
-                    if checkbox and "+" not in new_name:
-                        new_name = "+" + new_name 
+                    if checkbox and "(+)" not in new_name:
+                        new_name = "(+)" + new_name 
 
                     if new_name != row['Наименование']:
                         products.at[index, "Наименование"] = new_name
@@ -184,8 +182,8 @@ else:
                         conn.commit()
                 else:
                     # Удаляем "+" если чекбокс не выбран
-                    if "+" in row['Наименование']:
-                        new_name = row['Наименование'].replace("+", "")
+                    if "(+)" in row['Наименование']:
+                        new_name = row['Наименование'].replace("(+)", "")
                         products.at[index, "Наименование"] = new_name
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
