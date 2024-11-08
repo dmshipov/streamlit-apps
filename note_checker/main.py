@@ -3,7 +3,6 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import Image
-import time
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -99,7 +98,6 @@ else:
     
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
-        time.sleep(0.5)
         # Получаем текущее значение ввода
         input_value = st.session_state.text_input
         
@@ -133,8 +131,9 @@ else:
             conn.commit()
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-        st.session_state.products = products.copy()
         st.rerun()
+        st.session_state.products = products.copy()
+        
 
         
 
