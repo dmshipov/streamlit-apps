@@ -139,8 +139,7 @@ else:
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
         update_text()
-        st.rerun()
-        
+
         
 
         
