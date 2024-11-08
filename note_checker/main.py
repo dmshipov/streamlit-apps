@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import Image
+import time
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -98,6 +99,7 @@ else:
     
     # Кнопка для преобразования в таблицу
     if form.form_submit_button("+Добавить"):
+        time.sleep(0.5)
         # Получаем текущее значение ввода
         input_value = st.session_state.text_input
         
@@ -150,13 +152,11 @@ else:
         else:
             sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
         
-        
-        start_date = st.sidebar.date_input("Start Date")
-        end_date = st.sidebar.date_input("End Date")
-
-
         # Фильтр по дате
         st.sidebar.header("Фильтр по дате")
+        start_date = st.sidebar.date_input("Start Date")
+        end_date = st.sidebar.date_input("End Date")
+       
         start_datetime = datetime.datetime.combine(start_date, datetime.time(0, 0, 0)) if start_date else None
         end_datetime = datetime.datetime.combine(end_date, datetime.time(23, 59, 59)) if end_date else None
 
@@ -337,13 +337,21 @@ else:
             st.write(f"Общее количество: {int(total_quantity)}")
             st.write(f"Общий вес: {total_weight} грамм")  # Вывод общей суммы веса
 
+        # Вывод общей таблицы    
+        show_table = st.sidebar.button("Показать таблицу")
+
+        if show_table:
+            st.dataframe(sorted_products)
+            close_table = st.button("Скрыть таблицу")
+            if close_table:
+                st.empty()
 
         # Кнопка для удаления текста и продуктов
         if st.button("Удалить все позиции"):
             cursor.execute("DELETE FROM products")
             conn.commit()
             st.rerun()
-
+       
         excel_file_path = f"{st.session_state.username}.xlsx"
         # Используем openpyxl вместо xlsxwriter
         with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
@@ -363,5 +371,6 @@ else:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
+            
     # Закрытие соединения с базой данных
     conn.close()
