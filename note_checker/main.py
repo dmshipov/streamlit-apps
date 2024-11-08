@@ -103,7 +103,7 @@ else:
         
         # Проверяем, не пусто ли оно
         products_list = []  # Инициализируем список заранее
-        if input_value:
+        if input_value is not None:
             # Обработка введенных данных
             lines = input_value.split(' и ')
             lines = [line.strip() for line in lines]
