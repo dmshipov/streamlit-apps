@@ -87,7 +87,7 @@ def update_text():
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
-        st.rerun()
+
         
 st.markdown('## Блокнот')
 
