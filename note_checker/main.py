@@ -3,7 +3,6 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import Image
-import time
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -90,8 +89,15 @@ else:
 
     # Преобразование столбца 'Дата' в тип datetime.datetime (с секундами)
     products['Дата'] = pd.to_datetime(products['Дата'])
+        
+    # Создаем форму
+    form = st.form("Моя форма")
 
-    def update_text():
+    # Текстовое поле для ввода текста
+    form.text_area("Введите текст для новой позиции", key='text_input')
+    
+    # Кнопка для преобразования в таблицу
+    if form.form_submit_button("+Добавить"):
         # Получаем текущее значение ввода
         input_value = st.session_state.text_input
         
@@ -128,17 +134,6 @@ else:
         st.session_state.products = products.copy()
         st.rerun()
 
-    # Создаем форму
-    form = st.form("Моя форма")
-
-    # Текстовое поле для ввода текста
-    form.text_area("Введите текст для новой позиции", key='text_input')
-    
-    # Кнопка для преобразования в таблицу
-    if form.form_submit_button("+Добавить"):
-        update_text()
-        time.sleep(0.5)
-        st.rerun()
         
 
     # Отрисовка таблицы только если текст не пуст
@@ -146,13 +141,11 @@ else:
         
         st.sidebar.markdown("### Фильтр таблицы")
         # Элементы управления для сортировки в боковой панели
-        sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес", "Дата"])
+        sort_by = st.sidebar.selectbox("Сортировать по:", ["id", "Наименование", "Значение", "Количество", "Вес", "Дата"], index=0)  # Добавлено id и index=0
         sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
-
-        # Применяем сортировку
-        if sort_by == "id":
-            sorted_products = products.sort_values(by='id', ascending=(sort_order == "По возрастанию"))
-        elif sort_by == "Наименование":
+        sorted_products = products.sort_values(by='id', ascending=(sort_order == "По возрастанию"))
+        # Применяем сортировку          
+        if sort_by == "Наименование":
             sorted_products = products.sort_values(by='Наименование', ascending=(sort_order == "По возрастанию"))
         else:
             sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
