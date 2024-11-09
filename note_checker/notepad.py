@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import datetime
 import sqlite3
-from PIL import Image
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -32,12 +31,8 @@ cursor.execute('''
 ''')
 
 conn.commit()
-# Функция для загрузки изображения
-def load_image(image_file):
-    image = Image.open(image_file)
-    img_byte_arr = io.BytesIO()
-    image.save(img_byte_arr, format='PNG')  # Или другой формат
-    return img_byte_arr.getvalue()
+
+
 # Система аутентификации
 def authenticate(username, password):
     cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
@@ -54,6 +49,45 @@ def register(username, password):
         st.error("Пользователь с таким именем уже существует.")
     else:
         st.success("Регистрация прошла успешно!")
+
+def update_text(): 
+    # Получаем текущее значение ввода
+    if st.session_state.text_input:
+        input_value = st.session_state.text_input
+        
+        # Проверяем, не пусто ли оно
+        products_list = []  # Инициализируем список заранее
+        if input_value is not None:
+            # Обработка введенных данных
+            lines = input_value.split(' и ')
+            lines = [line.strip() for line in lines]
+            lines = [line.split('\n') for line in lines]
+            lines = [item for sublist in lines for item in sublist]
+
+            for line in lines:
+                parts = line.split(' И ')
+                for part in parts:
+                    part_cleaned = part.strip()
+                    if part_cleaned:  # Добавляем только непустые строки
+                        products_list.append({
+                            "Наименование": part_cleaned,
+                            "Значение": 0,
+                            "Количество": 1,
+                            "Вес": 0,
+                            "Фото": None,
+                            "Дата": None
+                        })
+        
+        for product in products_list:
+            # Добавляем данные в базу с помощью execute и параметров
+            cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
+                (st.session_state.username, product["Наименование"], product["Значение"], product["Количество"], product['Вес'], product['Фото']))
+            conn.commit()
+            
+        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
+        st.session_state.products = products.copy()
+        st.session_state.products = pd.DataFrame(products_list)
+
 st.markdown('## Блокнот')
 
 if 'username' not in st.session_state:
@@ -86,79 +120,63 @@ if st.session_state.username is None:
 
             
 else:
-    st.write(f"Добро пожаловать, {st.session_state.username}!")
 
     # Основная логика работы с продуктами
     products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
 
-    def update_text():
-        lines = st.session_state.text_input.split(' и ')
-        lines = [line.strip() for line in lines]
-        lines = [line.split('\n') for line in lines]
-        lines = [item for sublist in lines for item in sublist]
-
-        products_list = []
-        for line in lines:
-            parts = line.split(' И ')
-            for part in parts:
-                products_list.append({"Наименование": part.strip(), "Значение": 0, "Количество": 1, "Вес": 0, "Фото": None, "Дата": None})
-
-        for product in products_list:
-            # Добавляем данные в базу с помощью execute и параметров
-            cursor.execute("INSERT INTO products (username, Наименование, Значение, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
-                (st.session_state.username, product["Наименование"], product["Значение"], product["Количество"], product['Вес'], product['Фото']))
-            conn.commit()
-
-        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-        st.session_state.products = products.copy()
+    # Преобразование столбца 'Дата' в тип datetime.datetime (с секундами)
+    products['Дата'] = pd.to_datetime(products['Дата'])
         
+    with st.expander("Добавить новую запись"):
+        # Campo ввода текста для новой позиции
+        if 'text_input' not in st.session_state:
+            st.session_state.text_input = ""
+        text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
-    # Создаем форму
-    form = st.form("Моя форма")
-
-    # Текстовое поле для ввода текста
-    form.text_area("Введите текст для новой позиции", key='text_input')
-
-    # Кнопка для преобразования в таблицу
-    if form.form_submit_button("+Добавить"):
-        update_text()
-        st.rerun()
+        # Кнопка для преобразования в таблицу
+        if st.button("+Добавить"):  
+            update_text()
+            # Сбрасываем text_input в st.session_state
+            st.rerun()
+            
+        # Создаем четыре столбца
+        col1, col2 = st.columns([1, 1]) 
+        # Чекбоксы для каждой функции
+        with col1:
+            checkbox_price = st.checkbox("Значение", key="checkbox_price")
+     
+        with col2:
+            checkbox_quantity = st.checkbox("Количество", key="checkbox_quantity")
+        col1, col2 = st.columns([1, 1]) 
+        with col1:
+            checkbox_weight = st.checkbox("Вес", key="checkbox_weight")
+       
+        with col2: 
+            checkbox_photo = st.checkbox("Фото", key="checkbox_photo")
 
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
+        
         st.sidebar.markdown("### Фильтр таблицы")
         # Элементы управления для сортировки в боковой панели
-        sort_by = st.sidebar.selectbox("Сортировать по:", ["Наименование", "Значение", "Количество", "Вес", "Дата"])
+        sort_by = st.sidebar.selectbox("Сортировать по:", ["id", "Наименование", "Значение", "Количество", "Вес", "Дата"], index=0)  # Добавлено id и index=0
         sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
-
-        # Применяем сортировку
+        sorted_products = products.sort_values(by='id', ascending=(sort_order == "По возрастанию"))
+        # Применяем сортировку          
         if sort_by == "Наименование":
-            sorted_products = products.copy()
+            sorted_products = products.sort_values(by='Наименование', ascending=(sort_order == "По возрастанию"))
         else:
             sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
-     
-        selected_indices = []  # Список для хранения выбранных индексов
-       
-        # Надпись в sidebar
-        st.sidebar.markdown("### Вывести столбец")
         
-        # Чекбоксы для каждой функции 
-            
-        checkbox_price = st.sidebar.checkbox("Значение", key="checkbox_price")
-     
-        checkbox_quantity = st.sidebar.checkbox("Количество", key="checkbox_quantity")
-       
-        checkbox_weight = st.sidebar.checkbox("Вес", key="checkbox_weight")
-       
-        checkbox_photo = st.sidebar.checkbox("Фото", key="checkbox_photo")
-
-        checkbox_all = st.sidebar.checkbox("Все", key="checkbox_all")
+        
+        selected_indices = []  # Список для хранения выбранных индексов
+                    
 
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
             # Создаем четыре столбца
             col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 1.1])  
-
+        
             with col1:
                 st.markdown("<br>", unsafe_allow_html=True)
                 # Проверяем, есть ли "+" в поле ввода
@@ -174,12 +192,18 @@ else:
                     new_name = st.text_input("Наименование", value=row['Наименование'], key=f'name_{index}')
                     if checkbox and "+" not in new_name:
                         new_name = "+" + new_name 
-
+                        products.at[index, "Наименование"] = new_name
+                        # Обновляем значение в базе данных
+                        cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
+                        conn.commit()
+                        st.rerun()
+                        
                     if new_name != row['Наименование']:
                         products.at[index, "Наименование"] = new_name
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
                         conn.commit()
+                        st.rerun()
                 else:
                     # Удаляем "+" если чекбокс не выбран
                     if "+" in row['Наименование']:
@@ -188,9 +212,10 @@ else:
                         # Обновляем значение в базе данных
                         cursor.execute("UPDATE products SET Наименование=? WHERE id=?", (new_name, row['id']))
                         conn.commit()
+                        st.rerun()
 
             with col2:
-                if checkbox_price or checkbox_all:  # Проверяем выбранную опцию
+                if checkbox_price:  # Проверяем выбранную опцию
                     # Сохраняем новое значение в session_state
                     if f'price_{index}' not in st.session_state:
                         st.session_state[f'price_{index}'] = str(row['Значение'])  
@@ -215,7 +240,7 @@ else:
 
 
             with col3:
-                if checkbox_quantity or checkbox_all:  # Проверяем выбранную опцию
+                if checkbox_quantity:  # Проверяем выбранную опцию
                     # Ввод количества с преобразованием в int
                     quantity = st.number_input("Количество", 
                                                 min_value=0,
@@ -235,7 +260,7 @@ else:
                             products.at[index, "Количество"] = None  # Или оставьте None
                 
             with col4:
-                if checkbox_weight or checkbox_all: # Проверяем выбранную опцию
+                if checkbox_weight: # Проверяем выбранную опцию
                     # Ввод веса с преобразованием в int
                     weight = st.number_input("Вес в гр.", 
                                             min_value=0,
@@ -254,7 +279,7 @@ else:
                             st.error("Введите корректное значение для 'Вес'")
                             products.at[index, "Вес"] = None  # Или оставьте None
             with col5:  # Новый столбец для загрузки фото с камеры
-                if checkbox_photo or checkbox_all:
+                if checkbox_photo:
                     if products.at[index, "Фото"] is not None:
                         # Если фото в базе данных, отображаем его
                         st.image(products.at[index, "Фото"], caption='Фото', use_column_width=True)
@@ -302,17 +327,25 @@ else:
             st.write(f"Общее количество: {int(total_quantity)}")
             st.write(f"Общий вес: {total_weight} грамм")  # Вывод общей суммы веса
 
+        # Вывод общей таблицы    
+        show_table = st.sidebar.button("Показать таблицу")
+
+        if show_table:
+            st.dataframe(sorted_products)
+            close_table = st.button("Скрыть таблицу")
+            if close_table:
+                st.empty()
 
         # Кнопка для удаления текста и продуктов
         if st.button("Удалить все позиции"):
             cursor.execute("DELETE FROM products")
             conn.commit()
             st.rerun()
-
+       
         excel_file_path = f"{st.session_state.username}.xlsx"
         # Используем openpyxl вместо xlsxwriter
         with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-            products[["Наименование", "Значение", "Количество", "Вес"]].to_excel(writer, index=False, sheet_name='Products')
+            products[["Наименование", "Значение", "Количество", "Вес", "Дата"]].to_excel(writer, index=False, sheet_name='Products')
 
         with open(excel_file_path, "rb") as f:
             # Получаем текущую дату и время в формате "YYYY-MM-DD_HH-MM-SS"
@@ -328,5 +361,6 @@ else:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
+            
     # Закрытие соединения с базой данных
     conn.close()
