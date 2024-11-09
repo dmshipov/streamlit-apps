@@ -8,4 +8,6 @@ pdfplumber
 moviepy
 pydub
 noisereduce
-SpeechRecognition
+Speech Recognition
+numpy
+
