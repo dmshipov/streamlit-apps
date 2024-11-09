@@ -1,4 +1,4 @@
-streamlit
+streamlit==1.8.1
 sounddevice
 soundfile
 requests
@@ -8,6 +8,12 @@ pdfplumber
 moviepy
 pydub
 noisereduce
+<<<<<<< HEAD
 Speech Recognition
 numpy
+=======
+SpeechRecognition
+opencv-python==4.5.4.60
+numpy==1.22.3
+>>>>>>> 55137f01f3e848688c2aeef9c759d73ce881c396
 

@@ -17,16 +17,6 @@ from pydub import AudioSegment
 import noisereduce as nr
 
 
-def record_audio(duration, samplerate=44100):
-    st.session_state.recording = True
-    st.session_state.status_msg = "Началась запись..."
-    # Начинаем запись
-    audio_data = sd.rec(int(samplerate * duration), samplerate=samplerate, channels=1)
-    sd.wait()
-    st.session_state.recording = False
-    st.session_state.status_msg = "Запись завершена!"
-    return audio_data
-
 def recognize_speech(audio_data, samplerate, language="ru-RU"):
     with io.BytesIO() as f:
         sf.write(f, audio_data, samplerate, format='WAV')
@@ -266,38 +256,3 @@ if file_type == "Голосовой набор текста":
         st.session_state.checked_lines = []
     if 'initial_text' not in st.session_state:
         st.session_state.initial_text = ""
-
-    # Создаем форму
-    form = st.form("Моя форма")
-    
-    # Кнопка для голосового ввода
-    duration = st.slider("Выберите длительность записи (в секундах)", 1, 60, 3, step=1)
-
-    if form.form_submit_button("Начать голосовой набор"):
-        with st.spinner("Запись..."):
-            audio_data = record_audio(duration)
-            if audio_data is not None:
-                recognized_text = recognize_speech(audio_data, 44100)
-                if recognized_text is not None:
-                    # Обновляем текст в st.session_state
-                    st.session_state.initial_text += recognized_text + "\n"
-
-    # Создаем text_area ВНЕ формы
-    text_area = st.text_area("Распознанный текст", st.session_state.initial_text)
-
-    # Кнопка для удаления текста
-    if text_area:
-        st.button("Удалить текст", on_click=history_reset_function)
-
-    # Отрисовка чекбоксов
-    lines = st.session_state.initial_text.splitlines()
-    checked_lines = st.session_state.checked_lines
-
-    for index, line in enumerate(lines):
-        is_checked = line in checked_lines
-        checkbox = st.checkbox(line, value=is_checked, key=f'checkbox_{index}')  # Используем текущий статус чекбокса
-
-        if checkbox and line not in checked_lines:
-            checked_lines.append(line)
-        elif not checkbox and line in checked_lines:
-            checked_lines.remove(line)
