@@ -327,40 +327,39 @@ else:
             st.write(f"Общее количество: {int(total_quantity)}")
             st.write(f"Общий вес: {total_weight} грамм")  # Вывод общей суммы веса
 
-        # Вывод общей таблицы    
-        show_table = st.sidebar.button("Показать таблицу")
+            # Вывод общей таблицы    
+            show_table = st.sidebar.button("Показать таблицу")
 
-        if show_table:
-            st.dataframe(sorted_products.reset_index(drop=True)) # Добавлено reset_index(drop=True)
-            close_table = st.button("Скрыть таблицу")
-            if close_table:
-                st.empty()
+            if show_table:
+                st.dataframe(sorted_products.reset_index(drop=True)) # Добавлено reset_index(drop=True)
+                close_table = st.button("Скрыть таблицу")
+                if close_table:
+                    st.empty()
 
-        # Кнопка для удаления текста и продуктов
-        if st.button("Удалить все позиции"):
-            cursor.execute("DELETE FROM products")
-            conn.commit()
-            st.rerun()
-       
-        excel_file_path = f"{st.session_state.username}.xlsx"
-        # Используем openpyxl вместо xlsxwriter
-        with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-            products[["id", "username", "Наименование", "Значение", "Количество", "Вес", "Фото" "Дата"]].to_excel(writer, index=False, sheet_name='Products')
+            # Кнопка для удаления текста и продуктов
+            if st.button("Удалить все позиции"):
+                cursor.execute("DELETE FROM products")
+                conn.commit()
+                st.rerun()
+                
+            excel_file_path = f"{st.session_state.username}.xlsx"
+            # Используем openpyxl вместо xlsxwriter
+            with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
+                products[["Наименование", "Значение", "Количество", "Вес", "Дата"]].to_excel(writer, index=False, sheet_name='Products')
 
-        with open(excel_file_path, "rb") as f:
-            # Получаем текущую дату и время в формате "YYYY-MM-DD_HH-MM-SS"
-            current_datetime = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            
-            # Формируем имя файла с датой и временем
-            file_name = f"{st.session_state.username}_{current_datetime}.xlsx"
-            
-            st.sidebar.download_button(
-                label="Скачать таблицу в формате Excel",
-                data=f,
-                file_name=file_name,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
+            with open(excel_file_path, "rb") as f:
+                # Получаем текущую дату и время в формате "YYYY-MM-DD_HH-MM-SS"
+                current_datetime = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                
+                # Формируем имя файла с датой и временем
+                file_name = f"{st.session_state.username}_{current_datetime}.xlsx"
+                
+                st.sidebar.download_button(
+                    label="Скачать таблицу в формате Excel",
+                    data=f,
+                    file_name=file_name,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
             
     # Закрытие соединения с базой данных
     conn.close()
