@@ -313,7 +313,7 @@ else:
                 for index, row in sorted_products.iterrows():
                     if row['Наименование'] is not None:  # Проверяем, нужно ли добавить элемент для удаления
                         delete_items.append(row['Наименование'])
-                st.sidebar.markdown("---")
+             
                 # Выводим все элементы в одном expander
                 with st.sidebar.expander("Удалить позицию"):
                     for index, item in enumerate(delete_items):
@@ -345,11 +345,27 @@ else:
                                         
                     
                 
+                
                 # Вывод общей таблицы    
                 show_table = st.sidebar.button("Показать таблицу")
 
                 if show_table:
-                    st.dataframe(sorted_products.reset_index(drop=True)) # Добавлено reset_index(drop=True)
+                    # Выбираем нужные столбцы
+                    selected_columns = ["Наименование", "Цена", "Количество", "Вес", "Дата"]
+                    
+                    # Фильтруем таблицу по выбранным столбцам
+                    table_data = sorted_products[selected_columns]
+
+                    # Устанавливаем "Наименование" как индекс
+                    table_data = table_data.set_index("Наименование")
+                    table_data = table_data.reset_index()
+
+                    # Переиндексируем с 1
+                    table_data.index = range(1, len(table_data) + 1)
+
+                    # Выводим таблицу с индексом
+                    st.dataframe(table_data) 
+
                     close_table = st.button("Скрыть таблицу")
                     if close_table:
                         st.empty()
