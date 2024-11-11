@@ -399,8 +399,9 @@ else:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             Задача TEXT,
             Комментарий TEXT,
-            Приоритет TEXT,
-            План DATE
+            План DATE,
+            Приоритет TEXT
+            
 
         )''')
 
@@ -426,7 +427,7 @@ else:
 
         # Создание списка имен столбцов для последующего использования
         column_names = [description[0] for description in cursor.description]
-
+        st.markdown('## Планировщик задач')
         # Input fields for adding a new task
         with st.expander("Добавить новую задачу"):
 
@@ -495,11 +496,11 @@ else:
                     if task_to_edit:
                         edited_task = st.text_input("Задача", task_to_edit[1])
                         edited_comment = st.text_input("Комментарий", task_to_edit[2])
-                        edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=priorities.index(task_to_edit[3]))
+                        edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=priorities.index(task_to_edit[4]))
 
                         # Преобразуем дату в datetime.date 
                         if task_to_edit[4]:
-                            edited_plan = st.date_input("План", datetime.datetime.strptime(task_to_edit[4], "%Y-%m-%d").date())
+                            edited_plan = st.date_input("План", datetime.datetime.strptime(task_to_edit[3], "%Y-%m-%d").date())
                         else:
                             edited_plan = st.date_input("План") 
 
