@@ -429,12 +429,12 @@ else:
         column_names = [description[0] for description in cursor.description]
         st.markdown('## Список задач')
         # Input fields for adding a new task
-        with st.expander("Добавить задачу"):
+        with st.expander("Добавить новую задачу"):
 
             task = st.text_input("Задача")
             comment = st.text_input("Комментарий")
             priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=0)
-            plan = st.date_input("План")
+            plan = st.date_input("План", format="DD.MM.YYYY")
 
 
             if st.button("Добавить"):
@@ -500,16 +500,11 @@ else:
                         edited_task = st.text_input("Задача", task_to_edit[1])
                         edited_comment = st.text_input("Комментарий", task_to_edit[2])
                         edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=priorities.index(task_to_edit[4]))
+                        edited_plan = st.date_input("План", format="DD.MM.YYYY")
 
-                        # Преобразуем дату в datetime.date 
-                        if task_to_edit[4]:
-                            edited_plan = st.date_input("План", datetime.datetime.strptime(task_to_edit[3], "%d-%m-%Y").date())
-                        else:
-                            edited_plan = st.date_input("План") 
-
-                        # Добавляем кнопку сохранения изменений
+                         # Добавляем кнопку сохранения изменений
                         if st.form_submit_button("Сохранить изменения"):
-                            edit_task(cursor, int(selected_task_id_edit[0]), edited_task, edited_comment, edited_priority, edited_plan)
+                            edit_task(cursor, task_id_to_edit, edited_task, edited_comment, edited_priority, edited_plan)  # Передали task_id_to_edit
                             st.success("Задача обновлена!")
                             conn.commit()
                             st.rerun()
