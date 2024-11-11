@@ -427,7 +427,7 @@ else:
 
         # Создание списка имен столбцов для последующего использования
         column_names = [description[0] for description in cursor.description]
-        st.markdown('## Планировщик задач')
+        st.markdown('## План задач')
         # Input fields for adding a new task
         with st.expander("Добавить новую задачу"):
 
