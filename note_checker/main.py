@@ -438,6 +438,8 @@ else:
 
 
             if st.button("Добавить"):
+                if plan:
+                    plan = plan.strftime('%d-%m-%Y')
                 add_new_row(cursor, task, comment, priority, plan)
                 st.success("Задача добавлена!")
                 conn.commit()
@@ -491,7 +493,8 @@ else:
             with st.sidebar.form("edit_form"):
                 selected_task_id_edit = st.selectbox("Задача для редактирования", task_options, format_func=lambda x: x[1])
                 if selected_task_id_edit:
-                    cursor.execute("SELECT * FROM planing WHERE id=?", (int(selected_task_id_edit[0]),))
+                    task_id_to_edit = int(selected_task_id_edit[0]) 
+                    cursor.execute("SELECT * FROM planing WHERE id=?", (task_id_to_edit,))
                     task_to_edit = cursor.fetchone()
                     if task_to_edit:
                         edited_task = st.text_input("Задача", task_to_edit[1])
@@ -500,7 +503,7 @@ else:
 
                         # Преобразуем дату в datetime.date 
                         if task_to_edit[4]:
-                            edited_plan = st.date_input("План", datetime.datetime.strptime(task_to_edit[3], "%Y-%m-%d").date())
+                            edited_plan = st.date_input("План", datetime.datetime.strptime(task_to_edit[3], "%d-%m-%Y").date())
                         else:
                             edited_plan = st.date_input("План") 
 
