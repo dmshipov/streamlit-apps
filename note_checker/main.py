@@ -407,7 +407,7 @@ else:
                 # Проверка наличия необходимых столбцов
                 missing_columns = set(required_columns) - set(df.columns)
                 if missing_columns:
-                    st.error(f"В файле отсутствуют следующие столбцы: {', '.join(missing_columns)}")
+                    st.error(f"В файле отсутствуют следующие столбцы: {', '.join(missing_columns)}. Загрузите соответствующий файл.")
                 
                 else:
                     for index, row in df.iterrows():
@@ -557,7 +557,7 @@ else:
             required_columns = ['Задача', 'Комментарий', 'Приоритет', 'План']
             missing_columns = set(required_columns) - set(df.columns)
             if missing_columns:
-                st.error(f"В файле отсутствуют следующие столбцы: {', '.join(missing_columns)}. Загрузите соотвествующий файл")
+                st.error(f"В файле отсутствуют следующие столбцы: {', '.join(missing_columns)}. Загрузите соответствующий файл")
 
             else:
                 for index, row in df.iterrows():
