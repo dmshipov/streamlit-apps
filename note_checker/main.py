@@ -313,7 +313,13 @@ else:
                 for index, row in sorted_products.iterrows():
                     if row['Наименование'] is not None:  # Проверяем, нужно ли добавить элемент для удаления
                         delete_items.append(row['Наименование'])
-             
+
+                # Кнопка для удаления текста и продуктов
+                if st.button("Удалить все позиции"):
+                    cursor.execute("DELETE FROM products")
+                    conn.commit()
+                    st.rerun()
+
                 # Выводим все элементы в одном expander
                 with st.sidebar.expander("Удалить позицию"):
                     for index, item in enumerate(delete_items):
@@ -326,11 +332,7 @@ else:
                             st.rerun()
                             # Обновляем данные в st.session_state
                             st.session_state.products = products
-                # Кнопка для удаления текста и продуктов
-                    if st.button("Удалить все позиции"):
-                        cursor.execute("DELETE FROM products")
-                        conn.commit()
-                        st.rerun()
+                
 
                 # Вычисляем общую сумму и количество для выбранных Наименованиеов
                 if selected_indices:
@@ -389,7 +391,32 @@ else:
                         file_name=file_name,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+           # Загрузка CSV файла
+            uploaded_file = st.sidebar.file_uploader("Загрузите CSV файл", type=['csv'])
+            if uploaded_file is not None:
+                # Чтение CSV файла
+                df = pd.read_csv(uploaded_file)
+                
+                # Список необходимых столбцов
+                required_columns = ['Наименование', 'Цена', 'Количество', 'Вес', 'Фото']
+                
+                for index, row in df.iterrows():
+                    # Используем get() для получения значений из строки, с указанием значения по умолчанию
+                    name = row.get('Наименование', '')
+                    price = row.get('Цена', '')
+                    quantity = row.get('Количество', '')
+                    weight = row.get('Вес', '')
+                    photo = row.get('Фото', '')
                     
+                    # Выполнение запроса на вставку данных
+                    cursor.execute("""
+                        INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
+                        VALUES (?, ?, ?, ?, ?, ?, date('now'))
+                    """, (st.session_state.username, name, price, quantity, weight, photo))
+        
+                conn.commit()
+                st.success("Данные успешно загружены!")
+
             # Закрытие соединения с базой данных
             conn.close()
 
@@ -488,27 +515,49 @@ else:
                     conn.commit()
                     st.rerun()
 
-            st.sidebar.markdown("### Редактирование задачи")
+            
 
-            with st.sidebar.form("edit_form"):
+
+            with st.sidebar.expander("### Редактирование задачи"):
                 selected_task_id_edit = st.selectbox("Задача для редактирования", task_options, format_func=lambda x: x[1])
                 if selected_task_id_edit:
                     task_id_to_edit = int(selected_task_id_edit[0]) 
                     cursor.execute("SELECT * FROM planing WHERE id=?", (task_id_to_edit,))
                     task_to_edit = cursor.fetchone()
                     if task_to_edit:
-                        edited_task = st.text_input("Задача", task_to_edit[1])
-                        edited_comment = st.text_input("Комментарий", task_to_edit[2])
-                        edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=priorities.index(task_to_edit[4]))
-                        edited_plan = st.date_input("План", format="DD.MM.YYYY")
+                        with st.form(key='edit_form'):  # Создаем форму
+                            edited_task = st.text_input("Задача", task_to_edit[1])
+                            edited_comment = st.text_input("Комментарий", task_to_edit[2])
+                            edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=priorities.index(task_to_edit[4]))  
+                            edited_plan = st.date_input("План", format="DD.MM.YYYY", key="edited_plan")
 
-                         # Добавляем кнопку сохранения изменений
-                        if st.form_submit_button("Сохранить изменения"):
-                            edit_task(cursor, task_id_to_edit, edited_task, edited_comment, edited_priority, edited_plan)  # Передали task_id_to_edit
-                            st.success("Задача обновлена!")
-                            conn.commit()
-                            st.rerun()
+                            # Добавляем кнопку сохранения изменений ВНУТРИ ФОРМЫ
+                            if st.form_submit_button("Сохранить изменения"):
+                                edit_task(cursor, task_id_to_edit, edited_task, edited_comment, edited_priority, edited_plan)  # Передали task_id_to_edit
+                                st.success("Задача обновлена!")
+                                conn.commit()
+                                st.rerun()
 
+        uploaded_file = st.sidebar.file_uploader("Загрузите CSV файл", type=['csv'])
 
+        if uploaded_file is not None:
+            df = pd.read_csv(uploaded_file)
+
+            # Assuming the CSV has columns: 'Задача', 'Комментарий', 'Приоритет', 'План'
+            # Adjust column names if needed
+            for index, row in df.iterrows():
+                task = row['Задача']
+                comment = row['Комментарий']
+                priority = row['Приоритет']
+                plan = row['План']
+
+                cursor.execute("""
+                    INSERT INTO planing (Задача, Комментарий, Приоритет, План) 
+                    VALUES (?, ?, ?, ?)
+                """, (task, comment, priority, plan))
+
+            conn.commit()
+            st.success("Данные из CSV успешно загружены!")
+            
         # Commit changes to the database
         conn.commit()
