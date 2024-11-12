@@ -149,10 +149,10 @@ else:
             col1, col2 = st.columns([1, 1]) 
             # Чекбоксы для каждой функции
             with col1:
-                checkbox_price = st.checkbox("Цена", key="checkbox_price")
+                checkbox_price = st.checkbox("Цена", key="checkbox_price", value=True)
         
             with col2:
-                checkbox_quantity = st.checkbox("Количество", key="checkbox_quantity")
+                checkbox_quantity = st.checkbox("Количество", key="checkbox_quantity", value=True)
             col1, col2 = st.columns([1, 1]) 
             with col1:
                 checkbox_weight = st.checkbox("Вес", key="checkbox_weight")
@@ -394,11 +394,13 @@ else:
         # Determine file type and read data accordingly
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file)
+           
         elif uploaded_file.name.endswith('.xlsx'):
             df = pd.read_excel(uploaded_file)
+           
         else:
             st.error("Неверный тип файла. Пожалуйста, загрузите файл CSV или XLSX.")
-    
+      
 
         # Список необходимых столбцов
         required_columns = ['Наименование', 'Цена', 'Количество', 'Вес']
@@ -425,7 +427,7 @@ else:
 
             conn.commit()
             st.success("Данные успешно загружены!")
-
+            
     # Закрытие соединения с базой данных
     conn.close()
 
