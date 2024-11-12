@@ -85,6 +85,19 @@ cursor.execute('''
     )
 ''')
 
+# Creating the planing table if it does not exist
+cursor.execute('''CREATE TABLE IF NOT EXISTS planing (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Задача TEXT,
+    Комментарий TEXT,
+    План DATE,
+    Приоритет TEXT
+    
+
+)''')
+ 
+
+
 conn.commit()
 
 
@@ -432,25 +445,8 @@ else:
             # Закрытие соединения с базой данных
             conn.close()
 
-    else:
-        # Создаем соединение с базой данных
-        conn = sqlite3.connect('my_data_planing.db')
-        cursor = conn.cursor()
-
-
-        # Creating the planing table if it does not exist
-        cursor.execute('''CREATE TABLE IF NOT EXISTS planing (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Задача TEXT,
-            Комментарий TEXT,
-            План DATE,
-            Приоритет TEXT
-            
-
-        )''')
-
-
-    
+    else:     
+ 
         # Function to add a new row in planing
         def add_new_row(cursor, task, comment, priority, plan):
             cursor.execute("INSERT INTO planing (Задача, Комментарий, Приоритет, План) VALUES (?, ?, ?, ?)", 
