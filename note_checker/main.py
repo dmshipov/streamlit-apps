@@ -433,16 +433,31 @@ else:
             conn.close()
 
     else:
-        # Creating the planing table if it does not exist
-        cursor.execute('''CREATE TABLE IF NOT EXISTS planing (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Задача TEXT,
-            Комментарий TEXT,
-            План DATE,
-            Приоритет TEXT
-            
+        # Функция для создания базы данных
+        def create_database(user_id):
+            conn = sqlite3.connect(f'database_{user_id}.db')
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS planing (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Задача TEXT,
+                    Комментарий TEXT,
+                    План DATE,
+                    Приоритет TEXT
+                )
+            """)
+            conn.commit()
 
-        )''')
+
+        # Получение ID пользователя (нужно реализовать логику получения ID)
+        user_id = "user_id"  # Замените на реальный код получения ID
+
+        # Создание базы данных для пользователя
+        create_database(user_id)
+
+        # Подключение к базе данных
+        conn = sqlite3.connect(f'database_{user_id}.db')
+        cursor = conn.cursor()
 
 
     
