@@ -337,7 +337,8 @@ else:
                     total_sum = (products.loc[selected_indices, "Цена"] * 
                                 products.loc[selected_indices, "Количество"]).sum()
                     total_quantity = products.loc[selected_indices, "Количество"].sum()
-                    total_weight = products.loc[selected_indices, "Вес"].sum()  # Сумма веса
+                    total_weight = (products.loc[selected_indices, "Вес"].sum() * 
+                                products.loc[selected_indices, "Количество"]).sum()  # Сумма веса
                     
                     st.write(f"Общая сумма значений: {total_sum:.2f}")
                     st.write(f"Общее количество: {int(total_quantity)}")
