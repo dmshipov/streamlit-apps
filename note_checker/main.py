@@ -372,7 +372,7 @@ else:
 
                                         
                 excel_file_path = f"{st.session_state.username}.xlsx"
-                # Используем openpyxl вместо xlsxwriter
+       
                 with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
                     products[["Наименование", "Цена", "Количество", "Вес", "Дата", "Фото"]].to_excel(writer, index=False, sheet_name='Products')
 
@@ -384,11 +384,12 @@ else:
                     file_name = f"{st.session_state.username}_{current_datetime}.xlsx"
                     
                     st.sidebar.download_button(
-                        label="Скачать таблицу в формате Excel",
+                        label="Скачать таблицу в Excel",
                         data=f,
                         file_name=file_name,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+            # Добавим загрузку файла
             uploaded_file = st.sidebar.file_uploader("Загрузите CSV или XLSX файл", type=['csv', 'xlsx'])
 
             if uploaded_file is not None:
@@ -522,9 +523,7 @@ else:
                     else:
                         st.warning("Выберите задачу для удаления")
                     conn.commit()
-                    st.rerun()
-
-            
+                    st.rerun()         
 
 
             with st.sidebar.expander("### Редактирование задачи"):
@@ -546,6 +545,28 @@ else:
                                 st.success("Задача обновлена!")
                                 conn.commit()
                                 st.rerun()
+            
+            # Создание DataFrame из данных таблицы
+            df = pd.DataFrame(tasks_df)
+            # Сохранение DataFrame в файл xlsx
+            excel_file_path = f"{st.session_state.username}.xlsx"
+            with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name='Planing')
+
+            # Открытие файла для скачивания
+            with open(excel_file_path, "rb") as f:
+                # Получаем текущую дату и время в формате "YYYY-MM-DD_HH-MM-SS"
+                current_datetime = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                
+                # Формируем имя файла с датой и временем
+                file_name = f"{st.session_state.username}_{current_datetime}.xlsx"
+                
+                st.sidebar.download_button(
+                    label="Скачать таблицу в Excel",
+                    data=f,
+                    file_name=file_name,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
         uploaded_file = st.sidebar.file_uploader("Загрузите CSV файл", type=['csv'])
 
