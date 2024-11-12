@@ -510,12 +510,11 @@ else:
                 edit_task(cursor, row['id'], row['Задача'], row['Комментарий'], row['Приоритет'], row['План'])
 
         
-            st.sidebar.markdown("### Удаление задачи")
             with st.sidebar:
                 cursor.execute("SELECT id, Задача FROM planing")
                 tasks_for_delete = cursor.fetchall()
                 task_options = [(str(task[0]), task[1]) for task in tasks_for_delete]
-                selected_task_id = st.selectbox("Задача для удаления", task_options, format_func=lambda x: x[1])
+                selected_task_id = st.selectbox("Задача для удаления:", task_options, format_func=lambda x: x[1])
                 if st.button("Удалить задачу"):
                     if selected_task_id:  # Проверка перед удалением 
                         delete_task(cursor, int(selected_task_id[0]))
