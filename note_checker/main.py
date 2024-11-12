@@ -433,7 +433,6 @@ else:
             conn.close()
 
     else:
-        
         # Creating the planing table if it does not exist
         cursor.execute('''CREATE TABLE IF NOT EXISTS planing (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -444,13 +443,13 @@ else:
             
 
         )''')
-        
+
 
     
         # Function to add a new row in planing
         def add_new_row(cursor, task, comment, priority, plan):
-            cursor.execute("INSERT INTO planing (username, Задача, Комментарий, Приоритет, План) VALUES (?, ?, ?, ?, ?)", 
-                        (username, task, comment, priority, plan))
+            cursor.execute("INSERT INTO planing (Задача, Комментарий, Приоритет, План) VALUES (?, ?, ?, ?)", 
+                        (task, comment, priority, plan))
             
         # Function to edit an existing task
         def edit_task(cursor, task_id, task, comment, priority, plan):
