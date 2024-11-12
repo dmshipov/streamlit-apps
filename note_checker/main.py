@@ -119,7 +119,6 @@ if st.session_state.username is None:
 
             
 else:
-    st.sidebar.markdown('# Приложение')
     file_type = st.sidebar.radio("Выберите приложение:", ("Блокнот", "Планировщик задач"))
     st.sidebar.markdown('---')
     if file_type == "Блокнот":
@@ -164,7 +163,6 @@ else:
                     with col2: 
                         checkbox_photo = st.checkbox("Фото", key="checkbox_photo")
 
-                st.sidebar.markdown("### Фильтр таблицы")
                 # Элементы управления для сортировки в боковой панели
                 sort_by = st.sidebar.selectbox("Сортировать по:", ["id", "Наименование", "Цена", "Количество", "Вес", "Дата"], index=0)  # Добавлено id и index=0
                 sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
@@ -376,7 +374,7 @@ else:
                 excel_file_path = f"{st.session_state.username}.xlsx"
                 # Используем openpyxl вместо xlsxwriter
                 with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-                    products[["Наименование", "Цена", "Количество", "Вес", "Дата"]].to_excel(writer, index=False, sheet_name='Products')
+                    products[["Наименование", "Цена", "Количество", "Вес", "Дата", "Фото"]].to_excel(writer, index=False, sheet_name='Products')
 
                 with open(excel_file_path, "rb") as f:
                     # Получаем текущую дату и время в формате "YYYY-MM-DD_HH-MM-SS"
@@ -391,31 +389,43 @@ else:
                         file_name=file_name,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
-           # Загрузка CSV файла
-            uploaded_file = st.sidebar.file_uploader("Загрузите CSV файл", type=['csv'])
+            uploaded_file = st.sidebar.file_uploader("Загрузите CSV или XLSX файл", type=['csv', 'xlsx'])
+
             if uploaded_file is not None:
-                # Чтение CSV файла
-                df = pd.read_csv(uploaded_file)
-                
+                # Determine file type and read data accordingly
+                if uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
+                elif uploaded_file.name.endswith('.xlsx'):
+                    df = pd.read_excel(uploaded_file)
+                else:
+                    st.error("Неверный тип файла. Пожалуйста, загрузите файл CSV или XLSX.")
+            
+
                 # Список необходимых столбцов
-                required_columns = ['Наименование', 'Цена', 'Количество', 'Вес', 'Фото']
+                required_columns = ['Наименование', 'Цена', 'Количество', 'Вес']
+
+                # Проверка наличия необходимых столбцов
+                missing_columns = set(required_columns) - set(df.columns)
+                if missing_columns:
+                    st.error(f"В файле отсутствуют следующие столбцы: {', '.join(missing_columns)}")
                 
-                for index, row in df.iterrows():
-                    # Используем get() для получения значений из строки, с указанием значения по умолчанию
-                    name = row.get('Наименование', '')
-                    price = row.get('Цена', '')
-                    quantity = row.get('Количество', '')
-                    weight = row.get('Вес', '')
-                    photo = row.get('Фото', '')
-                    
-                    # Выполнение запроса на вставку данных
-                    cursor.execute("""
-                        INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
-                        VALUES (?, ?, ?, ?, ?, ?, date('now'))
-                    """, (st.session_state.username, name, price, quantity, weight, photo))
-        
-                conn.commit()
-                st.success("Данные успешно загружены!")
+                else:
+                    for index, row in df.iterrows():
+                        # Используем get() для получения значений из строки, с указанием значения по умолчанию
+                        name = row.get('Наименование', '')
+                        price = row.get('Цена', '')
+                        quantity = row.get('Количество', '')
+                        weight = row.get('Вес', '')
+                        photo = row.get('Фото', '')
+
+                        # Выполнение запроса на вставку данных
+                        cursor.execute("""
+                            INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
+                            VALUES (?, ?, ?, ?, ?, ?, date('now'))
+                                    """, (st.session_state.username, name, price, quantity, weight, photo))
+
+                    conn.commit()
+                    st.success("Данные успешно загружены!")
 
             # Закрытие соединения с базой данных
             conn.close()
@@ -543,21 +553,27 @@ else:
         if uploaded_file is not None:
             df = pd.read_csv(uploaded_file)
 
-            # Assuming the CSV has columns: 'Задача', 'Комментарий', 'Приоритет', 'План'
-            # Adjust column names if needed
-            for index, row in df.iterrows():
-                task = row['Задача']
-                comment = row['Комментарий']
-                priority = row['Приоритет']
-                plan = row['План']
+            # Проверка на наличие необходимых столбцов
+            required_columns = ['Задача', 'Комментарий', 'Приоритет', 'План']
+            missing_columns = set(required_columns) - set(df.columns)
+            if missing_columns:
+                st.error(f"В файле отсутствуют следующие столбцы: {', '.join(missing_columns)}. Загрузите соотвествующий файл")
 
-                cursor.execute("""
-                    INSERT INTO planing (Задача, Комментарий, Приоритет, План) 
-                    VALUES (?, ?, ?, ?)
-                """, (task, comment, priority, plan))
+            else:
+                for index, row in df.iterrows():
+                    task = row['Задача']
+                    comment = row['Комментарий']
+                    priority = row['Приоритет']
+                    plan = row['План']
 
-            conn.commit()
-            st.success("Данные из CSV успешно загружены!")
+                    cursor.execute("""
+                        INSERT INTO planing (Задача, Комментарий, Приоритет, План) 
+                        VALUES (?, ?, ?, ?)
+                    """, (task, comment, priority, plan))
+                st.success("Данные из CSV успешно загружены!")
+                conn.commit()
             
+
+
         # Commit changes to the database
         conn.commit()
