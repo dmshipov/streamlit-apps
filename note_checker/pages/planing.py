@@ -77,11 +77,15 @@ if st.session_state.username is None:
         if register_button:
             register(new_username, new_password)
 else:
-    # Function to add a new row in planing
-    def add_new_row(cursor, task, comment, priority, plan): 
-        cursor.execute("INSERT INTO planing (Задача, Комментарий, Приоритет, План) VALUES (?, ?, ?, ?)", 
-                    (task, comment, priority, plan)) 
-        
+    # Функция для добавления новой строки
+    def add_new_row(cursor, task, comment, priority, plan, username):
+    # Добавить новую задачу, используя username
+        cursor.execute("INSERT INTO planing (Задача, Комментарий, Приоритет, План, username) VALUES (?, ?, ?, ?, ?)",
+                 (task, comment, priority, plan, username)) 
+        conn.commit()
+        st.rerun()
+
+
     # Function to edit an existing task
     def edit_task(cursor, task_id, task, comment, priority, plan):
         cursor.execute("UPDATE planing SET Задача=?, Комментарий=?, Приоритет=?, План=? WHERE id=?",
@@ -91,8 +95,7 @@ else:
     def delete_task(cursor, task_id):
         cursor.execute("DELETE FROM planing WHERE id=?", (task_id,))
 
-    # Fetch and display tasks
-    cursor.execute("SELECT * FROM planing")
+    cursor.execute("SELECT * FROM planing WHERE username=?", (st.session_state.username,))
     tasks = cursor.fetchall()
 
     # Создание списка имен столбцов для последующего использования
@@ -110,11 +113,13 @@ else:
         if st.button("Добавить"):
             if plan:
                 plan = plan.strftime('%d-%m-%Y')
-            add_new_row(cursor, task, comment, priority, plan)
-            st.success("Задача добавлена!")
-            conn.commit()
-            st.rerun()
-
+            if 'username' in st.session_state:
+                # Добавление username при вызове функции
+                add_new_row(cursor, task, comment, priority, plan, st.session_state.username) 
+                st.success("Задача добавлена!")                
+            else:
+                st.warning("Имя пользователя не установлено.")
+            
     # Преобразование извлеченных данных в список словарей
     tasks_dict = [dict(zip(column_names, task)) for task in tasks]
 
@@ -140,7 +145,10 @@ else:
 
         # Function to update all tasks after editing
         for row in tasks_df:
-            edit_task(cursor, row['id'], row['Задача'], row['Комментарий'], row['Приоритет'], row['План'])
+            if 'username' in st.session_state:
+                edit_task(cursor, row['id'], row['Задача'], row['Комментарий'], row['Приоритет'], row['План'])
+            else:
+                st.warning("Имя пользователя не установлено.")
 
     
         with st.sidebar:
@@ -168,7 +176,10 @@ else:
                     with st.form(key='edit_form'):  # Создаем форму
                         edited_task = st.text_input("Задача", task_to_edit[1])
                         edited_comment = st.text_input("Комментарий", task_to_edit[2])
-                        edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=priorities.index(task_to_edit[4]))  
+                        if task_to_edit[4] in priorities:
+                            edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=priorities.index(task_to_edit[4]))
+                        else:
+                            edited_priority = st.selectbox("Приоритет", ("Низкий", "Средний", "Высокий"), index=0)
                         edited_plan = st.date_input("План", format="DD.MM.YYYY", key="edited_plan")
 
                         # Добавляем кнопку сохранения изменений ВНУТРИ ФОРМЫ
