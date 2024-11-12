@@ -230,13 +230,13 @@ else:
                 plan = row['План']
 
                 cursor.execute("""
-                    INSERT INTO planing (Задача, Комментарий, Приоритет, План) 
-                    VALUES (?, ?, ?, ?)
-                """, (task, comment, priority, plan))
+                    INSERT INTO planing (username, Задача, Комментарий, Приоритет, План) 
+                    VALUES (?, ?, ?, ?, ?)
+                """, (st.session_state.username, task, comment, priority, plan))
             st.success("Данные из CSV успешно загружены!")
             conn.commit()
         
 
 
-    # Commit changes to the database
-    conn.commit()
+    # Закрытие соединения с базой данных
+    conn.close()
