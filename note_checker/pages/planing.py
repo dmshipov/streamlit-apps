@@ -36,11 +36,11 @@ def register(username, password):
 # Creating the planing table if it does not exist
 cursor.execute('''CREATE TABLE IF NOT EXISTS planing (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT,
     Задача TEXT,
     Комментарий TEXT,
     План DATE,
-    Приоритет TEXT
+    Приоритет TEXT,
+    username TEXT
     
 
 )''')
@@ -230,13 +230,13 @@ else:
                 plan = row['План']
 
                 cursor.execute("""
-                    INSERT INTO planing (username, Задача, Комментарий, Приоритет, План) 
+                    INSERT INTO planing (Задача, Комментарий, Приоритет, План, username) 
                     VALUES (?, ?, ?, ?, ?)
-                """, (st.session_state.username, task, comment, priority, plan))
+                """, (task, comment, priority, plan, st.session_state.username))
             st.success("Данные из CSV успешно загружены!")
             conn.commit()
         
 
 
-    # Закрытие соединения с базой данных
-    conn.close()
+    # Commit changes to the database
+    conn.commit()
