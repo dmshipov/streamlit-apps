@@ -309,12 +309,6 @@ else:
             if row['Наименование'] is not None:  # Проверяем, нужно ли добавить элемент для удаления
                 delete_items.append(row['Наименование'])
 
-        # Кнопка для удаления текста и продуктов
-        if st.button("Удалить все позиции"):
-            cursor.execute("DELETE FROM products")
-            conn.commit()
-            st.rerun()
-
         # Выводим все элементы в одном expander
         with st.sidebar.expander("Удалить позицию"):
             for index, item in enumerate(delete_items):
@@ -328,6 +322,11 @@ else:
                     # Обновляем данные в st.session_state
                     st.session_state.products = products
         
+        # Кнопка для удаления текста и продуктов
+        if st.sidebar.button("Удалить все позиции"):
+            cursor.execute("DELETE FROM products")
+            conn.commit()
+            st.rerun()
 
         # Вычисляем общую сумму и количество для выбранных Наименованиеов
         if selected_indices:
