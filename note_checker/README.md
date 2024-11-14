@@ -40,6 +40,6 @@
 * Установите библиотеки с помощью команды pip install.
 * Запустите блокнот с помощью команды streamlit run main.py.
 
-Или просто перейдите по следующей ссылки [Streamlit cloud app.](https://notepadpy-fgf5vfcqnmxswkvszgpp2t.streamlit.app/planing)
+Или просто перейдите по следующей ссылки [Streamlit cloud app.](https://notepadpy-ykmmegdfccmsnqxacexnuw.streamlit.app)
 
 Наслаждайтесь работой с блокнотом!
