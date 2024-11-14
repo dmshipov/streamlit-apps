@@ -177,7 +177,7 @@ else:
         # Создаем таблицу для ввода цены и количества
         for index, row in sorted_products.iterrows():
             # Создаем четыре столбца
-            col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1])  
+            col2, col3, col4, col5, col6 = st.columns([2, 1.4, 1.4, 1.4, 1])  
         
             with col2:
                 st.markdown("<br>", unsafe_allow_html=True)
