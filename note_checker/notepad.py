@@ -304,23 +304,35 @@ else:
                         # Создаем список для значений, которые будут отображаться в expander
         delete_items = []
 
-        # Проходим по строкам и добавляем элементы в список delete_items
+        # Проходим по строкам и добавляем элементы в список delete_items и их id
+        id_mapping = {}  # Словарь для сопоставления наименований с id
         for index, row in sorted_products.iterrows():
             if row['Наименование'] is not None:  # Проверяем, нужно ли добавить элемент для удаления
                 delete_items.append(row['Наименование'])
+                id_mapping[row['Наименование']] = row['id']  # Предполагаем, что row['id'] содержит идентификатор
 
         # Выводим все элементы в одном expander
         with st.sidebar.expander("Удалить позицию"):
+            selected_items = []  # Список для хранения выбранных элементов
             for index, item in enumerate(delete_items):
                 if st.checkbox(f"{item}", key=f'delete_{index}_{item}'):
+                    selected_items.append(item)  # Добавляем выбранный элемент в список
+
+            if st.button("Удалить выбранные позиции"):
+                for item in selected_items:
+                    # Получаем id для удаления из базы данных
+                    row_id = id_mapping[item]
                     # Удаляем строку из DataFrame
-                    products.drop(index, inplace=True)
+                    products = products[products['Наименование'] != item]  # Удаляем позицию по наименованию
+
                     # Удаляем запись из базы данных
-                    cursor.execute("DELETE FROM products WHERE id=?", (row['id'],))
-                    conn.commit()
-                    st.rerun()
-                    # Обновляем данные в st.session_state
-                    st.session_state.products = products
+                    cursor.execute("DELETE FROM products WHERE id=?", (row_id,))
+        
+                conn.commit()
+                st.rerun()
+                # Обновляем данные в st.session_state
+                st.session_state.products = products
+
         
         # Кнопка для удаления текста и продуктов
         if st.sidebar.button("Удалить все позиции"):
