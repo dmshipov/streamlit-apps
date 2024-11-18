@@ -130,21 +130,17 @@ else:
     if 'text_input' not in st.session_state:
         st.session_state.text_input = ""   
 
-    with st.expander("Добавить запись"):
-        with st.form(key='input_form', clear_on_submit=True):
-            default_text = ""
-            # Campo ввода текста для новой позиции
-                       
-            
-            # Используем сохраненное состояние
-            text_input = st.text_area("Введите текст:", key="text_input", value=st.session_state.text_input if st.session_state.text_input else default_text)
-            
-            # Кнопка для добавления текста
-            submit_button = st.form_submit_button("Добавить")
-            
-            if submit_button:  
-                update_text()  # Вызываем функцию для обработки текста
-                st.rerun()
+    with st.expander("Добавить новую запись"):
+        # Campo ввода текста для новой позиции
+        if 'text_input' not in st.session_state:
+            st.session_state.text_input = ""
+        text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
+
+        # Кнопка для преобразования в таблицу
+        if st.button("Добавить"):  
+            update_text()
+            # Сбрасываем text_input в st.session_state
+            st.rerun()
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
