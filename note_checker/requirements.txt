@@ -3,7 +3,3 @@ pandas
 openpyxl
 datetime
 sqlalchemy
-uuid
-Pillow
-pytesseract
-opencv-python
