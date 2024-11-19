@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import datetime
 import sqlite3
+from PIL import Image
+import pytesseract
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -444,6 +446,19 @@ else:
     conn.close()
 
 
+    with st.sidebar.expander("OCR"):
+
+        uploaded_file = st.file_uploader("Загрузите изображение", type=["png", "jpg", "jpeg"])
+
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Загруженное изображение", use_column_width=True)
+
+            try:
+                text = pytesseract.image_to_string(image, lang='rus') # Замените 'rus' на нужный язык
+                st.text_area("Распознанный текст:", value=text, height=200)
+            except Exception as e:
+                st.error(f"Ошибка при распознавании текста: {e}")
 
 
 
