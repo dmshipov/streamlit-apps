@@ -137,8 +137,9 @@ else:
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
         # Кнопка для преобразования в таблицу
-        if st.button("Добавить", on_click=update_text):  
-            pass
+        if st.button("Добавить"):
+            update_text()  
+            st.rerun()
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
