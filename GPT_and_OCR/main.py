@@ -1,283 +1,124 @@
-# main.py
 import streamlit as st
-import os
 import requests
-from dotenv import load_dotenv
-from langchain_community.chat_models import ChatYandexGPT
-
-st.set_page_config(page_title='SEO tools')
-st.title('Yandex GPT')
-
-load_dotenv()
-yagpt_folder_id = os.getenv("YC_FOLDER_ID")
-yagpt_api_key = os.getenv("YC_API_KEY")
-
-# Проверка наличия значений в yagpt_folder_id и yagpt_api_key
-if yagpt_folder_id or yagpt_api_key:
-    st.write('GPT Активирован можно приступать к работе.')
-        
-    # Состояние для хранения истории сообщений
-    if 'history' not in st.session_state:
-        st.session_state.history = []
-
-    if 'word_input' not in st.session_state:
-        st.session_state.word_input = ""  # Инициализируем значение
-
-    
-       
-    # Создаем форму для ввода данных
-    with st.form(key='input_form', clear_on_submit=False):
-       default_text = ""
-
-       # Используем сохраненное состояние
-       user_input = st.text_area("Задайте вопрос:", height=260) 
-       submit_button = st.form_submit_button("Отправить")
+from PIL import Image
+from io import BytesIO
+import pytesseract
+from docx import Document
+import cv2
+import numpy as np
+import pdfplumber
 
 
-    with st.sidebar:
-        model_list = [
-            "YandexGPT Lite",
-            "YandexGPT Pro"      
-        ]    
-        index_model = 0
-        selected_model = st.sidebar.radio("Выберите модель для работы:", model_list, index=index_model, key="index")
+def preprocess_image(image, blur_value, threshold_value):
+    """Функция для предварительной обработки изображения."""
+    gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2GRAY)
+    gray = cv2.medianBlur(gray, blur_value)
+    _, thresh = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return Image.fromarray(thresh)
 
+st.title("Оцифровка изображения")
 
-    yagpt_temperature = st.sidebar.slider("Степень креативности (температура)", 0.0, 1.0, 0.6)
-    yagpt_max_tokens = st.sidebar.slider("Размер контекстного окна (в [токенах](https://cloud.yandex.ru/ru/docs/yandexgpt/concepts/tokens))", 200, 8000, 5000)
+# Sidebar parameters
+blur_value = st.sidebar.slider("Выберите уровень размытия", min_value=1, max_value=15, value=3, step=2)
+threshold_value = st.sidebar.slider("Выберите порог для обработки", min_value=0, max_value=255, value=0)
 
-    if selected_model==model_list[0]: 
-        model_uri = "gpt://"+str(yagpt_folder_id)+"/yandexgpt-lite/latest"
-    else:
-        model_uri = "gpt://"+str(yagpt_folder_id)+"/yandexgpt/latest"    
-    model = ChatYandexGPT(api_key=yagpt_api_key, model_uri=model_uri, temperature = yagpt_temperature, max_tokens = yagpt_max_tokens)
-    # model = YandexLLM(api_key = yagpt_api_key, folder_id = yagpt_folder_id, temperature = 0.6, max_tokens=8000, use_lite = False)
-    # Обработка отправки формы
-    if submit_button and user_input:
-        st.session_state.word_input = user_input  # Сохраняем пользовательский ввод
+# Выбор языка
+lang = st.sidebar.selectbox(
+    "Выберите язык для распознавания текста",
+    options=["rus+eng", "eng", "rus"],
+    index=0
+)
 
-        # Создание запроса
-        prompt = {
-            "modelUri": model_uri,  # Используем выбранный model_uri
-            "completionOptions": {
-                "stream": False,
-                "temperature": yagpt_temperature,
-                "maxTokens": yagpt_max_tokens
-            },
-            "messages": [
-                {
-                    "role": "user",
-                    "text": user_input
-                }
-            ]
-        }
+image_input = st.text_input("Вставьте ссылку на изображение")
 
-        url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "Api-Key " + str(yagpt_api_key)
-        }
+def load_image_from_url(image_input):
+    response = requests.get(image_input)
+    response.raise_for_status()
+    return Image.open(BytesIO(response.content))
 
-        # Отправка POST-запроса к API
-        response = requests.post(url, headers=headers, json=prompt)
-
-        if response.status_code == 200:
-            result = response.json()
-            
-            # Извлечение текста из нового формата ответа
-            try:
-                text = result["result"]["alternatives"][0]["message"]["text"]
-                st.session_state.history.append((user_input, text))  # Сохранение ввода и ответа в истории
-                st.write(text)
-            except (KeyError, IndexError) as e:
-                st.write("Не удалось извлечь текст из ответа.")
-                st.write(result)  # Выводим весь результат для анализа
+if image_input:
+    try:
+        if "http" in image_input:
+            image = load_image_from_url(image_input)
         else:
-            st.error("Произошла ошибка: " + str(response.status_code))
-
-    
-
-    def history_reset_function():
-        # Code to be executed when the reset button is clicked
-        st.session_state.clear()
-
-    st.sidebar.button("Обнулить историю общения",on_click=history_reset_function)
-
-
-   
-    # Кнопка для отображения истории ответов
-    if st.session_state.history:  # Проверяем наличие истории
-        if st.button("Показать историю"):
-            if st.session_state.history:
-                st.write("История:")
-                for user_message, bot_response in st.session_state.history:
-                    st.write(f"Вы: {user_message}")
-                    st.write(f"Бот: {bot_response}")
-            else:
-                st.write("История пуста.")
-else:
-    st.error("Не удалось найти файл .env - укажите путь к файлу или введите значения ID и API_KEY.")
-    
-    file_path = st.text_input("Введите путь к файлу .env")
-    yagpt_folder_id_input = st.text_input("Введите ID")
-    yagpt_api_key_input = st.text_input("Введите API_KEY")
-
-    if file_path:
-                # Если путь к файлу указан, загружаем переменные из файла
-        try:
-            with open(file_path, "r") as f:
-                lines = f.readlines()
-                # Предполагаем, что файл содержит переменные в формате VAR_NAME=VALUE
-                for line in lines:
-                    key, value = line.strip().split('=', 1)
-                    if key.strip() == "YC_FOLDER_ID":
-                        yagpt_folder_id = value.strip()
-                    elif key.strip() == "YC_API_KEY":
-                        yagpt_api_key = value.strip()
-                
-                # Проверяем, были ли считаны значения
-                if not yagpt_folder_id or not yagpt_api_key:
-                                                            st.error("Файл не содержит необходимые данные. Пожалуйста, проверьте содержимое файла.")
-                    
-        except FileNotFoundError:
-            st.error("Файл не найден. Пожалуйста, проверьте введенный путь.")
-        except IndexError:
-            st.error("Файл не содержит необходимые данные. Пожалуйста, проверьте содержимое файла.")
-        except ValueError:
-            st.error("Неверный формат данных в файле. Каждая строка должна соответствовать формату VAR_NAME=VALUE.")
-    elif yagpt_folder_id_input and yagpt_api_key_input:
-        # Если введены значения вручную, используем их
-        yagpt_folder_id = yagpt_folder_id_input
-        yagpt_api_key = yagpt_api_key_input
-        
+            image = Image.open(image_input)
+    except Exception as e:
+        st.error(f"Ошибка при загрузке изображения: {e}")
     else:
-        st.stop()  # Прерываем выполнение, если не указан путь к файлу и не введены значения вручную
-    # Запрос
-    prompt = {
-        "modelUri": "gpt://"+(yagpt_folder_id)+"/yandexgpt",
+        image = preprocess_image(image, blur_value, threshold_value)  # Предварительная обработка
+        st.image(image, caption="Загруженное изображение", use_column_width=True)
 
-        "messages": [
-            {
-                "role": "user",
-                "text": "Привет, как дела?"
-            }
-        ]
-    }
+        recognized_text = pytesseract.image_to_string(image, lang=lang, config='--psm 6')
+        st.write(recognized_text)
 
-    url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": "Api-Key " + str(yagpt_api_key)
-    }
+uploaded_file = st.file_uploader("Загрузите изображение или PDF", ["jpg", "jpeg", "png", "gif", "bmp", "pdf"])
 
-    # Отправка POST-запроса к API
-    response = requests.post(url, headers=headers, json=prompt)
+def extract_text_and_tables(pdf, tables, full_text):
+    for i, page in enumerate(pdf.pages):
+        text = page.extract_text()
+        if text:
+            full_text += text + "\n"
 
-    # Проверка кода ответа
-    if response.status_code == 200:
-        st.write('GPT Активирован можно приступать к работе.')
-        
-        # Состояние для хранения истории сообщений
-        if 'history' not in st.session_state:
-            st.session_state.history = []
+        extracted_tables = page.extract_tables()
+        for table in extracted_tables:
+            tables.append(table)
 
-        if 'word_input' not in st.session_state:
-            st.session_state.word_input = ""  # Инициализируем значение
+        img = page.to_image()
+        img_pil = img.original.convert("RGB")
+        img_processed = preprocess_image(img_pil, blur_value, threshold_value)  # Предварительная обработка
+        st.image(img_processed, caption=f"Страница {i + 1}", use_column_width=True)
+        recognized_text = pytesseract.image_to_string(img_processed, lang=lang, config='--psm 6')
+        st.write(recognized_text)
 
-        
-            
-        # Создаем форму для ввода данных
-        with st.form(key='input_form', clear_on_submit=False):
-            default_text = ""
-            
-            # Используем сохраненное состояние
-            user_input = st.text_area("Задайте вопрос:", height=260) 
-            submit_button = st.form_submit_button("Отправить")
+if uploaded_file is not None:
+    full_text = ""
+    tables = []
+    if uploaded_file.type == "application/pdf":
+        with pdfplumber.open(uploaded_file) as pdf:
+            extract_text_and_tables(pdf, tables, full_text)
 
-            if submit_button and user_input:
-                st.session_state.word_input = user_input  # Сохраняем пользовательский ввод
-
-        with st.sidebar:
-            model_list = [
-                "YandexGPT Lite",
-                "YandexGPT Pro"      
-            ]    
-            index_model = 0
-            selected_model = st.sidebar.radio("Выберите модель для работы:", model_list, index=index_model, key="index")
-
-
-        yagpt_temperature = st.sidebar.slider("Степень креативности (температура)", 0.0, 1.0, 0.6)
-        yagpt_max_tokens = st.sidebar.slider("Размер контекстного окна (в [токенах](https://cloud.yandex.ru/ru/docs/yandexgpt/concepts/tokens))", 200, 8000, 5000)
-
-        if selected_model==model_list[0]: 
-            model_uri = "gpt://"+str(yagpt_folder_id)+"/yandexgpt-lite/latest"
-        else:
-            model_uri = "gpt://"+str(yagpt_folder_id)+"/yandexgpt/latest"    
-        model = ChatYandexGPT(api_key=yagpt_api_key, model_uri=model_uri, temperature = yagpt_temperature, max_tokens = yagpt_max_tokens)
-        # model = YandexLLM(api_key = yagpt_api_key, folder_id = yagpt_folder_id, temperature = 0.6, max_tokens=8000, use_lite = False)
-        # Обработка отправки формы
-        if submit_button and user_input:
-            st.session_state.word_input = user_input  # Сохраняем пользовательский ввод
-
-            # Создание запроса
-            prompt = {
-                "modelUri": model_uri,  # Используем выбранный model_uri
-                "completionOptions": {
-                    "stream": False,
-                    "temperature": yagpt_temperature,
-                    "maxTokens": yagpt_max_tokens
-                },
-                "messages": [
-                    {
-                        "role": "user",
-                        "text": user_input
-                    }
-                ]
-            }
-
-            url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": "Api-Key " + str(yagpt_api_key)
-            }
-
-            # Отправка POST-запроса к API
-            response = requests.post(url, headers=headers, json=prompt)
-
-            if response.status_code == 200:
-                result = response.json()
-                
-                # Извлечение текста из нового формата ответа
-                try:
-                    text = result["result"]["alternatives"][0]["message"]["text"]
-                    st.session_state.history.append((user_input, text))  # Сохранение ввода и ответа в истории
-                    st.write(text)
-                except (KeyError, IndexError) as e:
-                    st.write("Не удалось извлечь текст из ответа.")
-                    st.write(result)  # Выводим весь результат для анализа
-            else:
-                st.error("Произошла ошибка: " + str(response.status_code))
-
-        
-
-        def history_reset_function():
-            # Code to be executed when the reset button is clicked
-            st.session_state.clear()
-
-        st.sidebar.button("Обнулить историю общения",on_click=history_reset_function)
-
-
-    
-        # Кнопка для отображения истории ответов
-        if st.session_state.history:  # Проверяем наличие истории
-            if st.button("Показать историю"):
-                if st.session_state.history:
-                    st.write("История:")
-                    for user_message, bot_response in st.session_state.history:
-                        st.write(f"Вы: {user_message}")
-                        st.write(f"Бот: {bot_response}")
-                else:
-                    st.write("История пуста.")
     else:
-        print(f"Ошибка: не верные данные. Попробуйте еще раз")
-        st.stop()
+        image = Image.open(uploaded_file)
+        image = preprocess_image(image, blur_value, threshold_value)  # Предварительная обработка
+        st.image(image, caption="Загруженное изображение", use_column_width=True)
+
+        recognized_text = pytesseract.image_to_string(image, lang=lang, config='--psm 6')
+        st.write(recognized_text)
+
+    if tables:
+        st.text("Извлеченные таблицы")
+        for i, table in enumerate(tables):
+            st.text(f"Таблица {i + 1}")
+            for row in table:
+                st.write(" | ".join(str(cell) for cell in row))
+
+    if st.button("Сохранить в TXT"):
+        with open('recognized_text.txt', 'w', encoding='utf-8') as f:
+            f.write(full_text if uploaded_file.type == "application/pdf" else recognized_text)
+
+        st.download_button(
+            label="Скачать TXT",
+            data=open('recognized_text.txt', 'rb').read(),
+            file_name='recognized_text.txt',
+            mime='text/plain'
+        )
+
+    if st.button("Сохранить в DOCX"):
+        doc = Document()
+        doc.add_paragraph(full_text if uploaded_file.type == "application/pdf" else recognized_text)
+        for i, table in enumerate(tables):
+            doc.add_paragraph(f"Таблица {i + 1}")
+            table_in_docx = doc.add_table(rows=len(table), cols=len(table[0]))
+            for row_index, row in enumerate(table):
+                cells = table_in_docx.rows[row_index].cells
+                for cell_index, cell in enumerate(row):
+                    cells[cell_index].text = str(cell)
+
+        doc.save('recognized_text.docx')
+
+        st.download_button(
+            label="Скачать DOCX",
+            data=open('recognized_text.docx', 'rb').read(),
+            file_name='recognized_text.docx',
+            mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
