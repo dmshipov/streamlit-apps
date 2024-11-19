@@ -6,3 +6,4 @@ sqlalchemy
 uuid
 Pillow
 pytesseract
+opencv-python
