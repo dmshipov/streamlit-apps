@@ -168,8 +168,10 @@ else:
         # Кнопка для преобразования в таблицу
         if st.button("Добавить"):
             update_text()  
-            st.session_state.text_input = ""
-            st.rerun()
+            if 'text_input' in st.session_state:
+                st.session_state.text_input = ""  # Обнуляем значение text_input
+            st.rerun()  # Используем experimental_rerun вместо rerun
+
 
             
     # Отрисовка таблицы только если текст не пуст
