@@ -172,8 +172,9 @@ else:
 
         if st.button("Добавить"):     # Убираем on_click отсюда
             update_text()
-            clear_text_input()       # Вызываем clear_text_input() после update_text()
             st.rerun()
+            clear_text_input()       # Вызываем clear_text_input() после update_text()
+            
 
             
     # Отрисовка таблицы только если текст не пуст
