@@ -162,16 +162,17 @@ else:
         st.session_state.text_input += st.session_state.ocr_text  # Добавляем текст OCR к text_input
 
     with st.expander("Добавить новую запись"):
-        # Campo ввода текста для новой позиции
+    # Campo ввода текста для новой позиции
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
         # Кнопка для преобразования в таблицу
         if st.button("Добавить"):
-            update_text()  
-            if 'text_input' in st.session_state:
-                st.session_state.text_input = ""  # Обнуляем значение text_input
-            st.rerun()  # Используем experimental_rerun вместо rerun
-
+            try:
+                update_text()  
+                st.session_state.text_input = ""  # Обнуляем значение text_input после добавления
+                st.rerun()  # Перезапускаем приложение
+            except Exception as e:
+                st.error(f"Произошла ошибка: {e}")
 
             
     # Отрисовка таблицы только если текст не пуст
