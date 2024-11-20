@@ -252,7 +252,7 @@ else:
             if extracted_text:
                 st.subheader("Распознанный текст")
                 text_area = st.text_area("", value=extracted_text, height=200)
-                if st.button("Заполнить значения"):
+                if st.button("Добавить", key="fill_values_button"):
                     if 'update_text' in locals() and callable(update_text):
                         update_text(extracted_text)
                     else:
