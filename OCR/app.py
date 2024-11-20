@@ -35,6 +35,7 @@ if reader is None:
     st.stop()
 
 
+
 def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
         try:
@@ -43,8 +44,10 @@ def image_to_text(img_file_buffer):
 
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
+                # Изменение: добавление paragraph=True
                 results = reader.readtext(img_array, paragraph=True)
-                extracted_text = "\n".join([text for (_, text, _) in results])
+                # Обработка результатов:  учитываем возможность отсутствия confidence
+                extracted_text = "\n".join([text for result in results for text in result[1:]])
                 return extracted_text
         except Exception as e:
             st.error(f"Ошибка при распознавании текста: {e}")
