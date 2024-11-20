@@ -38,10 +38,10 @@ def register(username, password):
     else:
         st.success("Регистрация прошла успешно!")
 
-def update_text(new_text): 
+def update_text(): 
     # Получаем текущее значение ввода
-    if new_text:
-        input_value = new_text
+    if st.session_state.text_input:
+        input_value = st.session_state.text_input
         
         # Проверяем, не пусто ли оно
         products_list = []  # Инициализируем список заранее
@@ -162,23 +162,14 @@ else:
         st.session_state.text_input += st.session_state.ocr_text  # Добавляем текст OCR к text_input
 
     with st.expander("Добавить новую запись"):
-    # Campo ввода текста для новой позиции
+        # Campo ввода текста для новой позиции
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
         # Кнопка для преобразования в таблицу
         if st.button("Добавить"):
-            # Сохраняем текущее значение в session_state перед обновлением
-            new_text = st.session_state.text_input
-            
-            # Обновляем текст в базе данных или выполняем другую логику
-            try:
-                update_text(new_text)  # Передайте новое значение в вашу функцию
-                st.session_state.text_input = ""  # Обнуляем значение text_input после добавления
-                
-                # Перезапускаем приложение для обновления виджетов
-                st.experimental_rerun()
-            except Exception as e:
-                st.error(f"Произошла ошибка: {e}")
+            update_text()  
+            st.rerun()
+
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
