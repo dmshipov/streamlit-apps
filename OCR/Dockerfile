@@ -1,17 +1,11 @@
-# Stage 1: Install Tesseract
-FROM ubuntu:latest AS builder
-
-RUN apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng && rm -rf /var/lib/apt/lists/*
-
-# Stage 2: Install Python dependencies and app
-FROM python:3.9-slim-buster
+# Замените на имя найденного вами образа
+FROM <имя_образа_с_tesseract_и_python>:latest
 
 WORKDIR /app
 
-COPY requirements.txt ./
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY --from=builder /usr/bin/tesseract /usr/bin/tesseract # Копируем tesseract из первого этапа
 COPY . .
 
 CMD ["streamlit", "run", "main.py"]
