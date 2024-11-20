@@ -39,7 +39,7 @@ def register(username, password):
         st.success("Регистрация прошла успешно!")
 
 def update_text(): 
-    # Получаем текущее Цена ввода
+    # Получаем текущее значение ввода
     if st.session_state.text_input:
         input_value = st.session_state.text_input
         
@@ -57,11 +57,31 @@ def update_text():
                 for part in parts:
                     part_cleaned = part.strip()
                     if part_cleaned:  # Добавляем только непустые строки
+                        # Инициализируем значения
+                        price = 0
+                        weight = 0
+
+                        # Разбиваем строку на слова и проверяем на наличие чисел
+                        items = part_cleaned.split()
+                        for item in items:
+                            try:
+                                # Пробуем преобразовать в число
+                                value = float(item)
+                                # Если это первое число, то это цена, если второе - вес
+                                if price == 0:
+                                    price = value
+                                elif weight == 0:
+                                    weight = value
+                            except ValueError:
+                                # Если не число, просто пропускаем
+                                continue
+
+                        # Добавляем продукт с найденными значениями
                         products_list.append({
-                            "Наименование": part_cleaned,
-                            "Цена": 0,
+                            "Наименование": ' '.join([i for i in items if not i.isdigit()]),  # Наименование без чисел
+                            "Цена": price,
                             "Количество": 1,
-                            "Вес": 0,
+                            "Вес": weight,
                             "Фото": None,
                             "Дата": None
                         })
@@ -71,6 +91,7 @@ def update_text():
             cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
                 (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
             conn.commit()
+
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
