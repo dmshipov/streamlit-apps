@@ -6,6 +6,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import sqlite3
+from PIL import ImageOps
 
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -501,6 +502,8 @@ else:
                     # Ресайз здесь!
                     image = resize_image(image)
 
+                    image = ImageOps.exif_transpose(image)
+
                     st.image(image, caption="Загруженное изображение", use_container_width=True)
 
                     with st.spinner("Распознавание текста..."):
@@ -512,26 +515,3 @@ else:
                     st.error(f"Ошибка при распознавании текста: {e}")
                     return None
             return None
-
-
-        image_input = st.radio(
-            "Выберите способ ввода текста:",
-            ["Камера", "Изображение"],
-            horizontal=True,
-            help="Выберите, как вы хотите загрузить изображение.",
-        )
-
-        img_file_buffer = None
-        if image_input == "Камера":
-            img_file_buffer = st.camera_input("Сделайте фото")
-        elif image_input == "Изображение":
-            img_file_buffer = st.file_uploader(
-                "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
-            )
-
-
-        if img_file_buffer:
-            extracted_text = image_to_text(img_file_buffer)
-            if extracted_text:
-                st.subheader("Распознанный текст")
-                st.text_area("", value=extracted_text, height=200)
