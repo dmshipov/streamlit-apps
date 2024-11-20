@@ -91,7 +91,13 @@ def update_text(new_text):
             cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
                 (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
             conn.commit()
-
+            cursor = conn.cursor()
+            try:
+                # Пример вставки в базу данных
+                cursor.execute("INSERT INTO your_table (column_name) VALUES (?)", (new_text,))
+                conn.commit()
+            finally:
+                cursor.close()
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
@@ -162,15 +168,14 @@ else:
         st.session_state.text_input += st.session_state.ocr_text  # Добавляем текст OCR к text_input
 
     with st.expander("Добавить новую запись"):
-    # Campo ввода текста для новой позиции
+        # Campo ввода текста для новой позиции
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
         # Кнопка для преобразования в таблицу
         if st.button("Добавить"):
             # Сохраняем текущее значение в session_state перед обновлением
-            new_text = st.session_state.text_input
-            
-            # Обновляем текст в базе данных или выполняем другую логику
+            new_text = text_input  # Используем текущее значение из text_area
+
             try:
                 update_text(new_text)  # Передайте новое значение в вашу функцию
                 st.session_state.text_input = ""  # Обнуляем значение text_input после добавления
