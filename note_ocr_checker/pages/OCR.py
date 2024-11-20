@@ -4,6 +4,9 @@ from PIL import Image
 import easyocr as ocr
 from PIL import ImageOps
 
+if 'ocr_text' not in st.session_state:
+    st.session_state.ocr_text = ""
+
 st.title("OCR")
 st.markdown("Оптическое распознавание символов")
 st.markdown("")
@@ -89,5 +92,8 @@ elif image_input == "Изображение":
 if img_file_buffer:
     extracted_text = image_to_text(img_file_buffer)
     if extracted_text:
+        st.session_state.ocr_text = extracted_text # Сохраняем текст в session_state
         st.subheader("Распознанный текст")
-        st.text_area("", value=extracted_text, height=200)
+        st.text_area("", value=extracted_text, height=200)       
+        if st.button("Отправить текст в Notepad"):
+            st.rerun() # Перезапускаем скрипт

@@ -154,7 +154,10 @@ else:
     products['Дата'] = pd.to_datetime(products['Дата'])
 
     if 'text_input' not in st.session_state:
-        st.session_state.text_input = ""   
+        st.session_state.text_input = "" 
+          
+    if 'ocr_text' in st.session_state: # Проверяем наличие текста
+        text_input = st.text_area("Вставьте текст сюда:", value=st.session_state.ocr_text, height=200)
 
     with st.expander("Добавить новую запись"):
         # Campo ввода текста для новой позиции
