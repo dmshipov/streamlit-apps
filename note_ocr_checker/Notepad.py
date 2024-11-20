@@ -41,7 +41,7 @@ def register(username, password):
 def update_text(new_text): 
     # Получаем текущее значение ввода
     if new_text:
-        input_value = st.session_state.text_input
+        input_value = new_text
         
         # Проверяем, не пусто ли оно
         products_list = []  # Инициализируем список заранее
@@ -91,12 +91,7 @@ def update_text(new_text):
             cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
                 (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
             conn.commit()
-            try:
-                # Пример вставки в базу данных
-                cursor.execute("INSERT INTO products (column_name) VALUES (?)", (new_text,))
-                conn.commit()
-            finally:
-                cursor.close()
+
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
