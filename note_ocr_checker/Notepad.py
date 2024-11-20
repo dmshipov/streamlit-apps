@@ -154,20 +154,22 @@ else:
     products['Дата'] = pd.to_datetime(products['Дата'])
 
     if 'text_input' not in st.session_state:
-        st.session_state.text_input = "" 
-          
-    if 'ocr_text' in st.session_state: # Проверяем наличие текста
-        text_input = st.text_area("Вставьте текст сюда:", value=st.session_state.ocr_text, height=200)
+        st.session_state.text_input = ""
+
+    # Объединяем текст из OCR с текущим текстом в text_input
+    if 'ocr_text' in st.session_state and st.session_state.ocr_text: #Проверяем есть ли текст
+        st.session_state.text_input += st.session_state.ocr_text + "\n" #добавляем ocr_text к text_input, "\n" для новой строки, если необходимо
+        st.session_state.ocr_text = ""  # Очищаем ocr_text после добавления
+
+    # Теперь используем только одно поле text_input
+    text_input = st.text_area("Вставьте текст сюда:", value=st.session_state.text_input, height=200, key="text_input")
+
 
     with st.expander("Добавить новую запись"):
-        # Campo ввода текста для новой позиции
-        if 'text_input' not in st.session_state:
-            st.session_state.text_input = ""
-        text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
+        text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input) #  Используем  key="text_input"
 
-        # Кнопка для преобразования в таблицу
         if st.button("Добавить"):
-            update_text()  
+            update_text()
             st.rerun()
             
     # Отрисовка таблицы только если текст не пуст
