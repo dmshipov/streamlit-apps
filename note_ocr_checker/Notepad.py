@@ -261,15 +261,7 @@ else:
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
-        
-        with st.sidebar.expander("Сортировка"):
-            sort_by = st.selectbox("Сортировать по:", ["id", "Наименование", "Цена", "Количество", "Вес", "Дата"], index=0)
-            sort_order = st.selectbox("Порядок сортировки:", ["По убыванию", "По возрастанию"], index=0) # Изменено на selectbox
 
-            ascending = (sort_order == "По возрастанию")
-            sorted_products = products.sort_values(by=sort_by, ascending=ascending)
-
-        
         with st.sidebar.expander("Добавить столбец"):
             col1, col2 = st.columns([1, 1])  # Columns within the expander
             with col1:
@@ -282,9 +274,43 @@ else:
                 checkbox_weight = st.checkbox("Вес", key="checkbox_weight")
             with col2:
                 checkbox_photo = st.checkbox("Фото", key="checkbox_photo")
+        
+        # Кнопка для удаления текста и продуктов
+        if st.sidebar.button("Удалить все позиции"):
+            cursor.execute("DELETE FROM products")
+            conn.commit()
+            st.rerun()
 
 
-       
+        # Выводим все элементы в одном expander
+        with st.sidebar.expander("Удалить позицию"):
+            selected_items = []  # Список для хранения выбранных элементов
+            for index, item in enumerate(delete_items):
+                if st.checkbox(f"{item}", key=f'delete_{index}_{item}'):
+                    selected_items.append(item)  # Добавляем выбранный элемент в список
+
+            if st.button("Удалить выбранные позиции"):
+                for item in selected_items:
+                    # Получаем id для удаления из базы данных
+                    row_id = id_mapping[item]
+                    # Удаляем строку из DataFrame
+                    products = products[products['Наименование'] != item]  # Удаляем позицию по наименованию
+
+                    # Удаляем запись из базы данных
+                    cursor.execute("DELETE FROM products WHERE id=?", (row_id,))
+        
+                conn.commit()
+                st.rerun()
+                # Обновляем данные в st.session_state
+                st.session_state.products = products    
+
+        with st.sidebar.expander("Сортировка"):
+            sort_by = st.selectbox("Сортировать по:", ["id", "Наименование", "Цена", "Количество", "Вес", "Дата"], index=0)
+            sort_order = st.selectbox("Порядок сортировки:", ["По убыванию", "По возрастанию"], index=0) # Изменено на selectbox
+
+            ascending = (sort_order == "По возрастанию")
+            sorted_products = products.sort_values(by=sort_by, ascending=ascending)        
+          
         
         
         selected_indices = []  # Список для хранения выбранных индексов
@@ -427,35 +453,7 @@ else:
                 delete_items.append(row['Наименование'])
                 id_mapping[row['Наименование']] = row['id']  # Предполагаем, что row['id'] содержит идентификатор
 
-        # Выводим все элементы в одном expander
-        with st.sidebar.expander("Удалить позицию"):
-            selected_items = []  # Список для хранения выбранных элементов
-            for index, item in enumerate(delete_items):
-                if st.checkbox(f"{item}", key=f'delete_{index}_{item}'):
-                    selected_items.append(item)  # Добавляем выбранный элемент в список
-
-            if st.button("Удалить выбранные позиции"):
-                for item in selected_items:
-                    # Получаем id для удаления из базы данных
-                    row_id = id_mapping[item]
-                    # Удаляем строку из DataFrame
-                    products = products[products['Наименование'] != item]  # Удаляем позицию по наименованию
-
-                    # Удаляем запись из базы данных
-                    cursor.execute("DELETE FROM products WHERE id=?", (row_id,))
-        
-                conn.commit()
-                st.rerun()
-                # Обновляем данные в st.session_state
-                st.session_state.products = products
-
-        
-        # Кнопка для удаления текста и продуктов
-        if st.sidebar.button("Удалить все позиции"):
-            cursor.execute("DELETE FROM products")
-            conn.commit()
-            st.rerun()
-
+               
         # Вычисляем общую сумму и количество для выбранных Наименованиеов
         if selected_indices:
             total_sum = (products.loc[selected_indices, "Цена"] * 
