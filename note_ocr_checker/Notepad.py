@@ -152,14 +152,17 @@ else:
 
     # Преобразование столбца 'Дата' в тип datetime.datetime (с секундами)
     products['Дата'] = pd.to_datetime(products['Дата'])
-         
+    
+    if 'text_input' in st.session_state:
+        if st.sidebar.button('Очистить поле ввода'):
+            st.session_state.text_input = ""
+
     
     # Инициализация text_input
     if 'text_input' not in st.session_state:
         st.session_state.text_input = ""
-    else:
-        if st.sidebar.button('Очистить поле ввода'):
-            st.session_state.text_input = ""
+
+          
         
     with st.expander("Добавить новую запись"):
         text_input = st.text_area("Введите текст в поле ввода", key="text_input", value=st.session_state.text_input)
