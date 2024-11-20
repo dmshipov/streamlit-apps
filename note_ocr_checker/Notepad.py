@@ -169,12 +169,9 @@ else:
     with st.expander("Добавить новую запись"):
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
-
-        if st.button("Добавить"):     # Убираем on_click отсюда
-            update_text()
+        if st.button("Добавить", on_click=clear_text_input):
+            update_text(st.session_state.text_input)  # Передаем текст как аргумент
             st.rerun()
-            clear_text_input()       # Вызываем clear_text_input() после update_text()
-            
 
             
     # Отрисовка таблицы только если текст не пуст
