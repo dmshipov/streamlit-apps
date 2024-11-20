@@ -172,6 +172,8 @@ else:
         if st.button("Добавить"):
             update_text()  
             st.rerun()
+            
+        if st.button("Очистить поле"):
             clear_input()
 
             
