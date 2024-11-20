@@ -38,59 +38,61 @@ def register(username, password):
     else:
         st.success("Регистрация прошла успешно!")
 
-def update_text(): 
+def update_text(new_text): 
     # Получаем текущее значение ввода
-    if st.session_state.text_input:
-        input_value = st.session_state.text_input
+    if new_text:  # Проверяем, не пусто ли новое значение
+        input_value = new_text
         
-        # Проверяем, не пусто ли оно
-        products_list = []  # Инициализируем список заранее
-        if input_value is not None:
-            # Обработка введенных данных
-            lines = input_value.split(' и ')
-            lines = [line.strip() for line in lines]
-            lines = [line.split('\n') for line in lines]
-            lines = [item for sublist in lines for item in sublist]
-
-            for line in lines:
-                parts = line.split(' И ')
-                for part in parts:
-                    part_cleaned = part.strip()
-                    if part_cleaned:  # Добавляем только непустые строки
-                        # Инициализируем значения
-                        price = 0
-                        weight = 0
-
-                        # Разбиваем строку на слова и проверяем на наличие чисел
-                        items = part_cleaned.split()
-                        for item in items:
-                            try:
-                                # Пробуем преобразовать в число
-                                value = float(item)
-                                # Если это первое число, то это цена, если второе - вес
-                                if price == 0:
-                                    price = value
-                                elif weight == 0:
-                                    weight = value
-                            except ValueError:
-                                # Если не число, просто пропускаем
-                                continue
-
-                        # Добавляем продукт с найденными значениями
-                        products_list.append({
-                            "Наименование": ' '.join([i for i in items if not i.isdigit()]),  # Наименование без чисел
-                            "Цена": price,
-                            "Количество": 1,
-                            "Вес": weight,
-                            "Фото": None,
-                            "Дата": None
-                        })
+        # Инициализируем список продуктов заранее
+        products_list = []  
         
-        for product in products_list:
-            # Добавляем данные в базу с помощью execute и параметров
-            cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
-                (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
+        # Обработка введенных данных
+        lines = input_value.split(' и ')
+        lines = [line.strip() for line in lines]
+        lines = [line.split('\n') for line in lines]
+        lines = [item for sublist in lines for item in sublist]
+
+        for line in lines:
+            parts = line.split(' И ')
+            for part in parts:
+                part_cleaned = part.strip()
+                if part_cleaned:  # Добавляем только непустые строки
+                    # Инициализируем значения
+                    price = 0
+                    weight = 0
+
+                    # Разбиваем строку на слова и проверяем на наличие чисел
+                    items = part_cleaned.split()
+                    for item in items:
+                        try:
+                            # Пробуем преобразовать в число
+                            value = float(item)
+                            # Если это первое число, то это цена, если второе - вес
+                            if price == 0:
+                                price = value
+                            elif weight == 0:
+                                weight = value
+                        except ValueError:
+                            # Если не число, просто пропускаем
+                            continue
+
+                    # Добавляем продукт с найденными значениями
+                    products_list.append({
+                        "Наименование": ' '.join([i for i in items if not i.isdigit()]),  # Наименование без чисел
+                        "Цена": price,
+                        "Количество": 1,
+                        "Вес": weight,
+                        "Фото": None,
+                        "Дата": None
+                    })
+        
+        # Подключаемся к базе данных и добавляем данные
+        with conn.cursor() as cursor:
+            for product in products_list:
+                cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
+                               (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
             conn.commit()
+
 
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
@@ -162,7 +164,7 @@ else:
         st.session_state.text_input += st.session_state.ocr_text  # Добавляем текст OCR к text_input
 
     with st.expander("Добавить новую запись"):
-    # Campo ввода текста для новой позиции
+        # Campo ввода текста для новой позиции
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
         # Кнопка для преобразования в таблицу
