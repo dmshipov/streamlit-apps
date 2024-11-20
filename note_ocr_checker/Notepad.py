@@ -152,7 +152,9 @@ else:
 
     # Преобразование столбца 'Дата' в тип datetime.datetime (с секундами)
     products['Дата'] = pd.to_datetime(products['Дата'])
-
+    
+    st.session_state.text_input = ""
+    
     # Инициализация text_input
     if 'text_input' not in st.session_state:
         st.session_state.text_input = ""
@@ -160,10 +162,8 @@ else:
     # Проверяем наличие текста и добавляем его в text_input
     if 'ocr_text' in st.session_state:
         st.session_state.text_input += st.session_state.ocr_text  # Добавляем текст OCR к text_input
-
-    def clear_input():
-        st.session_state.text_input = ""
-
+  
+        
     with st.expander("Добавить новую запись"):
         # Campo ввода текста для новой позиции
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
@@ -172,9 +172,6 @@ else:
         if st.button("Добавить"):
             update_text()  
             st.rerun()
-            
-        if st.button("Очистить поле"):
-            clear_input()
 
             
     # Отрисовка таблицы только если текст не пуст
