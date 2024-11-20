@@ -94,7 +94,7 @@ def update_text(new_text):
             cursor = conn.cursor()
             try:
                 # Пример вставки в базу данных
-                cursor.execute("INSERT INTO your_table (column_name) VALUES (?)", (new_text,))
+                cursor.execute("INSERT INTO products (Текст) VALUES (?)", (new_text,))
                 conn.commit()
             finally:
                 cursor.close()
