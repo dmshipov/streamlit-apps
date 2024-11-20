@@ -454,7 +454,7 @@ else:
 
 
     else:
-        st.title("Optical Character Recognition")
+        st.title("OCR")
         st.markdown("Оптическое распознавание символов")
         st.markdown("")
 
