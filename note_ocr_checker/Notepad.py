@@ -38,10 +38,10 @@ def register(username, password):
     else:
         st.success("Регистрация прошла успешно!")
 
-def update_text(): 
+def update_text(texts_input): 
     # Получаем текущее значение ввода
-    if st.session_state.text_input:
-        input_value = st.session_state.text_input
+    if texts_input:
+        input_value = texts_input
         
         # Проверяем, не пусто ли оно
         products_list = []  # Инициализируем список заранее
@@ -170,40 +170,123 @@ else:
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
         if st.button("Добавить"):  # Добавляем on_click
-            update_text()
+            update_text(text_input)
             st.rerun()
         
+    with st.expander("Оптическое распознавание"):
+        # Загрузка моделей EasyOCR. Указываем языки явно
+        @st.cache_resource()
+        def load_models(langs):
+            try:
+                reader = ocr.Reader(langs, model_storage_directory=".")
+                return reader
+            except Exception as e:
+                st.error(f"Ошибка при загрузке моделей EasyOCR: {e}")
+                return None
 
+        # Список поддерживаемых языков
+        available_langs = ["ru", "en", "es", "fr", "de"]
+
+        # Русский и английский по умолчанию
+        default_langs = ["ru", "en"]
+
+        selected_langs = st.multiselect(
+            "Выберите языки для распознавания:",
+            available_langs,
+            default=default_langs, # Устанавливаем default
+        )
+
+
+        reader = load_models(selected_langs)
+        if reader is None:
+            st.stop()
+
+
+
+        def resize_image(image, max_size=1000):
+            width, height = image.size
+            if width > max_size or height > max_size:
+                ratio = min(max_size / width, max_size / height)
+                new_size = (int(width * ratio), int(height * ratio))
+                image = image.resize(new_size)
+            return image
+
+
+        def image_to_text(img_file_buffer):
+            if img_file_buffer is not None:
+                try:
+                    image = Image.open(img_file_buffer)
+                    
+                    # Транспонируем фото
+                    image = ImageOps.exif_transpose(image)
+                    
+                    # Уменьшим размер фото
+                    image = resize_image(image)
+
+                    st.image(image, caption="Загруженное изображение", use_container_width=True)
+
+                    with st.spinner("Распознавание текста..."):
+                        img_array = np.array(image)
+                        results = reader.readtext(img_array, paragraph=True)
+                        extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)]) # Проверка на тип данных
+                        return extracted_text
+                except Exception as e:
+                    st.error(f"Ошибка при распознавании текста: {e}")
+                    return None
+            return None
+
+
+        image_input = st.radio(
+            "Выберите способ ввода текста:",
+            ["Изображение", "Камера"],
+            horizontal=True,
+            help="Выберите, как вы хотите загрузить изображение.",
+        )
+
+        img_file_buffer = None
+        if image_input == "Камера":
+            img_file_buffer = st.camera_input("Сделайте фото")
+        elif image_input == "Изображение":
+            img_file_buffer = st.file_uploader(
+                "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
+            )
+
+
+        if img_file_buffer:
+            extracted_text = image_to_text(img_file_buffer)
+            if extracted_text:
+                st.subheader("Распознанный текст")
+                st.text_area("", value=extracted_text, height=200)       
+                if st.button("Добавить"):
+                    update_text(extracted_text)
+                    st.rerun() # Перезапускаем скрипт  
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
         
-        with st.expander("Добавить значение:"):  
+        with st.sidebar.expander("Сортировка"):
+            sort_by = st.selectbox("Сортировать по:", ["id", "Наименование", "Цена", "Количество", "Вес", "Дата"], index=0)
+            sort_order = st.selectbox("Порядок сортировки:", ["По убыванию", "По возрастанию"], index=0) # Изменено на selectbox
 
-            # Создаем четыре столбца
-            col1, col2 = st.columns([1, 1]) 
-            # Чекбоксы для каждой функции
+            ascending = (sort_order == "По возрастанию")
+            sorted_products = products.sort_values(by=sort_by, ascending=ascending)
+
+        
+        with st.sidebar.expander("Добавить столбец"):
+            col1, col2 = st.columns([1, 1])  # Columns within the expander
             with col1:
                 checkbox_price = st.checkbox("Цена", key="checkbox_price", value=True)
-        
             with col2:
                 checkbox_quantity = st.checkbox("Количество", key="checkbox_quantity", value=True)
-            col1, col2 = st.columns([1, 1]) 
+
+            col1, col2 = st.columns([1, 1])
             with col1:
                 checkbox_weight = st.checkbox("Вес", key="checkbox_weight")
-        
-            with col2: 
+            with col2:
                 checkbox_photo = st.checkbox("Фото", key="checkbox_photo")
 
-        # Элементы управления для сортировки в боковой панели
-        sort_by = st.sidebar.selectbox("Сортировать по:", ["id", "Наименование", "Цена", "Количество", "Вес", "Дата"], index=0)  # Добавлено id и index=0
-        sort_order = st.sidebar.radio("Порядок сортировки:", ["По убыванию", "По возрастанию"])
-        sorted_products = products.sort_values(by='id', ascending=(sort_order == "По возрастанию"))
-        # Применяем сортировку          
-        if sort_by == "Наименование":
-            sorted_products = products.sort_values(by='Наименование', ascending=(sort_order == "По возрастанию"))
-        else:
-            sorted_products = products.sort_values(by=sort_by, ascending=(sort_order == "По возрастанию"))
+
+       
         
         
         selected_indices = []  # Список для хранения выбранных индексов
