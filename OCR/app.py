@@ -43,7 +43,7 @@ def image_to_text(img_file_buffer):
 
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
-                results = reader.readtext(img_array)
+                results = reader.readtext(img_array, paragraph=True)
                 extracted_text = "\n".join([text for (_, text, _) in results])
                 return extracted_text
         except Exception as e:
@@ -73,4 +73,3 @@ if img_file_buffer:
     if extracted_text:
         st.subheader("Распознанный текст")
         st.text_area("", value=extracted_text, height=200)
-        st.balloons()
