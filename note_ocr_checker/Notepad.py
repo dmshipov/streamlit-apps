@@ -167,13 +167,18 @@ else:
 
         # Кнопка для преобразования в таблицу
         if st.button("Добавить"):
+            # Сохраняем текущее значение в session_state перед обновлением
+            new_text = st.session_state.text_input
+            
+            # Обновляем текст в базе данных или выполняем другую логику
             try:
-                update_text()  
+                update_text(new_text)  # Передайте новое значение в вашу функцию
                 st.session_state.text_input = ""  # Обнуляем значение text_input после добавления
-                st.rerun()  # Перезапускаем приложение
+                
+                # Перезапускаем приложение для обновления виджетов
+                st.experimental_rerun()
             except Exception as e:
                 st.error(f"Произошла ошибка: {e}")
-
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
