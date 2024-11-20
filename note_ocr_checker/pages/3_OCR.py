@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import easyocr as ocr
+from PIL import ImageOps
 
 st.title("OCR")
 st.markdown("Оптическое распознавание символов")
@@ -36,18 +37,32 @@ if reader is None:
 
 
 
+def resize_image(image, max_size=1000):
+    width, height = image.size
+    if width > max_size or height > max_size:
+        ratio = min(max_size / width, max_size / height)
+        new_size = (int(width * ratio), int(height * ratio))
+        image = image.resize(new_size)
+    return image
+
+
 def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
         try:
             image = Image.open(img_file_buffer)
+            
+            # Транспонируем фото
+            image = ImageOps.exif_transpose(image)
+            
+            # Уменьшим размер фото
+            image = resize_image(image)
+
             st.image(image, caption="Загруженное изображение", use_container_width=True)
 
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
-                # Изменение: добавление paragraph=True
                 results = reader.readtext(img_array, paragraph=True)
-                # Обработка результатов:  учитываем возможность отсутствия confidence
-                extracted_text = "\n".join([text for result in results for text in result[1:]])
+                extracted_text = "\n".join([text for result in results for text in result[1:] if isinstance(text, str)]) # Проверка на тип данных
                 return extracted_text
         except Exception as e:
             st.error(f"Ошибка при распознавании текста: {e}")
@@ -55,14 +70,14 @@ def image_to_text(img_file_buffer):
     return None
 
 
-img_file_buffer = None
 image_input = st.radio(
     "Выберите способ ввода текста:",
-    ["Камера", "Изображение"],
+    ["Изображение", "Камера"],
     horizontal=True,
     help="Выберите, как вы хотите загрузить изображение.",
 )
 
+img_file_buffer = None
 if image_input == "Камера":
     img_file_buffer = st.camera_input("Сделайте фото")
 elif image_input == "Изображение":
