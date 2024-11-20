@@ -153,7 +153,7 @@ else:
     # Преобразование столбца 'Дата' в тип datetime.datetime (с секундами)
     products['Дата'] = pd.to_datetime(products['Дата'])
     
-    if st.sidebar.button('Очистить поле'):
+    if st.sidebar.button('Очистить поле ввода'):
         st.session_state.text_input = ""
 
     
