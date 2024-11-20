@@ -162,7 +162,7 @@ else:
         st.session_state.text_input = ""  
         
     with st.expander("Добавить новую запись"):
-        text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
+        text_input = st.text_area("Введите текст в поле ввода", key="text_input", value=st.session_state.text_input)
 
         if st.button("Добавить"):  # Добавляем on_click
             update_text(text_input)
@@ -279,9 +279,19 @@ else:
         if st.sidebar.button("Удалить все позиции"):
             cursor.execute("DELETE FROM products")
             conn.commit()
-            st.rerun()        
+            st.rerun()
 
-
+        # with st.sidebar.expander("Сортировка"):
+        #     sort_by = st.selectbox("Сортировать по:", ["id", "Наименование", "Цена", "Количество", "Вес", "Дата"], index=0)
+        #     sort_order = st.selectbox("Порядок сортировки:", ["По убыванию", "По возрастанию"], index=0) # Изменено на selectbox
+        
+        #     ascending = (sort_order == "По возрастанию")
+        #     sorted_products = products.sort_values(by=sort_by, ascending=ascending)  
+        sort_by = "id"  #  Например, сортируем по дате по умолчанию
+        sort_order = "По убыванию"
+        ascending = (sort_order == "По возрастанию")
+        sorted_products = products.sort_values(by=sort_by, ascending=ascending)
+        
         selected_indices = []  # Список для хранения выбранных индексов
                     
 
@@ -444,13 +454,7 @@ else:
                 # Обновляем данные в st.session_state
                 st.session_state.products = products
 
-        with st.sidebar.expander("Сортировка"):
-            sort_by = st.selectbox("Сортировать по:", ["id", "Наименование", "Цена", "Количество", "Вес", "Дата"], index=0)
-            sort_order = st.selectbox("Порядок сортировки:", ["По убыванию", "По возрастанию"], index=0) # Изменено на selectbox
-
-            ascending = (sort_order == "По возрастанию")
-            sorted_products = products.sort_values(by=sort_by, ascending=ascending)
-            
+        
         # Вычисляем общую сумму и количество для выбранных Наименованиеов
         if selected_indices:
             total_sum = (products.loc[selected_indices, "Цена"] * 
