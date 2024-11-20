@@ -153,7 +153,9 @@ else:
     # Преобразование столбца 'Дата' в тип datetime.datetime (с секундами)
     products['Дата'] = pd.to_datetime(products['Дата'])
     
-    st.session_state.text_input = ""
+    def clear_text_input():
+        st.session_state.text_input = ""
+
     
     # Инициализация text_input
     if 'text_input' not in st.session_state:
@@ -165,12 +167,10 @@ else:
   
         
     with st.expander("Добавить новую запись"):
-        # Campo ввода текста для новой позиции
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
 
-        # Кнопка для преобразования в таблицу
-        if st.button("Добавить"):
-            update_text()  
+        if st.button("Добавить", on_click=clear_text_input):  # Добавляем on_click
+            update_text()
             st.rerun()
 
             
