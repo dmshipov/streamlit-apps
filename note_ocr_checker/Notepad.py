@@ -87,11 +87,14 @@ def update_text(new_text):
                     })
         
         # Подключаемся к базе данных и добавляем данные
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()  # Создаем курсор вручную
+        try:
             for product in products_list:
                 cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
                                (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
             conn.commit()
+        finally:
+            cursor.close()  # Закрываем курсор в блоке finally
 
 
             
