@@ -168,6 +168,7 @@ else:
         # Кнопка для преобразования в таблицу
         if st.button("Добавить"):
             update_text()  
+            st.session_state.text_input = ""
             st.rerun()
 
             
