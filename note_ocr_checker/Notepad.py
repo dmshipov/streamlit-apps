@@ -160,8 +160,10 @@ else:
     # Проверяем наличие текста и добавляем его в text_input
     if 'ocr_text' in st.session_state:
         st.session_state.text_input += st.session_state.ocr_text  # Добавляем текст OCR к text_input
-    if st.button("Очистить поле"):
-        st.session_state.text_input = ''
+
+    def clear_input():
+        st.session_state.text_input = ""
+
     with st.expander("Добавить новую запись"):
         # Campo ввода текста для новой позиции
         text_input = st.text_area("Введите текст для новой позиции", key="text_input", value=st.session_state.text_input)
@@ -170,6 +172,7 @@ else:
         if st.button("Добавить"):
             update_text()  
             st.rerun()
+            clear_input()
 
             
     # Отрисовка таблицы только если текст не пуст
