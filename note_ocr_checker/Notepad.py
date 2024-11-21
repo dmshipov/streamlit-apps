@@ -243,8 +243,9 @@ else:
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
             update_text(extracted_text)
-            st.session_state.text_input  
-        
+            img_file_buffer = None  
+            if img_file_buffer is None:
+                st.rerun()
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
