@@ -242,9 +242,10 @@ else:
 
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
-            update_text(extracted_text)              
-        st.success('Позиция успешно добавлена')
-        img_file_buffer = None
+            update_text(extracted_text)
+            img_file_buffer = None
+            st.success("Изображение успешно загружено!")  # Сообщение об успехе  
+    
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
