@@ -243,7 +243,7 @@ else:
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
             update_text(extracted_text)              
-        st.sucseed('Позиция успешно добавлена')
+            st.success('Позиция успешно добавлена')
         img_file_buffer = None
             
     # Отрисовка таблицы только если текст не пуст
