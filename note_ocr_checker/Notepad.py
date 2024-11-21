@@ -256,7 +256,7 @@ else:
                 update_text(extracted_text)
             else:
                 st.error("Функция update_text не определена.")
-            st.rerun()
+          
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
