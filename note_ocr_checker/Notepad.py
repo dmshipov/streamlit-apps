@@ -254,11 +254,10 @@ else:
             extracted_text = image_to_text(img_file_buffer)
             if extracted_text:
                 update_text(extracted_text)
-                pass
-                st.rerun()
+                pass                
             else:
                 st.error("Функция update_text не определена.")
-          
+        st.rerun()
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
