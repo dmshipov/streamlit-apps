@@ -5,6 +5,7 @@ import easyocr as ocr
 import io
 import docx
 from docx import Document
+from docx.shared import Pt
 
 st.title("OCR")
 st.markdown("Оптическое распознавание символов")
