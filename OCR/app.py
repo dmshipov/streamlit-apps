@@ -3,7 +3,6 @@ import numpy as np
 from PIL import Image
 import easyocr as ocr
 import io
-from docxtpl import DocxTemplate
 
 st.title("OCR")
 st.markdown("Оптическое распознавание символов")
@@ -89,19 +88,3 @@ if img_file_buffer:
             file_name="extracted_text.txt",
             mime="text/plain",
         )
-        # --- Скачивание в DOCX ---
-        doc = DocxTemplate("template.docx") # Создаем шаблон, даже если он пустой
-        context = {} # Контекст пустой, нам не нужны шаблоны
-        doc.render(context)
-
-        docx_buffer = io.BytesIO()
-        doc.save(docx_buffer)
-        docx_buffer.seek(0)
-
-        st.download_button(
-            label="Скачать DOCX",
-            data=docx_buffer,
-            file_name="extracted_text.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-
