@@ -90,8 +90,12 @@ if img_file_buffer:
             mime="text/plain",
         )
         # --- Скачивание в DOCX ---
+        doc = DocxTemplate("template.docx") # Создаем шаблон, даже если он пустой
+        context = {} # Контекст пустой, нам не нужны шаблоны
+        doc.render(context)
+
         docx_buffer = io.BytesIO()
-        docx2txt.process(extracted_text, docx_buffer) # Прямо сюда пихаем текст
+        doc.save(docx_buffer)
         docx_buffer.seek(0)
 
         st.download_button(
@@ -100,3 +104,4 @@ if img_file_buffer:
             file_name="extracted_text.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
+
