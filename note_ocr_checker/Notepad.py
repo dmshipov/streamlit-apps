@@ -165,7 +165,7 @@ else:
           
         
     with st.expander("Добавить новую запись"):
-        text_input = st.text_area("Введите текст в поле ввода", horizontal=True, help="Введине текст используя разделитель 'и' или перенос на новую строку.", key="text_input", value=st.session_state.text_input)
+        text_input = st.text_area("Введите текст в поле ввода", help="Введине текст используя разделитель 'и' или перенос на новую строку.", key="text_input", value=st.session_state.text_input)
 
         if st.button("Добавить"):  # Добавляем on_click
             update_text(text_input)
