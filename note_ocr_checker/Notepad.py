@@ -182,20 +182,10 @@ else:
                 st.error(f"Ошибка при загрузке моделей EasyOCR: {e}")
                 return None
 
-        # Список поддерживаемых языков
-        available_langs = ["ru", "en", "es", "fr", "de"]
-
         # Русский и английский по умолчанию
         default_langs = ["ru", "en"]
 
-        selected_langs = st.multiselect(
-            "Выберите языки для распознавания:",
-            available_langs,
-            default=default_langs, # Устанавливаем default
-        )
-
-
-        reader = load_models(selected_langs)
+        reader = load_models(default_langs)
         if reader is None:
             st.stop()
 
