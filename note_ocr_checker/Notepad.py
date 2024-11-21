@@ -239,12 +239,12 @@ else:
                 "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
             )
 
-        placeholder = st.empty()  # Создаём пустое место
 
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
-            placeholder.text(extracted_text) # Записываем текст в пустое место
-            img_file_buffer = None
+            update_text(extracted_text)
+            img_file_buffer = None   
+            st.write('Позиция успешно добавлена')
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
