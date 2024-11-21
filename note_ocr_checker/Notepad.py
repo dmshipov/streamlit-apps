@@ -253,14 +253,10 @@ else:
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
             if extracted_text:
-                st.subheader("Распознанный текст")
-                text_area = st.text_area("", value=extracted_text, height=200)
-                if st.button("Добавить", key="fill_values_button"):
-                    if 'update_text' in locals() and callable(update_text):
-                        update_text(extracted_text)
-                    else:
-                        st.error("Функция update_text не определена.")
-                    st.rerun()
+                update_text(extracted_text)
+            else:
+                st.error("Функция update_text не определена.")
+            st.rerun()
             
     # Отрисовка таблицы только если текст не пуст
     if not products.empty:
