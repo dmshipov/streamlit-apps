@@ -3,9 +3,7 @@ import numpy as np
 from PIL import Image
 import easyocr as ocr
 import io
-import docx
-from docx import Document
-from docx.shared import Pt
+import docx2txt
 
 st.title("OCR")
 st.markdown("Оптическое распознавание символов")
@@ -91,20 +89,11 @@ if img_file_buffer:
             file_name="extracted_text.txt",
             mime="text/plain",
         )
-
         # --- Скачивание в DOCX ---
-        doc = docx.Document()
-        # Настройка шрифта
-        style = doc.styles['Normal']
-        font = style.font
-        font.name = 'Times New Roman' # Или любой другой шрифт
-        font.size = Pt(12)
-
-
-        p = doc.add_paragraph(extracted_text)
         docx_buffer = io.BytesIO()
-        doc.save(docx_buffer)
-        docx_buffer.seek(0)  # Перемещаем указатель в начало буфера
+        docx2txt.process(extracted_text, docx_buffer) # Прямо сюда пихаем текст
+        docx_buffer.seek(0)
+
         st.download_button(
             label="Скачать DOCX",
             data=docx_buffer,
