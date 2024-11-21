@@ -254,7 +254,7 @@ else:
             extracted_text = image_to_text(img_file_buffer)
             if extracted_text:
                 update_text(extracted_text)
-                st.rerun
+                st.rerun()
                 pass
             else:
                 st.error("Функция update_text не определена.")
