@@ -139,7 +139,7 @@ image_input = st.radio(
 )
 
 if image_input == "Камера":
-    img_file_buffer = st.camera_input("Сделайте фото")
+    img_file_buffer = st.camera_input("Сделайте фото", key="camera_input")
 elif image_input == "Изображение":
     img_file_buffer = st.file_uploader(
         "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
@@ -150,7 +150,7 @@ if img_file_buffer:
     extracted_text = image_to_text(img_file_buffer)
     if extracted_text:
         st.subheader("Распознанный текст")
-        st.text_area("", value=extracted_text, height=200)
+        st.text_area("", value=extracted_text, height=200, key="text_area")
 
         # --- Скачивание в TXT ---
         txt_buffer = io.BytesIO()
