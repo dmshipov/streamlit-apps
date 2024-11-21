@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 import easyocr as ocr
 import io
-from caracal import Document, Table, Paragraph, Bold, Image, Footer, Section
+from docxtpl import DocxTemplate
 
 st.title("OCR")
 st.markdown("Оптическое распознавание символов")
@@ -90,15 +90,13 @@ if img_file_buffer:
             mime="text/plain",
         )
         # --- Скачивание в DOCX ---
-        doc = Document()
+        doc = DocxTemplate("template.docx") # Создаем шаблон, даже если он пустой
+        context = {} # Контекст пустой, нам не нужны шаблоны
+        doc.render(context)
 
-        # Добавляем текст.  Из-за  использования  `Paragraph`  может  быть  чуть  сложнее  форматирование
-        doc.add_element(Paragraph(extracted_text))
-
-        docx_buffer = io.BytesIO()  # Сохраняем в буфер
+        docx_buffer = io.BytesIO()
         doc.save(docx_buffer)
         docx_buffer.seek(0)
-
 
         st.download_button(
             label="Скачать DOCX",
@@ -106,5 +104,4 @@ if img_file_buffer:
             file_name="extracted_text.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
-
 
