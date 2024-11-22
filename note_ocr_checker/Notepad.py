@@ -218,12 +218,11 @@ else:
                         img_array = np.array(image)
                         results = reader.readtext(img_array, paragraph=True)
                         extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)]) # Проверка на тип данных
-                        return extracted_text
+                        return extracted_text                       
                 except Exception as e:
                     st.error(f"Ошибка при распознавании текста: {e}")
                     return None
             return None
-
 
         image_input = st.radio(
             "Выберите способ ввода текста:",
