@@ -185,12 +185,9 @@ else:
 
         # Русский и английский по умолчанию
         default_langs = ["ru", "en"]
-
         reader = load_models(default_langs)
         if reader is None:
             st.stop()
-
-
 
         def resize_image(image, max_size=1000):
             width, height = image.size
@@ -200,18 +197,17 @@ else:
                 image = image.resize(new_size)
             return image
 
-
         def image_to_text(img_file_buffer):
             if img_file_buffer is not None:
                 try:
                     image = Image.open(img_file_buffer)
-                    
+
                     # Транспонируем фото
                     image = ImageOps.exif_transpose(image)
-                    
+
                     # Уменьшим размер фото
                     image = resize_image(image)
-                    
+
                     # Проверяем, есть ли уже распознанный текст в состоянии
                     if 'extracted_text' not in st.session_state:
                         with st.spinner("Распознавание текста..."):
@@ -219,12 +215,12 @@ else:
                             results = reader.readtext(img_array, paragraph=True)
                             extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)])  # Проверка на тип данных
                             st.session_state.extracted_text = extracted_text  # Сохраняем распознанный текст в состоянии
-                    
+
                     # Отображаем изображение и текст
-                    if st.checkbox("Изображение загруженно",  key='checkbox_image_loaded'):
+                    if st.checkbox("Изображение загруженно", key='checkbox_image_loaded'):
                         st.image(image, use_container_width=True)
                         st.text_area("Распознанный текст", st.session_state.extracted_text, height=300)
-                        
+
                     return st.session_state.extracted_text                       
                 except Exception as e:
                     st.error(f"Ошибка при распознавании текста: {e}")
@@ -246,11 +242,12 @@ else:
                 "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
             )
 
-
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
-            update_text(extracted_text)
-           
+            if 'extracted_text' in st.session_state and 'text_added' not in st.session_state:
+                update_text(st.session_state.extracted_text)
+                st.session_state.text_added = True  # Устанавливаем флаг, что текст был добавлен
+            
     
             
     # Отрисовка таблицы только если текст не пуст
