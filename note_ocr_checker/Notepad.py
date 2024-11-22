@@ -221,7 +221,7 @@ else:
                             st.session_state.extracted_text = extracted_text  # Сохраняем распознанный текст в состоянии
                     
                     # Отображаем изображение и текст
-                    if st.checkbox("Изображение загруженно"):
+                    if st.checkbox("Изображение загруженно",  key='checkbox_image_loaded'):
                         st.image(image, use_container_width=True)
                         st.text_area("Распознанный текст", st.session_state.extracted_text, height=300)
                         
