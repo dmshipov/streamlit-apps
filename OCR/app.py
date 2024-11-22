@@ -39,9 +39,8 @@ if reader is None:
 def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
         try:
-            image = Image.open(img_file_buffer)
-            st.write("Изображение загруженно")
-            with st.expander("Оптическое распознавание"):
+            image = Image.open(img_file_buffer)      
+            with st.expander("Изображение загруженно"):
                 st.image(image, use_container_width=True)
 
             with st.spinner("Распознавание текста..."):
