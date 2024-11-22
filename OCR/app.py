@@ -5,7 +5,7 @@ import easyocr as ocr
 import io
 
 st.set_page_config(layout="wide")
-st.markdown("#### Оптическое распознавание")
+st.header("Оптическое распознавание")
 
 # Загрузка моделей EasyOCR. Указываем языки явно
 @st.cache_resource()
