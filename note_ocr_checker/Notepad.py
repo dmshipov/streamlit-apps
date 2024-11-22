@@ -219,7 +219,7 @@ else:
                     # Отображаем изображение и текст
                     if st.checkbox("Изображение загруженно", key='checkbox_image_loaded'):
                         st.image(image, use_container_width=True)
-                        st.text_area("Распознанный текст", st.session_state.extracted_text, height=300)
+                    
 
                     return st.session_state.extracted_text                       
                 except Exception as e:
