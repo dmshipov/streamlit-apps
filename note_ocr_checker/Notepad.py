@@ -211,19 +211,24 @@ else:
                     
                     # Уменьшим размер фото
                     image = resize_image(image)
-            
-                    with st.spinner("Распознавание текста..."):
-                        img_array = np.array(image)
-                        results = reader.readtext(img_array, paragraph=True)
-                        extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)]) # Проверка на тип данных
-                        return extracted_text                       
+                    
+                    # Проверяем, есть ли уже распознанный текст в состоянии
+                    if 'extracted_text' not in st.session_state:
+                        with st.spinner("Распознавание текста..."):
+                            img_array = np.array(image)
+                            results = reader.readtext(img_array, paragraph=True)
+                            extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)])  # Проверка на тип данных
+                            st.session_state.extracted_text = extracted_text  # Сохраняем распознанный текст в состоянии
+                    
+                    # Отображаем изображение и текст
+                    if st.checkbox("Изображение загруженно"):
+                        st.image(image, use_container_width=True)
+                        st.text_area("Распознанный текст", st.session_state.extracted_text, height=300)
+                        
+                    return st.session_state.extracted_text                       
                 except Exception as e:
                     st.error(f"Ошибка при распознавании текста: {e}")
                     return None
-                
-            if st.checkbox("Изображение загруженно"):
-                st.image(image, use_container_width=True)
-                
             return None
 
         image_input = st.radio(
