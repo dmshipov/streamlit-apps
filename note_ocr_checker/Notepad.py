@@ -8,6 +8,7 @@ import datetime
 import sqlite3
 from PIL import ImageOps
 
+st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
 cursor = conn.cursor()
@@ -210,8 +211,8 @@ else:
                     
                     # Уменьшим размер фото
                     image = resize_image(image)
-
-                    st.image(image, caption="Загруженное изображение", use_container_width=True)
+                    with st.expander("Изображение загруженно"):
+                        st.image(image, use_container_width=True)
 
                     with st.spinner("Распознавание текста..."):
                         img_array = np.array(image)
@@ -243,7 +244,7 @@ else:
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
             update_text(extracted_text)
-            st.success("Позиция успешно добалвена!")  # Сообщение об успехе  
+           
     
             
     # Отрисовка таблицы только если текст не пуст
