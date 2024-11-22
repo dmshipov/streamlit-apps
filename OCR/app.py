@@ -4,9 +4,7 @@ from PIL import Image
 import easyocr as ocr
 import io
 
-st.title("OCR")
-st.markdown("Оптическое распознавание символов")
-st.markdown("")
+st.markdown("### Оптическое распознавание символов")
 
 # Загрузка моделей EasyOCR. Указываем языки явно
 @st.cache_resource()
