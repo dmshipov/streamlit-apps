@@ -211,9 +211,7 @@ else:
                     
                     # Уменьшим размер фото
                     image = resize_image(image)
-                    if st.checkbox("Изображение загруженно"):
-                        st.image(image, use_container_width=True)
-
+            
                     with st.spinner("Распознавание текста..."):
                         img_array = np.array(image)
                         results = reader.readtext(img_array, paragraph=True)
@@ -222,6 +220,10 @@ else:
                 except Exception as e:
                     st.error(f"Ошибка при распознавании текста: {e}")
                     return None
+                
+            if st.checkbox("Изображение загруженно"):
+                st.image(image, use_container_width=True)
+                
             return None
 
         image_input = st.radio(
