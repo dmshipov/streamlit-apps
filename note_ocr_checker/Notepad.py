@@ -211,7 +211,7 @@ else:
                     
                     # Уменьшим размер фото
                     image = resize_image(image)
-                    if st.button("Изображение загруженно"):
+                    if st.checkbox("Изображение загруженно"):
                         st.image(image, use_container_width=True)
 
                     with st.spinner("Распознавание текста..."):
