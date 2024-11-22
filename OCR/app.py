@@ -5,7 +5,7 @@ import easyocr as ocr
 import io
 
 st.set_page_config(layout="wide")
-st.header("Оптическое распознавание")
+st.markdown("#### Оптическое распознавание")
 
 # Загрузка моделей EasyOCR. Указываем языки явно
 @st.cache_resource()
@@ -74,7 +74,7 @@ elif image_input == "Изображение":
 if img_file_buffer:
     extracted_text = image_to_text(img_file_buffer)
     if extracted_text:
-        st.subheader("Распознанный текст")
+        st.markdown("##### Распознанный текст")
         st.text_area("", value=extracted_text, height=200, key="text_area")
 
         # --- Скачивание в TXT ---
