@@ -30,7 +30,6 @@ selected_langs = st.multiselect(
     default=default_langs, # Устанавливаем default
 )
 
-
 reader = load_models(selected_langs)
 if reader is None:
     st.stop()
