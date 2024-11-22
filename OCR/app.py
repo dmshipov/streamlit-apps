@@ -4,7 +4,7 @@ from PIL import Image
 import easyocr as ocr
 import io
 
-st.markdown('<style>.stApp { max-width: 100%; }</style>', unsafe_allow_html=True)
+st.set_page_config(layout="wide")
 
 st.markdown("#### Оптическое распознавание")
 
