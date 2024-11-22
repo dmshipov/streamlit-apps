@@ -41,6 +41,8 @@ def image_to_text(img_file_buffer):
         try:
             image = Image.open(img_file_buffer)
             st.write("Изображение загруженно")
+            with st.expander("Оптическое распознавание"):
+                st.image(image, use_container_width=True)
 
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
