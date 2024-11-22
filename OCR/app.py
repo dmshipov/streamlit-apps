@@ -41,7 +41,7 @@ def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
         try:
             image = Image.open(img_file_buffer)
-            st.image(image, caption="Загруженное изображение", use_container_width=False)
+            st.write("Изображение загруженно")
 
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
