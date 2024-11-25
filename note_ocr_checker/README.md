@@ -1,4 +1,4 @@
-## [Интерактивный инструмент для работы с данными](https://notepadpy-ykmmegdfccmsnqxacexnuw.streamlit.app)
+## [Интерактивный инструмент для работы с данными](https://notepadpy-jxrbvsf3jdydn2urdqtavr.streamlit.app/)
 Данное приложение представляет собой универсальный инструмент для работы с данными, который позволяет преобразовывать текст в таблицу, взаимодействовать с ней, планировать задачи и, благодаря новой функции OCR,  распознавать текст с изображений.  Всё это в удобном и интерактивном формате.
 
 ### Основные функции
@@ -71,4 +71,4 @@
 * Установите библиотеки с помощью команды pip install.
 * Запустите блокнот с помощью команды streamlit run main.py.
 
-Или просто перейдите по следующей ссылки [Streamlit cloud app.](https://notepadpy-hdqbc4ffq6j9efi3lwtbdq.streamlit.app/)
+Или просто перейдите по следующей ссылки [Streamlit cloud app.](https://notepadpy-jxrbvsf3jdydn2urdqtavr.streamlit.app/)

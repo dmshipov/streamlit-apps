@@ -244,9 +244,9 @@ else:
 
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
-            if 'extracted_text' in st.session_state and 'text_added' not in st.session_state:
-                update_text(st.session_state.extracted_text)
-                st.session_state.text_added = True  # Устанавливаем флаг, что текст был добавлен
+            if 'extracted_text' not in None:
+                update_text()
+
             
     
             
