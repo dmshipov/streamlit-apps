@@ -244,8 +244,7 @@ else:
 
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
-            if 'extracted_text' is not None:
-                update_text()
+            update_text()
 
             
     
