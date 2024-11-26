@@ -70,7 +70,7 @@ def update_text(texts_input):
                                 value = float(item)
                                 
                                 # Проверяем, если есть 'г' или 'Г' после числа
-                                if item.endswith('г') or item.endswith('Г'):
+                                if item.endswith('г') or item.endswith('Г') or item.endswith(' г') or item.endswith(' Г'):
                                     weight = value
                                 elif price == 0:
                                     price = value
