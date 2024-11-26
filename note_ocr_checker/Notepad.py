@@ -214,9 +214,6 @@ else:
                         results = reader.readtext(img_array, paragraph=True)
                         extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)])  # Проверка на тип данных
                         st.session_state.extracted_text = extracted_text  # Сохраняем распознанный текст в состоянии
-
-                    # Отображаем изображение и текст
-                    if st.checkbox("Изображение загруженно", key='checkbox_image_loaded'):
                         st.image(image, use_container_width=True)
                     
 
