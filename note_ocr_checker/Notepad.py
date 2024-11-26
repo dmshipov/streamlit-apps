@@ -73,14 +73,14 @@ def update_text(texts_input):
 
                 # Определяем цену и вес
                 if 'р' in item.lower() or 'p' in item.lower():
-                    rubles = value
+                    rubles += value  # Добавляем к рублям
                 elif 'к' in item.lower():
-                    kopeks = value
+                    kopeks += value  # Добавляем к копейкам
                 elif next_item in ["кг", "г"]:
                     weight = value if next_item == "кг" else value / 1000  # Преобразуем граммы в килограммы
 
         # Вычисляем общую цену
-        if rubles > 0:
+        if rubles > 0 or kopeks > 0:
             price = rubles + kopeks / 100
 
         # Получаем наименование товара (все, что не число)
