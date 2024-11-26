@@ -88,12 +88,9 @@ def update_text(texts_input):
             price = rubles + kopeks / 100
 
             # Удаляем цену и вес из строки, чтобы получить наименование продукта
-            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Boс|\d+\s*г)", "", part_cleaned).strip()
+            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Beс|\d+\s*г)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
-            if 'Вес:' in name:
-                index = name.find('Вес:')
-                if index != -1:
-                    name = name[:index].strip()
+            
             products_list.append({
                 "Наименование": name,
                 "Цена": price,
