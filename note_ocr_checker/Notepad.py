@@ -91,7 +91,7 @@ def update_text(texts_input):
             name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Boс|\d+\s*г)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
             if 'Вес:' in name:
-                name = name.split('Вес:')[0].strip()
+                name = name.replace('Вес:', '', 1).strip()
             products_list.append({
                 "Наименование": name,
                 "Цена": price,
