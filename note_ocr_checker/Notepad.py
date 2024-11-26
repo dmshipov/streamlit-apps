@@ -262,6 +262,7 @@ else:
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
             update_text(extracted_text)
+            st.success("Данные успешно загружены!")
 
             
     
