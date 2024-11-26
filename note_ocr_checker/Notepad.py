@@ -7,7 +7,6 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import ImageOps
-import re
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
@@ -66,19 +65,18 @@ def update_text(texts_input):
                         # Разбиваем строку на слова и проверяем на наличие чисел
                         items = part_cleaned.split()
                         for item in items:
-                            # Используем регулярное выражение для поиска числа с возможными пробелами перед 'г' или 'Г'
-                            match = re.match(r'(d+(.d+)?)s*(г|Г)', item)
-                            if match:
-                                weight = float(match.group(1))  # Получаем числовое значение веса
-                            else:
-                                try:
-                                    # Пробуем преобразовать в число (для цены)
-                                    value = float(item)
-                                    if price == 0:  # Устанавливаем цену только если она еще не установлена
-                                        price = value
-                                except ValueError:
-                                    # Если не число, просто пропускаем
-                                    continue
+                            try:
+                                # Пробуем преобразовать в число
+                                value = float(item)
+                                
+                                # Проверяем, если есть 'г' или 'Г' после числа
+                                if item.endswith('г') or item.endswith('Г'):
+                                    weight = value
+                                elif price == 0:
+                                    price = value
+                            except ValueError:
+                                # Если не число, просто пропускаем
+                                continue
 
                         # Добавляем продукт с найденными значениями
                         products_list.append({
