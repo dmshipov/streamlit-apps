@@ -44,10 +44,7 @@ def update_text(texts_input):
         input_value = texts_input
         products_list = []
         if input_value:
-            lines = input_value.split(' и ')
-            lines = [line.strip() for line in lines]
-            lines = [line.split('\n') for line in lines]
-            lines = [item for sublist in lines for item in sublist]
+            # ... (предыдущий код обработки строк)
 
             for line in lines:
                 parts = line.split(' И ')
@@ -62,16 +59,29 @@ def update_text(texts_input):
                         for i, item in enumerate(items):
                             try:
                                 value = float(item)
-                                if i + 1 < len(items) and items[i+1].lower().replace(" ", "") == "г":  # Проверка на 'г'
+
+
+                                next_item_check_r = ""
+                                if i + 1 < len(items):  # Проверка на выход за границы списка
+                                    next_item_check_r = items[i+1].lower().replace(" ", "")
+
+
+                                next_item_check_g = ""
+                                if i + 1 < len(items):
+                                  next_item_check_g = items[i+1].lower().replace(" ", "")
+                                
+
+                                if next_item_check_g == "г":
                                     weight = value
-                                    # Удаляем 'г' из items
-                                    items.pop(i+1) 
-                                elif price == 0:
+                                    items.pop(i+1)
+                                elif next_item_check_r in ["₽", "р"]:  # Проверка на '₽', 'р', 'Р'
+                                    price = value
+                                    items.pop(i + 1)  # Удаляем символ валюты
+                                elif price == 0:  # Если цена еще не определена
                                     price = value
                             except ValueError:
-                                name_parts.append(item)  # Добавляем в название, если не число
-                        
-                         # Формируем наименование
+                                name_parts.append(item)
+
                         name = ' '.join(name_parts)
 
 
