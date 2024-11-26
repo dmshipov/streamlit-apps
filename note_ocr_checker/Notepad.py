@@ -72,7 +72,7 @@ def update_text(texts_input):
                 weight = float(weight_matches[0])  # Получаем первое найденное значение веса
 
             # Удаляем из текста найденные цены и веса для формирования наименования
-            cleaned_part = re.sub(r'\d+\s*[р₽]\.?\d*\s*[кк]?', '', part_cleaned).strip()  # Убираем цены
+            cleaned_part = re.sub(r'\d+\s*[р.]\.?\d*\s*[кк]?', '', part_cleaned).strip()  # Убираем цены
             cleaned_part = re.sub(r'\d+(?:\.\d+)?\s*[г]', '', cleaned_part).strip()  # Убираем вес
 
             name = cleaned_part.strip()  # Наименование продукта
