@@ -55,9 +55,10 @@ def update_text(texts_input):
         if not part_cleaned:
             continue
 
+        price = 0
+        weight = 0
         rubles = 0
         kopeks = 0
-        weight = 0
 
         items = part_cleaned.split()
 
@@ -78,8 +79,9 @@ def update_text(texts_input):
                 elif next_item in ["кг", "г"]:
                     weight = value if next_item == "кг" else value / 1000  # Преобразуем граммы в килограммы
 
-        # Форматируем цену как строку "рубли,копейки"
-        price = f"{int(rubles)}.{int(kopeks)}" if rubles > 0 or kopeks > 0 else "0.0"
+        # Вычисляем общую цену
+        if rubles > 0:
+            price = rubles + '.' + kopeks
 
         # Получаем наименование товара (все, что не число)
         name = ' '.join(item for item in items if not item.isdigit() and not any(char.isdigit() for char in item))
