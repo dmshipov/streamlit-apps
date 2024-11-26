@@ -79,7 +79,7 @@ def update_text(texts_input):
                     weight = value if next_item == "кг" else value / 1000  # Преобразуем граммы в килограммы
 
         # Форматируем цену как строку "рубли,копейки"
-        price = f"{int(rubles)},{int(kopeks)}" if rubles > 0 or kopeks > 0 else "0,0"
+        price = f"{int(rubles)}.{int(kopeks)}" if rubles > 0 or kopeks > 0 else "0.0"
 
         # Получаем наименование товара (все, что не число)
         name = ' '.join(item for item in items if not item.isdigit() and not any(char.isdigit() for char in item))
