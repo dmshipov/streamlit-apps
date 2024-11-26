@@ -59,33 +59,26 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
 
-            # Используем регулярные выражения для поиска цен и весов
-            matches = re.findall(r'(\d+(?:\.\d+)?)\s*([р₽])\.?(\d+)?\s*([кк])?', part_cleaned)
+            # Регулярное выражение для поиска рублей и копеек
+            price_matches = re.findall(r'(\d+)\s*р[\.]?(\d*)\s*к?', part_cleaned)
+            if price_matches:
+                rubles = float(price_matches[0][0])  # Получаем рубли
+                kopeks = float(price_matches[0][1]) if price_matches[0][1] else 0  # Получаем копейки, если они есть
+                price = rubles + kopeks / 100  # Формируем полную цену
 
-            for match in matches:
-                ruble_value = float(match[0])
-                currency = match[1]
-                k_count = match[2]
-
-                if currency in ["₽", "р"]:
-                    rubles = ruble_value
-                    if k_count:
-                        kopeks = float(k_count)  # Получаем копейки, если они есть
-            
-            # Если есть рубли и копейки, устанавливаем цену
-            if rubles > 0:
-                price = rubles + kopeks / 100
-
-            # Поиск веса
+            # Регулярное выражение для поиска веса
             weight_matches = re.findall(r'(\d+(?:\.\d+)?)\s*г', part_cleaned)
             if weight_matches:
-                weight = float(weight_matches[0])
+                weight = float(weight_matches[0])  # Получаем первое найденное значение веса
 
-            # Формирование имени продукта
-            name = ' '.join(item for item in part_cleaned.split() if item not in [match[0] + match[1] for match in matches])
-            
+            # Удаляем из текста найденные цены и веса для формирования наименования
+            cleaned_part = re.sub(r'\d+\s*[р₽]\.?\d*\s*[кк]?', '', part_cleaned).strip()  # Убираем цены
+            cleaned_part = re.sub(r'\d+(?:\.\d+)?\s*[г]', '', cleaned_part).strip()  # Убираем вес
+
+            name = cleaned_part.strip()  # Наименование продукта
+
             products_list.append({
-                "Наименование": name.strip(),
+                "Наименование": name,
                 "Цена": price,
                 "Количество": 1,
                 "Вес": weight,
