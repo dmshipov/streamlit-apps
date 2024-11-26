@@ -57,38 +57,37 @@ def update_text(texts_input):
                         price = 0
                         weight = 0
                         name_parts = []
-                        rubles = 0
-                        kopeks = 0
 
                         items = part_cleaned.split()
                         for i, item in enumerate(items):
-                            numeric_part = ''.join(filter(str.isdigit, item))
+                            try:
+                                value = float(item)
 
-                            if numeric_part:
-                                value = float(numeric_part)
 
-                                next_item = ""
+                                next_item_check_r = ""
+                                if i + 1 < len(items):  # Проверка на выход за границы списка
+                                    next_item_check_r = items[i+1].lower().replace(" ", "")
+
+
+                                next_item_check_g = ""
                                 if i + 1 < len(items):
-                                    next_item = items[i + 1].lower().replace(" ", "")
+                                  next_item_check_g = items[i+1].lower().replace(" ", "")
+                                
 
-                                if next_item == "г":
+                                if next_item_check_g == "г":
                                     weight = value
-                                    items.pop(i + 1)  # Удаляем 'г'
-                                elif next_item in ["₽", "р"]:
-                                    rubles = value
-                                    items.pop(i + 1)  # Удаляем символ валюты
-                                elif "к" in item.lower():  # Проверка на наличие 'к' в элементе
-                                    kopeks = value
-                                elif price == 0 and rubles == 0:  # Если цена еще не определена
+                                    items.pop(i+1)
+                                elif next_item_check_r in ["₽", "р"]:  # Проверка на '₽', 'р', 'Р'
                                     price = value
-
-                        # Объединяем рубли и копейки, если есть копейки и нет цены в рублях
-                        if rubles > 0 and kopeks > 0 and price == 0:
-                            price = rubles + kopeks / 100
-                        elif rubles > 0 and price == 0:  # Если рублей нет, но есть цена в рублях
-                            price = rubles
+                                    items.pop(i + 1)  # Удаляем символ валюты
+                                elif price == 0:  # Если цена еще не определена
+                                    price = value
+                            except ValueError:
+                                name_parts.append(item)
 
                         name = ' '.join(name_parts)
+
+
 
                         products_list.append({
                             "Наименование": name,
