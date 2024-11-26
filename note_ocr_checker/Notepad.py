@@ -55,7 +55,6 @@ def update_text(texts_input):
 
             price = 0
             weight = 0
-            name_parts = []
             rubles = 0
             kopeks = 0
 
@@ -67,7 +66,10 @@ def update_text(texts_input):
                 if numeric_part:
                     value = float(numeric_part)
 
-                    next_item = items[i + 1].lower().replace(" ", "") if i + 1 < len(items) else ""
+                    if i + 1 < len(items):
+                        next_item = items[i + 1].lower().replace(" ", "")
+                    else:
+                        next_item = ""
 
                     if next_item == "г":
                         weight = value
@@ -81,9 +83,9 @@ def update_text(texts_input):
             if rubles > 0:
                 price = rubles + kopeks / 100 if kopeks > 0 and price == 0 else rubles
 
-            name = ' '.join(item for item in items if not item.isdigit())  # Добавляем только нечисловые элементы
+            name = ' '.join(item for item in items if not item.isdigit()) 
             products_list.append({
-                "Наименование": name,
+                "Наименование": name.strip(),
                 "Цена": price,
                 "Количество": 1,
                 "Вес": weight,
@@ -91,7 +93,6 @@ def update_text(texts_input):
                 "Дата": None
             })
 
-    # Использование одной команды вставки
     if products_list:
         cursor.executemany("""
             INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
@@ -102,7 +103,7 @@ def update_text(texts_input):
         conn.commit()
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-        st.session_state.products = products.copy() 
+        st.session_state.products = products.copy()
         st.session_state.products = pd.DataFrame(products_list)
 
 # Создание таблицы, если она еще не существует
