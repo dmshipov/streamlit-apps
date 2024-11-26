@@ -58,12 +58,23 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
 
-            # Используем регулярное выражение для извлечения рублей и копеек
+            # Проверяем различные форматы для извлечения рублей и копеек
+            price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+            else:
+                # Если нет формата 'р.' и 'к.', ищем альтернативные форматы
+                price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
+                if price_match:
+                    rubles = int(price_match.group(1))
+                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+            
+            # Обработка альтернативного формата суммы (например, '390 ₽')
             price_match = re.search(r"(\d+)\s*₽", part_cleaned)
             if price_match:
                 rubles = int(price_match.group(1))
-
-                # Проверяем на наличие копеек
+                # Поиск копеек в формате 'Boс'
                 kopeks_match = re.search(r"(\d+)\s*Boс", part_cleaned)
                 if kopeks_match:
                     kopeks = int(kopeks_match.group(1))
@@ -77,9 +88,7 @@ def update_text(texts_input):
             price = rubles + kopeks / 100
 
             # Удаляем цену и вес из строки, чтобы получить наименование продукта
-            name = re.sub(r"(\d+\s*₽|\d+\s*Boс|\d+\s*г)", "", part_cleaned).strip()
-
-            # Удаляем лишние символы и пробелы
+            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Boс|\d+\s*г)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
 
             products_list.append({
@@ -97,6 +106,12 @@ def update_text(texts_input):
             VALUES (?, ?, ?, ?, ?, ?, date('now'))
         """, [(st.session_state.username, prod["Наименование"], prod["Цена"], 
                 prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
+        
+        conn.commit()
+
+        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
+        st.session_state.products = products.copy()
+        st.session_state.products = pd.DataFrame(products_list)
         
         conn.commit()
 
