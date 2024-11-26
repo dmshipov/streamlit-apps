@@ -208,13 +208,12 @@ else:
                     # Уменьшим размер фото
                     image = resize_image(image)
 
-                    # Проверяем, есть ли уже распознанный текст в состоянии
-                    if 'extracted_text' not in st.session_state:
-                        with st.spinner("Распознавание текста..."):
-                            img_array = np.array(image)
-                            results = reader.readtext(img_array, paragraph=True)
-                            extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)])  # Проверка на тип данных
-                            st.session_state.extracted_text = extracted_text  # Сохраняем распознанный текст в состоянии
+
+                    with st.spinner("Распознавание текста..."):
+                        img_array = np.array(image)
+                        results = reader.readtext(img_array, paragraph=True)
+                        extracted_text = " ".join([text for result in results for text in result[1:] if isinstance(text, str)])  # Проверка на тип данных
+                        st.session_state.extracted_text = extracted_text  # Сохраняем распознанный текст в состоянии
 
                     # Отображаем изображение и текст
                     if st.checkbox("Изображение загруженно", key='checkbox_image_loaded'):
@@ -244,8 +243,7 @@ else:
 
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
-            if 'extracted_text' is not None:
-                update_text(extracted_text)
+            update_text(extracted_text)
 
             
     
