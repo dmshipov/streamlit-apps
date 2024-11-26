@@ -81,6 +81,9 @@ def update_text(texts_input):
                                     kopeks = value
                                 elif price == 0 and rubles == 0:  # Если цена еще не определена
                                     price = value
+                            else:
+                                # Если это не числовое значение, добавляем в name_parts
+                                name_parts.append(item)
 
                         # Объединяем рубли и копейки, если есть копейки и нет цены в рублях
                         if rubles > 0 and kopeks > 0 and price == 0:
