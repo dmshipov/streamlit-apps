@@ -59,21 +59,28 @@ def update_text(texts_input):
             kopeks = 0
 
             # Используем регулярное выражение для извлечения рублей и копеек
-            price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
+            price_match = re.search(r"(\d+)\s*₽", part_cleaned)
             if price_match:
                 rubles = int(price_match.group(1))
-                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-            
+
+                # Проверяем на наличие копеек
+                kopeks_match = re.search(r"(\d+)\s*Boс", part_cleaned)
+                if kopeks_match:
+                    kopeks = int(kopeks_match.group(1))
+
             # Теперь обрабатываем вес
-            weight_match = re.search(r"(\d+)г", part_cleaned)
+            weight_match = re.search(r"(\d+)\s*г", part_cleaned)
             if weight_match:
                 weight = int(weight_match.group(1))
 
             # Определяем полную цену
             price = rubles + kopeks / 100
 
-            # Удаляем цены и вес из строки, чтобы получить наименование продукта
-            name = re.sub(r"(\d+p\.? ?\d*к\.?|(\d+)г)", "", part_cleaned).strip()
+            # Удаляем цену и вес из строки, чтобы получить наименование продукта
+            name = re.sub(r"(\d+\s*₽|\d+\s*Boс|\d+\s*г)", "", part_cleaned).strip()
+
+            # Удаляем лишние символы и пробелы
+            name = re.sub(r"[;]", "", name).strip()
 
             products_list.append({
                 "Наименование": name,
