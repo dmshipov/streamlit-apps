@@ -7,6 +7,7 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import ImageOps
+import re
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
@@ -43,10 +44,9 @@ def update_text(texts_input):
     if not texts_input:
         return
 
-    input_value = texts_input
     products_list = []
 
-    lines = (line.strip() for line in input_value.split(' и '))
+    lines = (line.strip() for line in texts_input.split(' и '))
     for line in lines:
         for part in line.split(' И '):
             part_cleaned = part.strip()
@@ -58,32 +58,32 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
 
-            items = part_cleaned.split()
-            
-            for i, item in enumerate(items):
-                numeric_part = ''.join(filter(str.isdigit, item))
+            # Разделение по "р." для извлечения рубли и копейки
+            if 'р.' in part_cleaned:
+                price_part = part_cleaned.split('р.')[0].strip()
+                kopeks_part = part_cleaned.split('р.')[1].strip()
 
-                if numeric_part:
-                    value = float(numeric_part)
+                # Получение рублей
+                if price_part.isdigit():
+                    rubles = float(price_part)
 
-                    if i + 1 < len(items):
-                        next_item = items[i + 1].lower().replace(" ", "")
-                    else:
-                        next_item = ""
+                # Получение копеек, если они указаны
+                if 'к.' in kopeks_part:
+                    kopeks_part = kopeks_part.split('к.')[0].strip()
+                    if kopeks_part.isdigit():
+                        kopeks = float(kopeks_part)
 
-                    if next_item == "г":
-                        weight = value
-                    elif next_item in ["₽", "р."]:
-                        rubles = value
-                    elif "к" in item.lower():
-                        kopeks = value
-                    elif price == 0 and rubles == 0:
-                        price = value
+            # Теперь обрабатываем вес
+            weight_match = re.search(r"(\d+)г", part_cleaned)
+            if weight_match:
+                weight = int(weight_match.group(1))
 
-            if rubles > 0:
-                price = rubles + kopeks / 100 if kopeks > 0 and price == 0 else rubles
+            # Определяем цену с учетом рублей и копеек
+            price = rubles + kopeks / 100
 
-            name = ' '.join(item for item in items if not item.isdigit()) 
+            # Обработка остальных частей строки для названия
+            name = re.sub(r"(\d+р\.? ?\d+к\.?|(\d+)г)", "", part_cleaned).strip()
+
             products_list.append({
                 "Наименование": name.strip(),
                 "Цена": price,
