@@ -39,7 +39,6 @@ def register(username, password):
     else:
         st.success("Регистрация прошла успешно!")
 
-Python
 
 def update_text(texts_input):
     if not texts_input:
