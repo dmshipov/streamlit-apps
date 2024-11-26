@@ -7,6 +7,7 @@ import pandas as pd
 import datetime
 import sqlite3
 from PIL import ImageOps
+import re
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
@@ -58,34 +59,23 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
 
-            items = part_cleaned.split()
+            # Используем регулярное выражение для извлечения цен
+            price_match = re.search(r"(\d+)р\.? ?(\d+)к\.?", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks = int(price_match.group(2))
+                price = rubles + kopeks / 100
+
+            # Теперь обрабатываем вес
+            weight_match = re.search(r"(\d+)г", part_cleaned)
+            if weight_match:
+                weight = int(weight_match.group(1))
+
+            # Обработка остальных частей строки для названия
+            name = re.sub(r"(\d+р\.? ?\d+к\.?|(\d+)г)", "", part_cleaned).strip()
             
-            for i, item in enumerate(items):
-                numeric_part = ''.join(filter(str.isdigit, item))
-
-                if numeric_part:
-                    value = float(numeric_part)
-
-                    if i + 1 < len(items):
-                        next_item = items[i + 1].lower().replace(" ", "")
-                    else:
-                        next_item = ""
-
-                    if next_item == "г":
-                        weight = value
-                    elif next_item in ["₽", "р"]:
-                        rubles = value
-                    elif "к" in item.lower():
-                        kopeks = value
-                    elif price == 0 and rubles == 0:
-                        price = value
-
-            if rubles > 0:
-                price = rubles + kopeks / 100 if kopeks > 0 and price == 0 else rubles
-
-            name = ' '.join(item for item in items if not item.isdigit()) 
             products_list.append({
-                "Наименование": name.strip(),
+                "Наименование": name,
                 "Цена": price,
                 "Количество": 1,
                 "Вес": weight,
