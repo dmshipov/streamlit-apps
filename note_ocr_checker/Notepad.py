@@ -58,34 +58,25 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
 
-            # Разделение по "р." для извлечения рубли и копейки
-            if 'р.' in part_cleaned:
-                price_part = part_cleaned.split('р.')[0].strip()
-                kopeks_part = part_cleaned.split('р.')[1].strip()
-
-                # Получение рублей
-                if price_part.isdigit():
-                    rubles = float(price_part)
-
-                # Получение копеек, если они указаны
-                if 'к.' in kopeks_part:
-                    kopeks_part = kopeks_part.split('к.')[0].strip()
-                    if kopeks_part.isdigit():
-                        kopeks = float(kopeks_part)
-
+            # Используем регулярное выражение для извлечения рублей и копеек
+            price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+            
             # Теперь обрабатываем вес
             weight_match = re.search(r"(\d+)г", part_cleaned)
             if weight_match:
                 weight = int(weight_match.group(1))
 
-            # Определяем цену с учетом рублей и копеек
+            # Определяем полную цену
             price = rubles + kopeks / 100
 
-            # Обработка остальных частей строки для названия
-            name = re.sub(r"(\d+р\.? ?\d+к\.?|(\d+)г)", "", part_cleaned).strip()
+            # Удаляем цены и вес из строки, чтобы получить наименование продукта
+            name = re.sub(r"(\d+p\.? ?\d*к\.?|(\d+)г)", "", part_cleaned).strip()
 
             products_list.append({
-                "Наименование": name.strip(),
+                "Наименование": name,
                 "Цена": price,
                 "Количество": 1,
                 "Вес": weight,
