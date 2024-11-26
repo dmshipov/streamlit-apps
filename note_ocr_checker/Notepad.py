@@ -81,7 +81,7 @@ def update_text(texts_input):
 
         # Вычисляем общую цену
         if rubles > 0:
-            price = rubles + '.' + kopeks
+            price = f'{rubles}"."{kopeks}'
 
         # Получаем наименование товара (все, что не число)
         name = ' '.join(item for item in items if not item.isdigit() and not any(char.isdigit() for char in item))
