@@ -80,7 +80,7 @@ def update_text(texts_input):
                     kopeks = int(kopeks_match.group(1))
 
             # Теперь обрабатываем вес
-            weight_match = re.search(r"(\d+)\s*г", part_cleaned)
+            weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
             if weight_match:
                 weight = int(weight_match.group(1))
 
