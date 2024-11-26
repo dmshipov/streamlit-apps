@@ -44,7 +44,10 @@ def update_text(texts_input):
         input_value = texts_input
         products_list = []
         if input_value:
-            # ... (предыдущий код обработки строк)
+            lines = input_value.split(' и ')
+            lines = [line.strip() for line in lines]
+            lines = [line.split('\n') for line in lines]
+            lines = [item for sublist in lines for item in sublist]
 
             for line in lines:
                 parts = line.split(' И ')
