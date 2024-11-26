@@ -40,73 +40,68 @@ def register(username, password):
         st.success("Регистрация прошла успешно!")
 
 def update_text(texts_input):
-    if texts_input:
-        input_value = texts_input
-        products_list = []
-        if input_value:
-            lines = input_value.split(' и ')
-            lines = [line.strip() for line in lines]
-            lines = [line.split('\n') for line in lines]
-            lines = [item for sublist in lines for item in sublist]
+    if not texts_input:
+        return
 
-            for line in lines:
-                parts = line.split(' И ')
-                for part in parts:
-                    part_cleaned = part.strip()
-                    if part_cleaned:
-                        price = 0
-                        weight = 0
-                        name_parts = []
-                        rubles = 0
-                        kopeks = 0
+    input_value = texts_input
+    products_list = []
 
-                        items = part_cleaned.split()
-                        for i, item in enumerate(items):
-                            numeric_part = ''.join(filter(str.isdigit, item))
+    lines = (line.strip() for line in input_value.split(' и '))
+    for line in lines:
+        for part in line.split(' И '):
+            part_cleaned = part.strip()
+            if not part_cleaned:
+                continue
 
-                            if numeric_part:
-                                value = float(numeric_part)
+            price = 0
+            weight = 0
+            rubles = 0
+            kopeks = 0
 
-                                next_item = ""
-                                if i + 1 < len(items):
-                                    next_item = items[i + 1].lower().replace(" ", "")
-
-                                if next_item == "г":
-                                    weight = value
-                                    items.pop(i + 1)  # Удаляем 'г'
-                                elif next_item in ["₽", "р"]:
-                                    rubles = value
-                                    items.pop(i + 1)  # Удаляем символ валюты
-                                elif "к" in item.lower():  # Проверка на наличие 'к' в элементе
-                                    kopeks = value
-                                elif price == 0 and rubles == 0:  # Если цена еще не определена
-                                    price = value
-
-                        # Объединяем рубли и копейки, если есть копейки и нет цены в рублях
-                        if rubles > 0 and kopeks > 0 and price == 0:
-                            price = rubles + kopeks / 100
-                        elif rubles > 0 and price == 0:  # Если рублей нет, но есть цена в рублях
-                            price = rubles
-
-                        name = ' '.join(name_parts)
-
-                        products_list.append({
-                            "Наименование": name,
-                            "Цена": price,
-                            "Количество": 1,
-                            "Вес": weight,
-                            "Фото": None,
-                            "Дата": None
-                        })
-
-        for product in products_list:
-            cursor.execute("""
-                INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
-                VALUES (?, ?, ?, ?, ?, ?, date('now'))
-            """, (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
-            conn.commit()
-
+            items = part_cleaned.split()
             
+            for i, item in enumerate(items):
+                numeric_part = ''.join(filter(str.isdigit, item))
+
+                if numeric_part:
+                    value = float(numeric_part)
+
+                    if i + 1 < len(items):
+                        next_item = items[i + 1].lower().replace(" ", "")
+                    else:
+                        next_item = ""
+
+                    if next_item == "г":
+                        weight = value
+                    elif next_item in ["₽", "р"]:
+                        rubles = value
+                    elif "к" in item.lower():
+                        kopeks = value
+                    elif price == 0 and rubles == 0:
+                        price = value
+
+            if rubles > 0:
+                price = rubles + kopeks / 100 if kopeks > 0 and price == 0 else rubles
+
+            name = ' '.join(item for item in items if not item.isdigit()) 
+            products_list.append({
+                "Наименование": name.strip(),
+                "Цена": price,
+                "Количество": 1,
+                "Вес": weight,
+                "Фото": None,
+                "Дата": None
+            })
+
+    if products_list:
+        cursor.executemany("""
+            INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
+            VALUES (?, ?, ?, ?, ?, ?, date('now'))
+        """, [(st.session_state.username, prod["Наименование"], prod["Цена"], 
+                prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
+        
+        conn.commit()
+
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
         st.session_state.products = pd.DataFrame(products_list)
