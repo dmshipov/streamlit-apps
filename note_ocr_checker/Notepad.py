@@ -90,7 +90,7 @@ def update_text(texts_input):
             # Удаляем цену и вес из строки, чтобы получить наименование продукта
             name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Boс|\d+\s*г)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
-
+            name = name.split('Вес:')[0].strip()
             products_list.append({
                 "Наименование": name,
                 "Цена": price,
