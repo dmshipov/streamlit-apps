@@ -39,15 +39,11 @@ def register(username, password):
     else:
         st.success("Регистрация прошла успешно!")
 
-def update_text(texts_input): 
-    # Получаем текущее значение ввода
+def update_text(texts_input):
     if texts_input:
         input_value = texts_input
-        
-        # Проверяем, не пусто ли оно
-        products_list = []  # Инициализируем список заранее
-        if input_value is not None:
-            # Обработка введенных данных
+        products_list = []
+        if input_value:
             lines = input_value.split(' и ')
             lines = [line.strip() for line in lines]
             lines = [line.split('\n') for line in lines]
@@ -57,43 +53,44 @@ def update_text(texts_input):
                 parts = line.split(' И ')
                 for part in parts:
                     part_cleaned = part.strip()
-                    if part_cleaned:  # Добавляем только непустые строки
-                        # Инициализируем значения
+                    if part_cleaned:
                         price = 0
                         weight = 0
+                        name_parts = []
 
-                        # Разбиваем строку на слова и проверяем на наличие чисел
                         items = part_cleaned.split()
-                        for item in items:
+                        for i, item in enumerate(items):
                             try:
-                                # Пробуем преобразовать в число
                                 value = float(item)
-                                
-                                # Проверяем, если есть 'г' или 'Г' после числа
-                                if item.endswith('г') or item.endswith('Г') or item.endswith(' г') or item.endswith(' Г'):
+                                if i + 1 < len(items) and items[i+1].lower().replace(" ", "") == "г":  # Проверка на 'г'
                                     weight = value
+                                    # Удаляем 'г' из items
+                                    items.pop(i+1) 
                                 elif price == 0:
                                     price = value
                             except ValueError:
-                                # Если не число, просто пропускаем
-                                continue
+                                name_parts.append(item)  # Добавляем в название, если не число
+                        
+                         # Формируем наименование
+                        name = ' '.join(name_parts)
 
-                        # Добавляем продукт с найденными значениями
+
+
                         products_list.append({
-                            "Наименование": ' '.join([i for i in items if not i.isdigit() and not (i.endswith('г') or i.endswith('Г'))]),  # Наименование без чисел и единиц измерения
+                            "Наименование": name,
                             "Цена": price,
                             "Количество": 1,
                             "Вес": weight,
                             "Фото": None,
                             "Дата": None
                         })
-        
-        for product in products_list:
-            # Добавляем данные в базу с помощью execute и параметров
-            cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
-                (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
-            conn.commit()
 
+        for product in products_list:
+            cursor.execute("""
+                INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
+                VALUES (?, ?, ?, ?, ?, ?, date('now'))
+            """, (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
+            conn.commit()
 
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
