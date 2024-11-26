@@ -59,23 +59,33 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
 
-            # Используем регулярное выражение для извлечения цен
-            price_match = re.search(r"(\d+)р\.? ?(\d+)к\.?", part_cleaned)
-            if price_match:
-                rubles = int(price_match.group(1))
-                kopeks = int(price_match.group(2))
+            # Используем регулярные выражения для поиска цен и весов
+            matches = re.findall(r'(\d+(?:\.\d+)?)\s*([р₽])\.?(\d+)?\s*([кк])?', part_cleaned)
+
+            for match in matches:
+                ruble_value = float(match[0])
+                currency = match[1]
+                k_count = match[2]
+
+                if currency in ["₽", "р"]:
+                    rubles = ruble_value
+                    if k_count:
+                        kopeks = float(k_count)  # Получаем копейки, если они есть
+            
+            # Если есть рубли и копейки, устанавливаем цену
+            if rubles > 0:
                 price = rubles + kopeks / 100
 
-            # Теперь обрабатываем вес
-            weight_match = re.search(r"(\d+)г", part_cleaned)
-            if weight_match:
-                weight = int(weight_match.group(1))
+            # Поиск веса
+            weight_matches = re.findall(r'(\d+(?:\.\d+)?)\s*г', part_cleaned)
+            if weight_matches:
+                weight = float(weight_matches[0])
 
-            # Обработка остальных частей строки для названия
-            name = re.sub(r"(\d+р\.? ?\d+к\.?|(\d+)г)", "", part_cleaned).strip()
+            # Формирование имени продукта
+            name = ' '.join(item for item in part_cleaned.split() if item not in [match[0] + match[1] for match in matches])
             
             products_list.append({
-                "Наименование": name,
+                "Наименование": name.strip(),
                 "Цена": price,
                 "Количество": 1,
                 "Вес": weight,
