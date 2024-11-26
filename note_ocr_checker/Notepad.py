@@ -68,18 +68,19 @@ def update_text(texts_input):
                             try:
                                 # Пробуем преобразовать в число
                                 value = float(item)
-                                # Если это первое число, то это цена, если второе - вес
-                                if price == 0:
-                                    price = value
-                                elif weight == 0:
+                                
+                                # Проверяем, если есть 'г' или 'Г' после числа
+                                if item.endswith('г') or item.endswith('Г'):
                                     weight = value
+                                elif price == 0:
+                                    price = value
                             except ValueError:
                                 # Если не число, просто пропускаем
                                 continue
 
                         # Добавляем продукт с найденными значениями
                         products_list.append({
-                            "Наименование": ' '.join([i for i in items if not i.isdigit()]),  # Наименование без чисел
+                            "Наименование": ' '.join([i for i in items if not i.isdigit() and not (i.endswith('г') or i.endswith('Г'))]),  # Наименование без чисел и единиц измерения
                             "Цена": price,
                             "Количество": 1,
                             "Вес": weight,
@@ -92,6 +93,7 @@ def update_text(texts_input):
             cursor.execute("INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) VALUES (?, ?, ?, ?, ?, ?, date('now'))",
                 (st.session_state.username, product["Наименование"], product["Цена"], product["Количество"], product['Вес'], product['Фото']))
             conn.commit()
+
 
             
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
