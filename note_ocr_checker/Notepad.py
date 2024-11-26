@@ -39,6 +39,8 @@ def register(username, password):
     else:
         st.success("Регистрация прошла успешно!")
 
+Python
+
 def update_text(texts_input):
     if not texts_input:
         return
@@ -46,60 +48,53 @@ def update_text(texts_input):
     input_value = texts_input
     products_list = []
 
-    lines = (line.strip() for line in input_value.split(' и '))
+    # Разделяем строки по ' и ' и ' И '
+    lines = (line.strip() for line in input_value.split(' и ') + input_value.split(' И '))
+    
     for line in lines:
-        for part in line.split(' И '):
-            part_cleaned = part.strip()
-            if not part_cleaned:
-                continue
+        part_cleaned = line.strip()
+        if not part_cleaned:
+            continue
 
-            price = 0
-            weight = 0
-            rubles = 0
-            kopeks = 0
+        price = 0
+        weight = 0
+        rubles = 0
+        kopeks = 0
 
-            items = part_cleaned.split()
-            
-            for i, item in enumerate(items):
-                numeric_part = ''.join(filter(str.isdigit, item))
+        items = part_cleaned.split()
 
-                if numeric_part:
-                    value = float(numeric_part)
+        for i, item in enumerate(items):
+            # Извлекаем числовую часть
+            numeric_part = ''.join(filter(str.isdigit, item))
+            if numeric_part:
+                value = float(numeric_part)
 
-                    # Проверяем следующее слово
-                    if i + 1 < len(items):
-                        next_item = items[i + 1].lower().replace(" ", "")
-                    else:
-                        next_item = ""
+                # Проверяем следующее слово
+                next_item = items[i + 1].lower() if i + 1 < len(items) else ""
 
-                    # Определяем цену и вес
-                    if next_item in ["₽", "р"]:
-                        rubles = value
-                    elif "к" in item.lower():
-                        kopeks = value
-                    elif next_item == "кг":
-                        weight = value
-                    elif next_item == "г":
-                        weight = value / 1000  # Преобразуем граммы в килограммы
-                    else:
-                        # Если это просто число без единицы измерения
-                        if price == 0 and rubles == 0:
-                            price = value
+                # Определяем цену и вес
+                if 'р' in item.lower() or 'p' in item.lower():
+                    rubles = value
+                elif 'к' in item.lower():
+                    kopeks = value
+                elif next_item in ["кг", "г"]:
+                    weight = value if next_item == "кг" else value / 1000  # Преобразуем граммы в килограммы
 
-            # Вычисляем общую цену
-            if rubles > 0:
-                price = rubles + kopeks / 100
+        # Вычисляем общую цену
+        if rubles > 0:
+            price = rubles + kopeks / 100
 
-            # Получаем наименование товара
-            name = ' '.join(item for item in items if not item.isdigit())
-            products_list.append({
-                "Наименование": name.strip(),
-                "Цена": price,
-                "Количество": 1,
-                "Вес": weight,
-                "Фото": None,
-                "Дата": None
-            })
+        # Получаем наименование товара (все, что не число)
+        name = ' '.join(item for item in items if not item.isdigit() and not any(char.isdigit() for char in item))
+        
+        products_list.append({
+            "Наименование": name.strip(),
+            "Цена": price,
+            "Количество": 1,
+            "Вес": weight,
+            "Фото": None,
+            "Дата": None
+        })
 
     if products_list:
         cursor.executemany("""
