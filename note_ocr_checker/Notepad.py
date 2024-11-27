@@ -59,33 +59,20 @@ def update_text(texts_input):
             kopeks = 0
 
             # Проверяем различные форматы для извлечения рублей и копеек
-            price_match = re.search(r"(d+),(d{2})", part_cleaned)  # Изменено на запятую
+            price_match = re.search(r"(d+,d{2})", part_cleaned)
             if price_match:
-                rubles = int(price_match.group(1))
-                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                price_str = price_match.group(1).replace(',', '.')  # Заменяем запятую на точку для float
+                price = float(price_str)  # Преобразуем строку в число с плавающей точкой
             
-            # Обработка альтернативного формата суммы (например, '390 ₽')
-            price_match = re.search(r"(d+)s*₽", part_cleaned)
-            if price_match:
-                rubles = int(price_match.group(1))
-                # Поиск копеек в формате 'Boс'
-                kopeks_match = re.search(r"(d+)s*Boс", part_cleaned)
-                if kopeks_match:
-                    kopeks = int(kopeks_match.group(1))
-
-            # Теперь обрабатываем вес
+            # Обработка веса
             weight_match = re.search(r"(d+)s*[гГ]", part_cleaned)
             if weight_match:
                 weight = int(weight_match.group(1))
-
-            # Определяем полную цену с точкой
-            price = float(f"{rubles}.{kopeks:02d}")  # Форматируем цену с точкой
 
             # Удаляем цену и вес из строки, чтобы получить наименование продукта
             name = re.sub(r"(d+,d{2}|d+s*₽|d+p.? ?d*к.?|d+s*Beс|d+s*г)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
             name = re.sub(r"(Вес.*)", "", name).strip()
-            
             products_list.append({
                 "Наименование": name,
                 "Цена": price,
@@ -95,20 +82,14 @@ def update_text(texts_input):
                 "Дата": None
             })
 
-    if products_list:
-        cursor.executemany("""
-            INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
-            VALUES (?, ?, ?, ?, ?, ?, date('now'))
-        """, [(st.session_state.username, prod["Наименование"], prod["Цена"], 
-                prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
-        
-        conn.commit()
-
-        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-        st.session_state.products = products.copy()
-        st.session_state.products = pd.DataFrame(products_list)
-        
-        conn.commit()
+        if products_list:
+            cursor.executemany("""
+                INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
+                VALUES (?, ?, ?, ?, ?, ?, date('now'))
+            """, [(st.session_state.username, prod["Наименование"], prod["Цена"], 
+                    prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
+            
+            conn.commit()
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
