@@ -90,7 +90,11 @@ def update_text(texts_input):
              # Извлекаем цену с "Цена:"
             price_match = re.search(r"Цена:\s*(\d+(?:[\s.,]*\d+)*)", part_cleaned)
             if price_match:
-                price = float(price_match.group(1))
+                try:  # Добавляем try-except блок
+                    price = float(price_match.group(1))
+                except (ValueError, TypeError): # Ловим ошибки преобразования типов
+                    print(f"Ошибка преобразования цены: {price_match.group(1)}") # Выводим сообщение об ошибке
+                    price = 0 # Или другое значение по умолчанию
 
             # Удаляем только цены с валютой, без "Цена:"
             name = re.sub(r"(\d+(?:[\s.,]*\d+)*\s*[₽РУБpк]+)", "", part_cleaned).strip()
