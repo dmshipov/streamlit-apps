@@ -87,17 +87,8 @@ def update_text(texts_input):
             # Определяем полную цену
             price = rubles + kopeks / 100
 
-             # Извлекаем цену с "Цена:"
-            price_match = re.search(r"Цена:\s*(\d+(?:[\s.,]*\d+)*)", part_cleaned)
-            if price_match:
-                try:  # Добавляем try-except блок
-                    price = float(price_match.group(1))
-                except (ValueError, TypeError): # Ловим ошибки преобразования типов
-                    print(f"Ошибка преобразования цены: {price_match.group(1)}") # Выводим сообщение об ошибке
-                    price = 0 # Или другое значение по умолчанию
-
-            # Удаляем только цены с валютой, без "Цена:"
-            name = re.sub(r"(\d+(?:[\s.,]*\d+)*\s*[₽РУБpк]+)", "", part_cleaned).strip()
+            # Удаляем цену и вес из строки, чтобы получить наименование продукта
+            name = re.sub(r"(d+s*₽|d+s*РУБ|d+s*р.? ?d*к.?|d+p.? ?d*к.?|d+s*г|d+s*[оО]г|Цена:s*d+s*₽)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
             name = re.sub(r"(Вес.*)", "", name).strip()
             products_list.append({
