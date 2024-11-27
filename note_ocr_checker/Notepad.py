@@ -87,8 +87,13 @@ def update_text(texts_input):
             # Определяем полную цену
             price = rubles + kopeks / 100
 
-            # Удаляем цену и вес из строки, чтобы получить наименование продукта
-            name = re.sub(r"(\d+(?:[\s.,]*\d+)*\s*[₽РУБpк]+|\Цена:\s*\d+(?:[\s.,]*\d+)*)", "", part_cleaned).strip()
+             # Извлекаем цену с "Цена:"
+            price_match = re.search(r"Цена:\s*(\d+(?:[\s.,]*\d+)*)", part_cleaned)
+            if price_match:
+                price = float(price_match.group(1))
+
+            # Удаляем только цены с валютой, без "Цена:"
+            name = re.sub(r"(\d+(?:[\s.,]*\d+)*\s*[₽РУБpк]+)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
             name = re.sub(r"(Вес.*)", "", name).strip()
             products_list.append({
