@@ -58,46 +58,48 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
 
-            # Проверяем различные форматы для извлечения рублей и копеек
-            # Извлечение цены из строки "Цена: 134,00"
+            # Проверяем наличие цены в формате "Цена: 134,00"
             price_match = re.search(r"Цена:s*(d+),?(d*)", part_cleaned)
             if price_match:
                 rubles = int(price_match.group(1))
                 kopeks = int(price_match.group(2)) if price_match.group(2) else 0
             else:
-                # Извлечение цены в формате "90 179 РУБ" или "89 399 руб"
-                price_match = re.search(r"(d+)s*(?:РУБ|руб|р)s*(d*)", part_cleaned, re.IGNORECASE)
+                # Проверяем другие форматы для извлечения рублей и копеек
+                price_match = re.search(r"(d+)s*р.?(d*)s*к.?", part_cleaned)
                 if price_match:
                     rubles = int(price_match.group(1))
                     kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                else:
+                    price_match = re.search(r"(d+)p.? ?(d*)к.?", part_cleaned)
+                    if price_match:
+                        rubles = int(price_match.group(1))
+                        kopeks = int(price_match.group(2)) if price_match.group(2) else 0
 
-                # Обработка формата с пробелами и запятыми
-                price_match = re.search(r"(d+),?(d*)s*руб", part_cleaned, re.IGNORECASE)
+                # Обработка альтернативного формата суммы (например, '390 ₽')
+                price_match = re.search(r"(d+)s*₽", part_cleaned)
                 if price_match:
                     rubles = int(price_match.group(1))
-                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-
-            # Обработка альтернативного формата суммы (например, '390 ₽')
-            price_match = re.search(r"(d+)s*₽", part_cleaned)
-            if price_match:
-                rubles = int(price_match.group(1))
-                kopeks_match = re.search(r"(d+)s*Boс", part_cleaned)
-                if kopeks_match:
-                    kopeks = int(kopeks_match.group(1))
+                    # Поиск копеек в формате 'Boс'
+                    kopeks_match = re.search(r"(d+)s*Boс", part_cleaned)
+                    if kopeks_match:
+                        kopeks = int(kopeks_match.group(1))
 
             # Теперь обрабатываем вес
-            weight_match = re.search(r"(d+)s*[гГ]|(d+)s*[кК]|(d+)s*[лЛ]", part_cleaned)
+            weight_match = re.search(r"(d+)s*[гГ]", part_cleaned)
             if weight_match:
-                weight = int(weight_match.group(1) or weight_match.group(2) or weight_match.group(3))
+                weight = int(weight_match.group(1))
 
-            # Теперь обрабатываем имя продукта
-            name = re.sub(r"(d+s*₽|d+s*РУБ|d+s*руб|d+s*р.? ?d*к.?|d+s*[гГкКлЛ])", "", part_cleaned).strip()
+            # Определяем полную цену
+            price = rubles + kopeks / 100
+
+            # Удаляем цену и вес из строки, чтобы получить наименование продукта
+            name = re.sub(r"(d+s*₽|d+p.? ?d*к.?|d+s*Beс|d+s*г)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
-            name = re.sub(r"(Цена.*|брал.*|пл.*)", "", name).strip()
+            name = re.sub(r"(Цена.*)", "", name).strip()
 
             products_list.append({
                 "Наименование": name,
-                "Цена": rubles + kopeks / 100,
+                "Цена": price,
                 "Количество": 1,
                 "Вес": weight,
                 "Фото": None,
