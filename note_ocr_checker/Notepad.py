@@ -8,10 +8,6 @@ import datetime
 import sqlite3
 from PIL import ImageOps
 import re
-import nltk
-
-# Download Russian Punkt tokenizer
-nltk.download('punkt', quiet=False)
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
@@ -49,7 +45,6 @@ def update_text(texts_input):
         return
 
     products_list = []
-    lemmatizer = WordNetLemmatizer()
 
     lines = (line.strip() for line in texts_input.split(' и '))
     for line in lines:
@@ -63,52 +58,51 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
             
-            # Проверяем различные форматы для извлечения рублей и копеек
+        # Проверяем различные форматы для извлечения рублей и копеек
             price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
             if price_match:
                 rubles = int(price_match.group(1))
                 kopeks = int(price_match.group(2)) if price_match.group(2) else 0
             else:
+                # Если нет формата 'р.' и 'к.', ищем альтернативные форматы
                 price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
                 if price_match:
                     rubles = int(price_match.group(1))
                     kopeks = int(price_match.group(2)) if price_match.group(2) else 0
                 else:
+                    # Проверяем новый формат "Цена: 134,00"
                     price_match = re.search(r"Цена:\s*(\d+)(?:,(\d+))?", part_cleaned)
                     if price_match:
                         rubles = int(price_match.group(1))
                         kopeks = int(price_match.group(2)) if price_match.group(2) else 0
                     else:
-                        price_match = re.search(r"(\d+)\s*(?:РУБ|руб)", part_cleaned)
+                        # Проверяем форматы "179 РУБ" и "288 руб"
+                        price_match = re.search(r"(\d+)\s*(?:РУБ|руб)", part_cleaned) #Added this line
                         if price_match:
                             rubles = int(price_match.group(1))
                             kopeks = 0
-            
+                        
+            # Обработка альтернативного формата суммы (например, '390 ₽')
             price_match = re.search(r"(\d+)\s*₽", part_cleaned)
             if price_match:
                 rubles = int(price_match.group(1))
+                # Поиск копеек в формате 'коп'
                 kopeks_match = re.search(r"(\d+)\s*коп", part_cleaned)
                 if kopeks_match:
                     kopeks = int(kopeks_match.group(1))
 
+            # Теперь обрабатываем вес
             weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
             if weight_match:
                 weight = int(weight_match.group(1))
 
+            # Определяем полную цену
             price = rubles + kopeks / 100
 
-            # Токенизация наименования продукта
-            tokens = word_tokenize(part_cleaned, language='russian')
-
-            # Используем лемматизацю для очистки наименования
-            cleaned_tokens = [lemmatizer.lemmatize(token) for token in tokens if token.isalpha()]
-            name = ' '.join(cleaned_tokens)
-
-            # Удаляем остатки от цены и веса из наименования
-            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*г)", "", name).strip()
+            # Удаляем цену и вес из строки, чтобы получить наименование продукта
+            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Beс|\d+\s*г)", "", part_cleaned).strip()
             name = re.sub(r"[;]", "", name).strip()
-            name = re.sub(r"(Вес.*|ВЕС*|Цена.*|ЦЕНА*)", "", name).strip()
-
+            name = re.sub(r"(Вес.*|ВEC*|Цена.*|ЦЕНА*)", "", name).strip()
             products_list.append({
                 "Наименование": name,
                 "Цена": price,
