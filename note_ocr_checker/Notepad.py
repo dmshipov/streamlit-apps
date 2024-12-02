@@ -189,7 +189,8 @@ else:
         if st.button("Добавить"):  # Добавляем on_click
             update_text(text_input)
             st.rerun()
-        
+            tokens = update_text(text_input)
+            
     with st.expander("Оптическое распознавание"):
         # Загрузка моделей EasyOCR. Указываем языки явно
         @st.cache_resource()
