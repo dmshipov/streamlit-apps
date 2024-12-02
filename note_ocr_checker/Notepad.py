@@ -9,12 +9,14 @@ import sqlite3
 from PIL import ImageOps
 import re
 import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import SnowballStemmer
-
-nltk.download('punkt')
+nltk.download('punkt')  # Скачиваем общие данные для токенизации
+nltk.download('averaged_perceptron_tagger') # необходимый для пунктуации теггер
+nltk.download('punkt_data') #обязательно
 nltk.download('stopwords')
+try:
+    nltk.data.find('tokenizers/punkt/russian.pickle')
+except LookupError:
+    nltk.download('punkt', quiet=True)
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
