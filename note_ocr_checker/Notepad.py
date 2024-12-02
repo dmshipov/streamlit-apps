@@ -482,9 +482,7 @@ else:
 
                             cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
                             conn.commit()    
-                        cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
-                        conn.commit()
-                        # Создаем список для значений, которые будут отображаться в expander
+        # Создаем список для значений, которые будут отображаться в expander
         delete_items = []
 
         # Проходим по строкам и добавляем элементы в список delete_items и их id
