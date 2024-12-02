@@ -8,21 +8,7 @@ import datetime
 import sqlite3
 from PIL import ImageOps
 import re
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import SnowballStemmer
 
-try:
-    nltk.download('punkt')
-    nltk.download('averaged_perceptron_tagger')
-    nltk.download('punkt_data')
-    nltk.download('stopwords')
-    nltk.download('punkt', lang='rus') #Явно указываем язык
-    print("Данные NLTK загружены успешно.")
-except Exception as e:
-    print(f"Ошибка загрузки данных NLTK: {e}")
-    
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
@@ -55,10 +41,13 @@ def register(username, password):
         st.success("Регистрация прошла успешно!")
 
 def update_text(texts_input):
+    if not texts_input:
+        return
+
+    products_list = []
+
     lines = (line.strip() for line in texts_input.split(' и '))
     products_list = []
-    russian_stopwords = set(stopwords.words('russian'))
-    stemmer = SnowballStemmer("russian")
 
     for line in lines:
         for part in line.split(' И '):
@@ -66,57 +55,39 @@ def update_text(texts_input):
             if not part_cleaned:
                 continue
 
-            # Предобработка текста с помощью NLTK
-            tokens = word_tokenize(part_cleaned, language='russian')
-            tokens = [token.lower() for token in tokens if token.isalnum()]
-            tokens = [stemmer.stem(token) for token in tokens if token not in russian_stopwords]
-            part_cleaned = " ".join(tokens)
-
             price = 0
             weight = 0
             rubles = 0
             kopeks = 0
+            
+            # Токенизация и определение частей речи
+            tokens = word_tokenize(part_cleaned)
+            tagged_tokens = pos_tag(tokens)
 
-            # Извлечение цены
-            price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
-            if price_match:
-                rubles = int(price_match.group(1))
-                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-            else:
-                price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
-                if price_match:
-                    rubles = int(price_match.group(1))
-                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-                else:
-                    price_match = re.search(r"цена:\s*(\d+)(?:,(\d+))?", part_cleaned)
-                    if price_match:
-                        rubles = int(price_match.group(1))
-                        kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-                    else:
-                        price_match = re.search(r"(\d+)\s*(?:руб|РУБ)", part_cleaned)
-                        if price_match:
-                            rubles = int(price_match.group(1))
-                            kopeks = 0
+            # Обработка токенов для извлечения цен и весов
+            for token, tag in tagged_tokens:
+                # Проверка на наличие рублей и копеек
+                if tag in ['CD']:  # CD - числительные
+                    next_token = tokens[tokens.index(token) + 1] if tokens.index(token) + 1 < len(tokens) else ''
+                    
+                    if 'руб' in next_token or 'р' in next_token:
+                        rubles = int(token)
+                        if 'к' in tokens[tokens.index(next_token) + 1] or 'коп' in tokens[tokens.index(next_token) + 1]:
+                            kopeks = int(tokens[tokens.index(next_token) + 1])
+                    elif '₽' in next_token:
+                        rubles = int(token)
 
-            price_match = re.search(r"(\d+)\s*₽", part_cleaned)
-            if price_match:
-                rubles = int(price_match.group(1))
-                kopeks_match = re.search(r"(\d+)\s*коп", part_cleaned)
-                if kopeks_match:
-                    kopeks = int(kopeks_match.group(1))
+                    # Проверка на вес
+                    if 'г' in next_token or 'кг' in next_token:
+                        weight = int(token)
 
+            # Определяем полную цену
             price = rubles + kopeks / 100
 
-            # Извлечение веса
-            weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
-            if weight_match:
-                weight = int(weight_match.group(1))
-
-            # Извлечение наименования (после очистки с помощью NLTK)
-            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Beс|\d+\s*г)", "", part_cleaned).strip()
+            # Удаляем цену и вес из строки, чтобы получить наименование продукта
+            name = part_cleaned
+            name = re.sub(r"(d+s*₽|d+p.? ?d*к.?|d+s*г|d+s*руб|d+s*коп)", "", name).strip()
             name = re.sub(r"[;]", "", name).strip()
-            name = re.sub(r"(вес.*|bec*|цена.*|цена*)", "", name).strip()
-
 
             products_list.append({
                 "Наименование": name,
@@ -126,7 +97,6 @@ def update_text(texts_input):
                 "Фото": None,
                 "Дата": None
             })
-
 
     if products_list:
         cursor.executemany("""
@@ -443,32 +413,16 @@ else:
                             conn.commit()
                             st.rerun()
                     else:
+                        # Если фото нет, показываем кнопку "Загрузить фото"
                         image_file = st.camera_input("Фото", key=f'image_{index}')
-                        if image_file is not None:
+                        if image_file is not None:  # Проверка внутри блока if
+                            # Сохраняем изображение в базу данных
                             image_bytes = image_file.read()
                             products.at[index, "Фото"] = image_bytes
                             
-                            if image_file: #Обработка изображения только если оно загружено
-                                extracted_text = image_to_text(image_file)
-                                if extracted_text:
-                                    # Извлечение цены и веса (настройте регулярные выражения!!!)
-                                    price_match = re.search(r"(\d+)\s*руб(?:лей)?", extracted_text) # Пример: поиск "123 рублей"
-                                    weight_match = re.search(r"(\d+)\s*г", extracted_text)  # Пример: поиск "100 г"
-
-                                    if price_match:
-                                        price = float(price_match.group(1))
-                                        products.at[index, "Цена"] = price
-                                        cursor.execute("UPDATE products SET Цена=? WHERE id=?", (price, row['id']))
-                                        conn.commit()
-                                    if weight_match:
-                                        weight = int(weight_match.group(1))
-                                        products.at[index, "Вес"] = weight
-                                        cursor.execute("UPDATE products SET Вес=? WHERE id=?", (weight, row['id']))
-                                        conn.commit()
-
                             cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
                             conn.commit()
-        # Создаем список для значений, которые будут отображаться в expander
+                        # Создаем список для значений, которые будут отображаться в expander
         delete_items = []
 
         # Проходим по строкам и добавляем элементы в список delete_items и их id
