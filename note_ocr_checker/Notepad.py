@@ -471,11 +471,11 @@ else:
                                     if price is not None:
                                         products.at[index, "Цена"] = price
                                         cursor.execute("UPDATE products SET Цена=? WHERE id=?", (price, row['id']))
-
+                                        conn.commit()
                                     if weight is not None:
                                         products.at[index, "Вес"] = weight
                                         cursor.execute("UPDATE products SET Вес=? WHERE id=?", (weight, row['id']))
-                                        
+                                        conn.commit()
                                     conn.commit()
                                 except Exception as e:
                                     st.error(f"Ошибка обработки текста: {e}")
