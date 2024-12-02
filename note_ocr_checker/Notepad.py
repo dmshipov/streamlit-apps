@@ -13,16 +13,19 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import SnowballStemmer
 
-# Загрузка данных для русского языка
+# Загрузка данных для русского языка - полный путь
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('punkt_data')
+nltk.download('stopwords')
 try:
     nltk.data.find('tokenizers/punkt/russian.pickle')
 except LookupError:
-    nltk.download('punkt', quiet=True) #quiet=True скрывает вывод информации о загрузке
-
-try:
-    nltk.data.find('tokenizers/punkt/russian.pickle')
-except LookupError:
-    print("Ошибка загрузки данных токенизации для русского языка.")
+    try:
+        nltk.download('punkt', quiet=True)
+        print('Данные скачаны')
+    except Exception as e:
+        print(f"Ошибка загрузки данных токенизации для русского языка: {e}")
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
