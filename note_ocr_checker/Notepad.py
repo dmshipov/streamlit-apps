@@ -75,11 +75,44 @@ def update_text(texts_input):
 
 def extract_price_weight(text):
     """Извлекает цену и вес из текста.  Настройте регулярные выражения!"""
-    price_match = re.search(r"(\d+)\s*руб(?:лей)?", text)  # Пример: поиск "123 рублей"
-    weight_match = re.search(r"(\d+)\s*г", text)  # Пример: поиск "100 г"
+    for part_cleaned in text:
+            price = 0
+            weight = 0
+            rubles = 0
+            kopeks = 0
 
-    price = float(price_match.group(1)) if price_match else None
-    weight = int(weight_match.group(1)) if weight_match else None
+            price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+            else:
+                price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
+                if price_match:
+                    rubles = int(price_match.group(1))
+                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                else:
+                    price_match = re.search(r"Цена:\s*(\d+)(?:,(\d+))?", part_cleaned)
+                    if price_match:
+                        rubles = int(price_match.group(1))
+                        kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                    else:
+                        price_match = re.search(r"(\d+)\s*(?:РУБ|руб)", part_cleaned)
+                        if price_match:
+                            rubles = int(price_match.group(1))
+                            kopeks = 0
+
+            price_match = re.search(r"(\d+)\s*₽", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks_match = re.search(r"(\d+)\s*коп", part_cleaned)
+                if kopeks_match:
+                    kopeks = int(kopeks_match.group(1))
+
+            weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
+            if weight_match:
+                weight = int(weight_match.group(1))
+
+            price = rubles + kopeks / 100
     return price, weight
 
 def extract_and_insert_product_info(parts, cursor):
