@@ -462,33 +462,28 @@ else:
                             # Сохраняем изображение в базу данных
                             image_bytes = image_file.read()
                             products.at[index, "Фото"] = image_bytes
-                        else:
-                            image_file = st.camera_input("Фото", key=f'image_{index}')
-                            if image_file is not None:
-                                image_bytes = image_file.read()
-                                products.at[index, "Фото"] = image_bytes
                                 
-                                extracted_text = image_to_text(image_file)
-                                if extracted_text:
-                                    try:
-                                        price, weight = extract_price_weight(extracted_text) #Извлечение цены и веса
+                            extracted_text = image_to_text(image_file)
+                            if extracted_text:
+                                try:
+                                    price, weight = extract_price_weight(extracted_text) #Извлечение цены и веса
 
-                                        if price is not None:
-                                            products.at[index, "Цена"] = price
-                                            cursor.execute("UPDATE products SET Цена=? WHERE id=?", (price, row['id']))
+                                    if price is not None:
+                                        products.at[index, "Цена"] = price
+                                        cursor.execute("UPDATE products SET Цена=? WHERE id=?", (price, row['id']))
 
-                                        if weight is not None:
-                                            products.at[index, "Вес"] = weight
-                                            cursor.execute("UPDATE products SET Вес=? WHERE id=?", (weight, row['id']))
-                                            
-                                        conn.commit()
-                                    except Exception as e:
-                                        st.error(f"Ошибка обработки текста: {e}")
+                                    if weight is not None:
+                                        products.at[index, "Вес"] = weight
+                                        cursor.execute("UPDATE products SET Вес=? WHERE id=?", (weight, row['id']))
+                                        
+                                    conn.commit()
+                                except Exception as e:
+                                    st.error(f"Ошибка обработки текста: {e}")
 
-                                cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
-                                conn.commit()    
                             cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
-                            conn.commit()
+                            conn.commit()    
+                        cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
+                        conn.commit()
                         # Создаем список для значений, которые будут отображаться в expander
         delete_items = []
 
