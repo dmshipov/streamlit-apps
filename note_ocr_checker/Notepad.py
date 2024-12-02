@@ -117,7 +117,7 @@ def extract_price_weight(parts):
        
         products_list.append({
             "Цена": price,
-            "Вес": weight
+            "Вес": weight,
             "Фото": None
         })
 
