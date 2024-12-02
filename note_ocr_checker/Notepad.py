@@ -53,9 +53,9 @@ def update_text(texts_input):
             if part_cleaned:
                 products_list.append({
             "Наименование": part_cleaned,
-            "Цена": None,
+            "Цена": 0,
             "Количество": 1,
-            "Вес": None,
+            "Вес": 0,
             "Фото": None,
             "Дата": None
         })
