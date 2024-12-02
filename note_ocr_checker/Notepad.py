@@ -500,10 +500,10 @@ else:
 
                             extracted_text = image_to_text(image_file)
                             if extracted_text:
-                                try:
-                                    price_weight_data = extract_price_weight(extracted_text) #Изменил, чтобы получать словарь
-                                    price = price_weight_data[0]['Цена'] # Достаём цену
-                                    weight = price_weight_data[0]['Вес'] # Достаём вес
+                                price_weight_data = extract_price_weight(extracted_text)  # Изменил, чтобы получать словарь
+                                if price_weight_data:  # Проверяем наличие данных
+                                    price = price_weight_data[0]['Цена']  # Достаём цену
+                                    weight = price_weight_data[0]['Вес']  # Достаём вес
                                     price_str = str(price)
                                     weight_str = str(weight)
 
@@ -511,10 +511,15 @@ else:
                                     products.at[index, "Вес"] = weight
 
                                     # commit только один раз после всех изменений
-                                    cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price_str, weight_str, row['id'])) # product_id вместо row['id']
-                                    conn.commit()
-                                except Exception as e:
-                                    st.error(f"Ошибка обработки текста: {e}")
+                                    try:
+                                        cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price_str, weight_str, row['id']))
+                                        conn.commit()
+                                    except Exception as e:
+                                        st.error(f"Ошибка при обновлении базы данных: {e}")
+                                else:
+                                    st.warning("Не удалось извлечь цену и вес из текста.")
+                            else:
+                                st.warning("Не удалось извлечь текст из изображения.")
 
         # Создаем список для значений, которые будут отображаться в expander
         delete_items = []
