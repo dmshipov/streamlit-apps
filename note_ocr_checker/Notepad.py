@@ -41,24 +41,76 @@ def register(username, password):
         st.success("Регистрация прошла успешно!")
 
 def update_text(texts_input):
-    """Разделяет текст на части и возвращает список очищенных строк."""
     if not texts_input:
-        return []
+        return
 
     products_list = []
+
     lines = (line.strip() for line in texts_input.split(' и '))
     for line in lines:
         for part in line.split(' И '):
             part_cleaned = part.strip()
-            if part_cleaned:
-                products_list.append({
-            "Наименование": part_cleaned,
-            "Цена": 0,
-            "Количество": 1,
-            "Вес": 0,
-            "Фото": None,
-            "Дата": None
-        })
+            if not part_cleaned:
+                continue
+
+            price = 0
+            weight = 0
+            rubles = 0
+            kopeks = 0
+            
+        # Проверяем различные форматы для извлечения рублей и копеек
+            price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+            else:
+                # Если нет формата 'р.' и 'к.', ищем альтернативные форматы
+                price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
+                if price_match:
+                    rubles = int(price_match.group(1))
+                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                else:
+                    # Проверяем новый формат "Цена: 134,00"
+                    price_match = re.search(r"Цена:\s*(\d+)(?:,(\d+))?", part_cleaned)
+                    if price_match:
+                        rubles = int(price_match.group(1))
+                        kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                    else:
+                        # Проверяем форматы "179 РУБ" и "288 руб"
+                        price_match = re.search(r"(\d+)\s*(?:РУБ|руб)", part_cleaned) #Added this line
+                        if price_match:
+                            rubles = int(price_match.group(1))
+                            kopeks = 0
+                        
+            # Обработка альтернативного формата суммы (например, '390 ₽')
+            price_match = re.search(r"(\d+)\s*₽", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                # Поиск копеек в формате 'коп'
+                kopeks_match = re.search(r"(\d+)\s*коп", part_cleaned)
+                if kopeks_match:
+                    kopeks = int(kopeks_match.group(1))
+
+            # Теперь обрабатываем вес
+            weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
+            if weight_match:
+                weight = int(weight_match.group(1))
+
+            # Определяем полную цену
+            price = rubles + kopeks / 100
+
+            # Удаляем цену и вес из строки, чтобы получить наименование продукта
+            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Beс|\d+\s*г)", "", part_cleaned).strip()
+            name = re.sub(r"[;]", "", name).strip()
+            name = re.sub(r"(Вес.*|ВEC*|Цена.*|ЦЕНА*)", "", name).strip()
+            products_list.append({
+                "Наименование": name,
+                "Цена": price,
+                "Количество": 1,
+                "Вес": weight,
+                "Фото": None,
+                "Дата": None
+            })
 
     if products_list:
         cursor.executemany("""
@@ -66,120 +118,8 @@ def update_text(texts_input):
             VALUES (?, ?, ?, ?, ?, ?, date('now'))
         """, [(st.session_state.username, prod["Наименование"], prod["Цена"], 
                 prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
-        cursor.connection.commit()
-
-
-        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-        st.session_state.products = products.copy()
-        st.session_state.products = pd.DataFrame(products_list)
-
-def extract_price_weight(parts):
-    """Извлекает цену и вес из списка строк и возвращает список словарей."""
-    results = []
-
-    for part_cleaned in parts:
-        rubles = 0
-        kopeks = 0
-        weight = 0
-
-        # Поиск цены с использованием разных вариантов написания
-        price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned, re.IGNORECASE)
-        if price_match:
-            rubles = int(price_match.group(1))
-            kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-        else:
-            price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned, re.IGNORECASE)
-            if price_match:
-                rubles = int(price_match.group(1))
-                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-            else:
-                price_match = re.search(r"Цена:\s*(\d+)(?:,(\d+))?", part_cleaned, re.IGNORECASE)
-                if price_match:
-                    rubles = int(price_match.group(1))
-                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-                else:
-                    price_match = re.search(r"(\d+)\s*(?:РУБ|руб|₽)", part_cleaned, re.IGNORECASE)
-                    if price_match:
-                        rubles = int(price_match.group(1))
-                        kopeks = 0
-
-        #Обработка копеек, если они указаны отдельно
-        kopeks_match = re.search(r"(\d+)\s*коп\.?", part_cleaned, re.IGNORECASE)
-        if kopeks_match:
-            kopeks = int(kopeks_match.group(1))
-
-        # Поиск веса
-        weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned, re.IGNORECASE)
-        if weight_match:
-            weight = int(weight_match.group(1))
-
-        price = rubles + kopeks / 100
-        results.append({"Цена": price, "Вес": weight})
-
-    return results
-
-
-def extract_and_insert_product_info(parts, cursor):
-    """Извлекает информацию о продуктах и вставляет её в базу данных."""
-    products_list = []
-    for part_cleaned in parts:
-        price = 0
-        weight = 0
-        rubles = 0
-        kopeks = 0
-
-        price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
-        if price_match:
-            rubles = int(price_match.group(1))
-            kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-        else:
-            price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
-            if price_match:
-                rubles = int(price_match.group(1))
-                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-            else:
-                price_match = re.search(r"Цена:\s*(\d+)(?:,(\d+))?", part_cleaned)
-                if price_match:
-                    rubles = int(price_match.group(1))
-                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-                else:
-                    price_match = re.search(r"(\d+)\s*(?:РУБ|руб)", part_cleaned)
-                    if price_match:
-                        rubles = int(price_match.group(1))
-                        kopeks = 0
-
-        price_match = re.search(r"(\d+)\s*₽", part_cleaned)
-        if price_match:
-            rubles = int(price_match.group(1))
-            kopeks_match = re.search(r"(\d+)\s*коп", part_cleaned)
-            if kopeks_match:
-                kopeks = int(kopeks_match.group(1))
-
-        weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
-        if weight_match:
-            weight = int(weight_match.group(1))
-
-        price = rubles + kopeks / 100
-        name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*Beс|\d+\s*г)", "", part_cleaned).strip()
-        name = re.sub(r"[;]", "", name).strip()
-        name = re.sub(r"(Вес.*|ВEC*|Цена.*|ЦЕНА*)", "", name).strip()
-        products_list.append({
-            "Наименование": name,
-            "Цена": price,
-            "Количество": 1,
-            "Вес": weight,
-            "Фото": None,
-            "Дата": None
-        })
-
-    if products_list:
-        cursor.executemany("""
-            INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
-            VALUES (?, ?, ?, ?, ?, ?, date('now'))
-        """, [(st.session_state.username, prod["Наименование"], prod["Цена"], 
-                prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
-        cursor.connection.commit()
-
+        
+        conn.commit()
 
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
@@ -327,16 +267,10 @@ else:
 
         if img_file_buffer:
             extracted_text = image_to_text(img_file_buffer)
-            if extracted_text:
-                parts = extracted_text.split() #Разделение только по пробелам
-                if parts:
-                    extract_and_insert_product_info(parts, cursor)
-                else:
-                    st.warning("Текст пустой после разделения.")
-            else:
-                st.warning("Распознавание текста не удалось.")
+            update_text(extracted_text)
+            st.success("Данные успешно загружены!")
 
-
+            
     
             
     # Отрисовка таблицы только если текст не пуст
@@ -493,35 +427,16 @@ else:
                             conn.commit()
                             st.rerun()
                     else:
+                        # Если фото нет, показываем кнопку "Загрузить фото"
                         image_file = st.camera_input("Фото", key=f'image_{index}')
-                        if image_file is not None:
+                        if image_file is not None:  # Проверка внутри блока if
+                            # Сохраняем изображение в базу данных
                             image_bytes = image_file.read()
                             products.at[index, "Фото"] = image_bytes
-
-                            extracted_text = image_to_text(image_file)
-                            if extracted_text:
-                                price_weight_data = extract_price_weight(extracted_text)  # Изменил, чтобы получать словарь
-                                if price_weight_data:  # Проверяем наличие данных
-                                    price = price_weight_data[0]['Цена']  # Достаём цену
-                                    weight = price_weight_data[0]['Вес']  # Достаём вес
-                                    price_str = str(price)
-                                    weight_str = str(weight)
-
-                                    products.at[index, "Цена"] = price
-                                    products.at[index, "Вес"] = weight
-
-                                    # commit только один раз после всех изменений
-                                    try:
-                                        cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price_str, weight_str, row['id']))
-                                        conn.commit()
-                                    except Exception as e:
-                                        st.error(f"Ошибка при обновлении базы данных: {e}")
-                                else:
-                                    st.warning("Не удалось извлечь цену и вес из текста.")
-                            else:
-                                st.warning("Не удалось извлечь текст из изображения.")
-
-        # Создаем список для значений, которые будут отображаться в expander
+                            
+                            cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
+                            conn.commit()
+                        # Создаем список для значений, которые будут отображаться в expander
         delete_items = []
 
         # Проходим по строкам и добавляем элементы в список delete_items и их id
