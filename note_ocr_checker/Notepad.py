@@ -510,11 +510,8 @@ else:
                                     products.at[index, "Цена"] = price
                                     products.at[index, "Вес"] = weight
 
-                                    #Получаем ID  из DataFrame products.  Это КРИТИЧНО
-                                    product_id = products.at[index, "id"] #предполагается, что у тебя есть столбец id
-
                                     # commit только один раз после всех изменений
-                                    cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price_str, weight_str, product_id)) # product_id вместо row['id']
+                                    cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price_str, weight_str, row['id'])) # product_id вместо row['id']
                                     conn.commit()
                                 except Exception as e:
                                     st.error(f"Ошибка обработки текста: {e}")
