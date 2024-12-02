@@ -10,9 +10,11 @@ from PIL import ImageOps
 import re
 import nltk
 from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
 
-# Загрузка необходимых ресурсов
+# Убедитесь, что необходимые ресурсы загружены
 nltk.download('punkt')
+nltk.download('wordnet')
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
@@ -50,10 +52,9 @@ def update_text(texts_input):
         return
 
     products_list = []
+    lemmatizer = WordNetLemmatizer()
 
     lines = (line.strip() for line in texts_input.split(' и '))
-    products_list = []
-
     for line in lines:
         for part in line.split(' И '):
             part_cleaned = part.strip()
@@ -65,34 +66,51 @@ def update_text(texts_input):
             rubles = 0
             kopeks = 0
             
-            # Токенизация и определение частей речи
-            tokens = word_tokenize(part_cleaned)
-            tagged_tokens = pos_tag(tokens)
+            # Проверяем различные форматы для извлечения рублей и копеек
+            price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+            else:
+                price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
+                if price_match:
+                    rubles = int(price_match.group(1))
+                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                else:
+                    price_match = re.search(r"Цена:\s*(\d+)(?:,(\d+))?", part_cleaned)
+                    if price_match:
+                        rubles = int(price_match.group(1))
+                        kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                    else:
+                        price_match = re.search(r"(\d+)\s*(?:РУБ|руб)", part_cleaned)
+                        if price_match:
+                            rubles = int(price_match.group(1))
+                            kopeks = 0
+            
+            price_match = re.search(r"(\d+)\s*₽", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks_match = re.search(r"(\d+)\s*коп", part_cleaned)
+                if kopeks_match:
+                    kopeks = int(kopeks_match.group(1))
 
-            # Обработка токенов для извлечения цен и весов
-            for token, tag in tagged_tokens:
-                # Проверка на наличие рублей и копеек
-                if tag in ['CD']:  # CD - числительные
-                    next_token = tokens[tokens.index(token) + 1] if tokens.index(token) + 1 < len(tokens) else ''
-                    
-                    if 'руб' in next_token or 'р' in next_token:
-                        rubles = int(token)
-                        if 'к' in tokens[tokens.index(next_token) + 1] or 'коп' in tokens[tokens.index(next_token) + 1]:
-                            kopeks = int(tokens[tokens.index(next_token) + 1])
-                    elif '₽' in next_token:
-                        rubles = int(token)
+            weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
+            if weight_match:
+                weight = int(weight_match.group(1))
 
-                    # Проверка на вес
-                    if 'г' in next_token or 'кг' in next_token:
-                        weight = int(token)
-
-            # Определяем полную цену
             price = rubles + kopeks / 100
 
-            # Удаляем цену и вес из строки, чтобы получить наименование продукта
-            name = part_cleaned
-            name = re.sub(r"(d+s*₽|d+p.? ?d*к.?|d+s*г|d+s*руб|d+s*коп)", "", name).strip()
+            # Токенизация наименования продукта
+            tokens = word_tokenize(part_cleaned, language='russian')
+
+            # Используем лемматизацю для очистки наименования
+            cleaned_tokens = [lemmatizer.lemmatize(token) for token in tokens if token.isalpha()]
+            name = ' '.join(cleaned_tokens)
+
+            # Удаляем остатки от цены и веса из наименования
+            name = re.sub(r"(\d+\s*₽|\d+p\.? ?\d*к\.?|\d+\s*г)", "", name).strip()
             name = re.sub(r"[;]", "", name).strip()
+            name = re.sub(r"(Вес.*|ВЕС*|Цена.*|ЦЕНА*)", "", name).strip()
 
             products_list.append({
                 "Наименование": name,
@@ -111,7 +129,7 @@ def update_text(texts_input):
                 prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
         
         conn.commit()
-
+        
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
         st.session_state.products = pd.DataFrame(products_list)
@@ -189,8 +207,7 @@ else:
         if st.button("Добавить"):  # Добавляем on_click
             update_text(text_input)
             st.rerun()
-            tokens = update_text(text_input)
-            
+        
     with st.expander("Оптическое распознавание"):
         # Загрузка моделей EasyOCR. Указываем языки явно
         @st.cache_resource()
