@@ -9,6 +9,9 @@ import sqlite3
 from PIL import ImageOps
 import re
 import nltk
+from nltk.corpus import stopwords  # Эта строка необходима!
+from nltk.tokenize import word_tokenize
+from nltk.stem import SnowballStemmer
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
 nltk.download('punkt_data')
@@ -55,7 +58,7 @@ def register(username, password):
 def update_text(texts_input):
     lines = (line.strip() for line in texts_input.split(' и '))
     products_list = []
-    russian_stopwords = set(stopwords.words('russian')) #Теперь stopwords доступен
+    russian_stopwords = set(stopwords.words('russian'))
     stemmer = SnowballStemmer("russian")
 
     for line in lines:
