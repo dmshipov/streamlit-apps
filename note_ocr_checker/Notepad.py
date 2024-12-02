@@ -65,7 +65,7 @@ def update_text(texts_input):
             INSERT INTO products (username, Наименование, Цена, Количество, Вес, Фото, Дата) 
             VALUES (?, ?, ?, ?, ?, ?, date('now'))
         """, [(st.session_state.username, prod["Наименование"], prod["Цена"], 
-                prod["Количество"], prod['Вес'], prod['Фото']) for prod in parts])
+                prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
         cursor.connection.commit()
 
 
