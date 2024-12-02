@@ -74,17 +74,16 @@ def update_text(texts_input):
         st.session_state.products = pd.DataFrame(products_list)
 
 def extract_price_weight(parts):
-    """Извлекает цену и вес из списка строк."""
-    price = 0
-    weight = 0
+    """Извлекает цену и вес из списка строк и возвращает список словарей."""
     results = []
 
     for part_cleaned in parts:
         rubles = 0
         kopeks = 0
+        weight = 0
 
         # Поиск цены с использованием разных вариантов написания
-        price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned, re.IGNORECASE) #Добавили re.IGNORECASE для нечувствительности к регистру
+        price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned, re.IGNORECASE)
         if price_match:
             rubles = int(price_match.group(1))
             kopeks = int(price_match.group(2)) if price_match.group(2) else 0
@@ -104,12 +103,10 @@ def extract_price_weight(parts):
                         rubles = int(price_match.group(1))
                         kopeks = 0
 
-
         #Обработка копеек, если они указаны отдельно
         kopeks_match = re.search(r"(\d+)\s*коп\.?", part_cleaned, re.IGNORECASE)
         if kopeks_match:
             kopeks = int(kopeks_match.group(1))
-
 
         # Поиск веса
         weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned, re.IGNORECASE)
@@ -117,9 +114,9 @@ def extract_price_weight(parts):
             weight = int(weight_match.group(1))
 
         price = rubles + kopeks / 100
+        results.append({"Цена": price, "Вес": weight})
 
-
-    return price, weight
+    return results
 
 
 def extract_and_insert_product_info(parts, cursor):
@@ -504,15 +501,20 @@ else:
                             extracted_text = image_to_text(image_file)
                             if extracted_text:
                                 try:
-                                    price, weight = extract_price_weight(extracted_text)
+                                    price_weight_data = extract_price_weight(extracted_text) #Изменил, чтобы получать словарь
+                                    price = price_weight_data[0]['Цена'] # Достаём цену
+                                    weight = price_weight_data[0]['Вес'] # Достаём вес
+                                    price_str = str(price)
+                                    weight_str = str(weight)
 
-                                    if price is not None:
-                                        products.at[index, "Цена"] = price
-                                    if weight is not None:
-                                        products.at[index, "Вес"] = weight
+                                    products.at[index, "Цена"] = price
+                                    products.at[index, "Вес"] = weight
+
+                                    #Получаем ID  из DataFrame products.  Это КРИТИЧНО
+                                    product_id = products.at[index, "id"] #предполагается, что у тебя есть столбец id
 
                                     # commit только один раз после всех изменений
-                                    cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price, weight, row['id']))
+                                    cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price_str, weight_str, product_id)) # product_id вместо row['id']
                                     conn.commit()
                                 except Exception as e:
                                     st.error(f"Ошибка обработки текста: {e}")
