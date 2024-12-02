@@ -9,12 +9,9 @@ import sqlite3
 from PIL import ImageOps
 import re
 import nltk
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
 
-# Убедитесь, что необходимые ресурсы загружены
+# Download the punkt tokenizer data for Russian
 nltk.download('punkt')
-nltk.download('wordnet')
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
@@ -129,7 +126,7 @@ def update_text(texts_input):
                 prod["Количество"], prod['Вес'], prod['Фото']) for prod in products_list])
         
         conn.commit()
-        
+
         products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
         st.session_state.products = products.copy()
         st.session_state.products = pd.DataFrame(products_list)
