@@ -9,10 +9,14 @@ import sqlite3
 from PIL import ImageOps
 import re
 import nltk
-nltk.download('punkt')  # Скачиваем общие данные для токенизации
-nltk.download('averaged_perceptron_tagger') # необходимый для пунктуации теггер
-nltk.download('punkt_data') #обязательно
+from nltk.corpus import stopwords #Добавлена эта строка
+from nltk.tokenize import word_tokenize
+from nltk.stem import SnowballStemmer
+
+nltk.download('punkt')
 nltk.download('stopwords')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('punkt_data')
 try:
     nltk.data.find('tokenizers/punkt/russian.pickle')
 except LookupError:
@@ -52,7 +56,7 @@ def register(username, password):
 def update_text(texts_input):
     lines = (line.strip() for line in texts_input.split(' и '))
     products_list = []
-    russian_stopwords = set(stopwords.words('russian'))
+    russian_stopwords = set(stopwords.words('russian')) #Теперь stopwords доступен
     stemmer = SnowballStemmer("russian")
 
     for line in lines:
