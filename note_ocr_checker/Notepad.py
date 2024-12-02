@@ -10,8 +10,8 @@ from PIL import ImageOps
 import re
 import nltk
 
-# Download the punkt tokenizer data for Russian
-nltk.download('punkt')
+# Download Russian Punkt tokenizer
+nltk.download('punkt', quiet=False)
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
