@@ -118,16 +118,13 @@ def extract_price_weight(parts):
         products_list.append({
             "Цена": price,
             "Вес": weight
+            "Фото": None
         })
 
     if products_list:
         cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price, weight, row['id']))
         conn.commit()
 
-
-        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
-        st.session_state.products = products.copy()
-        st.session_state.products = pd.DataFrame(products_list)
 
 
 def extract_and_insert_product_info(parts, cursor):
