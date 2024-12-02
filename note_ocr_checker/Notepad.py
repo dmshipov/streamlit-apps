@@ -73,7 +73,14 @@ def update_text(texts_input):
         st.session_state.products = products.copy()
         st.session_state.products = pd.DataFrame(products_list)
 
+def extract_price_weight(text):
+    """Извлекает цену и вес из текста.  Настройте регулярные выражения!"""
+    price_match = re.search(r"(\d+)\s*руб(?:лей)?", text)  # Пример: поиск "123 рублей"
+    weight_match = re.search(r"(\d+)\s*г", text)  # Пример: поиск "100 г"
 
+    price = float(price_match.group(1)) if price_match else None
+    weight = int(weight_match.group(1)) if weight_match else None
+    return price, weight
 
 def extract_and_insert_product_info(parts, cursor):
     """Извлекает информацию о продуктах и вставляет её в базу данных."""
@@ -455,7 +462,31 @@ else:
                             # Сохраняем изображение в базу данных
                             image_bytes = image_file.read()
                             products.at[index, "Фото"] = image_bytes
-                            
+                        else:
+                            image_file = st.camera_input("Фото", key=f'image_{index}')
+                            if image_file is not None:
+                                image_bytes = image_file.read()
+                                products.at[index, "Фото"] = image_bytes
+                                
+                                extracted_text = image_to_text(image_file)
+                                if extracted_text:
+                                    try:
+                                        price, weight = extract_price_weight(extracted_text) #Извлечение цены и веса
+
+                                        if price is not None:
+                                            products.at[index, "Цена"] = price
+                                            cursor.execute("UPDATE products SET Цена=? WHERE id=?", (price, row['id']))
+
+                                        if weight is not None:
+                                            products.at[index, "Вес"] = weight
+                                            cursor.execute("UPDATE products SET Вес=? WHERE id=?", (weight, row['id']))
+                                            
+                                        conn.commit()
+                                    except Exception as e:
+                                        st.error(f"Ошибка обработки текста: {e}")
+
+                                cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
+                                conn.commit()    
                             cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
                             conn.commit()
                         # Создаем список для значений, которые будут отображаться в expander
