@@ -516,10 +516,7 @@ else:
                                     conn.commit()
                                 except Exception as e:
                                     st.error(f"Ошибка обработки текста: {e}")
-                            else:
-                                #Сохраняем фото, даже если текст не распознан
-                                cursor.execute("UPDATE products SET Фото=? WHERE id=?", (image_bytes, row['id']))
-                                conn.commit()
+
         # Создаем список для значений, которые будут отображаться в expander
         delete_items = []
 
