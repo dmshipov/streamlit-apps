@@ -117,9 +117,9 @@ def extract_price_weight(parts):
             weight = int(weight_match.group(1))
 
         price = rubles + kopeks / 100
-        results.append({"Цена": price, "Вес": weight})
 
-    return results
+
+    return price, weight
 
 
 def extract_and_insert_product_info(parts, cursor):
