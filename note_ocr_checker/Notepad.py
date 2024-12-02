@@ -9,18 +9,10 @@ import sqlite3
 from PIL import ImageOps
 import re
 import nltk
+from nltk.tokenize import word_tokenize
 
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    print("Punkt tokenizer not found. Downloading...")
-    nltk.download('punkt')
-
-try:
-    nltk.data.find('taggers/averaged_perceptron_tagger')
-except LookupError:
-    print("Averaged Perceptron Tagger not found. Downloading...")
-    nltk.download('averaged_perceptron_tagger')
+# Загрузка необходимых ресурсов
+nltk.download('punkt')
 
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
