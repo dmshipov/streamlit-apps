@@ -9,21 +9,20 @@ import sqlite3
 from PIL import ImageOps
 import re
 import nltk
-from nltk.corpus import stopwords  # Эта строка необходима!
+from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import SnowballStemmer
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('punkt_data')
-nltk.download('stopwords')
+
 try:
-    nltk.data.find('tokenizers/punkt/russian.pickle')
-except LookupError:
-    try:
-        nltk.download('punkt', quiet=True, lang='rus') #Здесь явно указываем язык
-        print('Данные скачаны')
-    except Exception as e:
-        print(f"Ошибка загрузки данных токенизации для русского языка: {e}")
+    nltk.download('punkt')
+    nltk.download('averaged_perceptron_tagger')
+    nltk.download('punkt_data')
+    nltk.download('stopwords')
+    nltk.download('punkt', lang='rus') #Явно указываем язык
+    print("Данные NLTK загружены успешно.")
+except Exception as e:
+    print(f"Ошибка загрузки данных NLTK: {e}")
+    
 st.set_page_config(layout="wide")
 # Создаем соединение с базой данных
 conn = sqlite3.connect('my_data.db')
