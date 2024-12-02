@@ -73,37 +73,61 @@ def update_text(texts_input):
         st.session_state.products = products.copy()
         st.session_state.products = pd.DataFrame(products_list)
 
-def extract_price_weight(text):
-    """Извлекает цену и вес из текста."""
-    price = None
-    weight = None
-    
-    # Извлечение цены
-    price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?|(\d+)p\.? ?(\d*)к\.?|Цена:\s*(\d+)(?:,(\d+))?|(\d+)\s*(?:РУБ|руб)|\d+\s*₽", text)
-    if price_match:
-        if price_match.group(1):
+def extract_price_weight(parts):
+    """Извлекает информацию о продуктах и вставляет её в базу данных."""
+    products_list = []
+    for part_cleaned in parts:
+        price = 0
+        weight = 0
+        rubles = 0
+        kopeks = 0
+
+        price_match = re.search(r"(\d+)\s*р\.?(\d*)\s*к\.?", part_cleaned)
+        if price_match:
             rubles = int(price_match.group(1))
             kopeks = int(price_match.group(2)) if price_match.group(2) else 0
-        elif price_match.group(3):
-            rubles = int(price_match.group(3))
-            kopeks = int(price_match.group(4)) if price_match.group(4) else 0
-        elif price_match.group(5):
-            rubles = int(price_match.group(5))
-            kopeks = int(price_match.group(6)) if price_match.group(6) else 0
-        elif price_match.group(7):
-            rubles = int(price_match.group(7))
-            kopeks = 0
         else:
-            rubles = int(price_match.group(0).split()[0]) #₽
-            kopeks = 0
+            price_match = re.search(r"(\d+)p\.? ?(\d*)к\.?", part_cleaned)
+            if price_match:
+                rubles = int(price_match.group(1))
+                kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+            else:
+                price_match = re.search(r"Цена:\s*(\d+)(?:,(\d+))?", part_cleaned)
+                if price_match:
+                    rubles = int(price_match.group(1))
+                    kopeks = int(price_match.group(2)) if price_match.group(2) else 0
+                else:
+                    price_match = re.search(r"(\d+)\s*(?:РУБ|руб)", part_cleaned)
+                    if price_match:
+                        rubles = int(price_match.group(1))
+                        kopeks = 0
+
+        price_match = re.search(r"(\d+)\s*₽", part_cleaned)
+        if price_match:
+            rubles = int(price_match.group(1))
+            kopeks_match = re.search(r"(\d+)\s*коп", part_cleaned)
+            if kopeks_match:
+                kopeks = int(kopeks_match.group(1))
+
+        weight_match = re.search(r"(\d+)\s*[гГ]", part_cleaned)
+        if weight_match:
+            weight = int(weight_match.group(1))
+
         price = rubles + kopeks / 100
+       
+        products_list.append({
+            "Цена": price,
+            "Вес": weight
+        })
 
-    # Извлечение веса
-    weight_match = re.search(r"(\d+)\s*[гГ]", text)
-    if weight_match:
-        weight = int(weight_match.group(1))
+    if products_list:
+        cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price, weight, row['id']))
+        conn.commit()
 
-    return price, weight
+
+        products = pd.read_sql_query("SELECT * FROM products WHERE username=?", conn, params=(st.session_state.username,))
+        st.session_state.products = products.copy()
+        st.session_state.products = pd.DataFrame(products_list)
 
 
 def extract_and_insert_product_info(parts, cursor):
@@ -489,14 +513,7 @@ else:
                                 extracted_text = image_to_text(image_file)
                                 if extracted_text:
                                     price, weight = extract_price_weight(extracted_text)
-                                    
-                                    #Защита от None
-                                    price = price if price is not None else 0
-                                    weight = weight if weight is not None else 0
 
-                                    #Обновление всех данных за один запрос
-                                    cursor.execute("UPDATE products SET Фото=?, Цена=?, Вес=? WHERE id=?", (image_bytes, price, weight, row['id']))
-                                    conn.commit()
                                 else:
                                     # Сохраняем фото, даже если текст не распознан
                                     st.warning("Текст не распознан.")
