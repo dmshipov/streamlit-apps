@@ -29,8 +29,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import math
 import numpy as np
 import datetime
-service = Service(ChromeDriverManager().install())
-driver = webdriver.Chrome(service=service)
+
 # Ваши данные (замените на реальные данные)
 region_data = {
     "Курганская область": {"number": 27, "federal_district": "Уральский федеральный округ"},
