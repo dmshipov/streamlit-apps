@@ -15,11 +15,18 @@ options.add_argument('--disable-dev-shm-usage')  # Overcome resource problems
 @st.cache_resource
 def get_driver():
     try:
-        # Attempt to use ChromeDriverManager.  Remove version=... if it doesn't work
+        # Попытаемся использовать ChromeDriverManager, но не полагаться на него полностью.
         driver_path = ChromeDriverManager().install()
-        service = Service(executable_path=driver_path)
-        driver = webdriver.Chrome(service=service, options=options)
+        st.write(f"ChromeDriver path from ChromeDriverManager: {driver_path}") #Добавили вывод пути
+
+        # Попробуем напрямую указать путь, чтобы избежать возможных проблем
+        # со Service, но это может работать не всегда, поэтому оставим Service
+        # service = Service(executable_path=driver_path)
+        # driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Chrome(executable_path=driver_path, options=options)
         return driver
+
+
     except Exception as e:
         st.error(f"Error initializing Chrome WebDriver: {e}")
         return None
@@ -31,19 +38,15 @@ if driver:
         driver.get("https://www.yandex.ru")
         st.write("Successfully opened Yandex.ru!")
         st.write("Page Title:", driver.title)
-        # Можно добавить вывод page_source, но это может занять много места
         # st.code(driver.page_source)
 
-        # Optional: Close the driver (put the button in the sidebar for better UX)
         if st.sidebar.button("Close Driver"):
             driver.quit()
             st.write("Driver closed.")
     except Exception as e:
         st.error(f"Error accessing Yandex.ru: {e}")
-
 else:
     st.warning("WebDriver could not be initialized.  Check the logs.")
-
 
 # import streamlit as st
 # import pandas as pd
