@@ -1,7 +1,0 @@
-pandas
-selenium
-requests
-lxml
-countryflag
-jupyter
-jupyterlab
