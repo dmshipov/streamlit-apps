@@ -1,18 +1,34 @@
+import streamlit as st
 from selenium import webdriver
-from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 
-options = Options() 
-options.add_argument("--headless=new")
-options.add_argument('--disable-gpu')
+def open_yandex():
+    # Настройки для Chrome
+    options = Options()
+    options.headless = True  # Задаем режим безголового браузера
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-driver = webdriver.Chrome(options=options)
+    # Создание экземпляра WebDriver
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=options)
 
-driver.get('https://www3.nohhi.co.jp/rktrace/trace.html')
+    # Переход на сайт
+    driver.get("https://www.yandex.ru")
 
-search_bar = driver.find_element(By.NAME, "command5")
-search_bar.send_keys(num)
-search_bar.submit()
+    # Получение заголовка страницы
+    page_title = driver.title
+    driver.quit()
+    
+    return page_title
+
+# Основной код приложения
+st.title("Открываем Yandex с Selenium")
+if st.button("Открыть Yandex"):
+    title = open_yandex()
+    st.write(f"Заголовок страницы: {title}")
 
 # import streamlit as st
 # import pandas as pd
