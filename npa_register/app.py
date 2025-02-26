@@ -15,12 +15,12 @@ options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource pro
 @st.cache_resource
 def get_driver():
     try:
-        service = Service(ChromeDriverManager().install())
+        service = Service(executable_path=ChromeDriverManager(version="114.0.5735.90").install())
         driver = webdriver.Chrome(service=service, options=options)
         return driver
     except Exception as e:
         st.error(f"Error initializing Chrome WebDriver: {e}")
-        return None  # Важно возвращать None в случае ошибки
+        return None
 
 # Retrieve the driver and get the webpage
 driver = get_driver()
