@@ -9,23 +9,39 @@ options = Options()
 options.add_argument('--disable-gpu')
 options.add_argument('--headless')  # Operate in headless mode
 options.add_argument('--no-sandbox')  # Needed in some environments (e.g., Docker)
-options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems in Docker
+options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
 
 # Create a singleton driver
-@st.experimental_singleton
+@st.cache_resource
 def get_driver():
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    try:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+        return driver
+    except Exception as e:
+        st.error(f"Error initializing Chrome WebDriver: {e}")
+        return None  # Важно возвращать None в случае ошибки
 
 # Retrieve the driver and get the webpage
 driver = get_driver()
-driver.get('https://pravo-search.minjust.ru/bigs/portal.html')
 
-# Display the page source in Streamlit
-st.code(driver.page_source)
+if driver:
+    try:
+        driver.get('https://pravo-search.minjust.ru/bigs/portal.html')
 
-# Optionally, close the driver when the app stops
-if st.button("Close Driver"):
-    driver.quit()
+        # Display the page source in Streamlit
+        st.code(driver.page_source)
+
+        # Optionally, close the driver (поместите кнопку в sidebar для надежности)
+        if st.sidebar.button("Close Driver"):
+            driver.quit()
+            st.write("Driver closed.") # Подтверждение закрытия
+
+    except Exception as e:
+        st.error(f"Error during scraping: {e}")
+
+else:
+    st.warning("WebDriver initialization failed. Cannot proceed.")
 
 
 # import streamlit as st
