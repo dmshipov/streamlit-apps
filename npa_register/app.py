@@ -1,19 +1,21 @@
 import streamlit as st
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options
+import os
+
 # Set up Chrome options
 options = Options()
 options.add_argument('--disable-gpu')
 options.add_argument('--headless')  # Operate in headless mode
-options.add_argument('--no-sandbox')  # Needed in some environments (e.g., Docker)
-options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
+options.add_argument('--no-sandbox')  # Needed in some environments
+options.add_argument('--disable-dev-shm-usage')  # Overcome resource problems
 
 @st.cache_resource
 def get_driver():
     try:
-        # Try without specifying the version
+        # Attempt to use ChromeDriverManager.  Remove version=... if it doesn't work
         driver_path = ChromeDriverManager().install()
         service = Service(executable_path=driver_path)
         driver = webdriver.Chrome(service=service, options=options)
@@ -21,27 +23,26 @@ def get_driver():
     except Exception as e:
         st.error(f"Error initializing Chrome WebDriver: {e}")
         return None
-    
-# Retrieve the driver and get the webpage
+
 driver = get_driver()
 
 if driver:
     try:
-        driver.get('https://pravo-search.minjust.ru/bigs/portal.html')
+        driver.get("https://www.yandex.ru")
+        st.write("Successfully opened Yandex.ru!")
+        st.write("Page Title:", driver.title)
+        # Можно добавить вывод page_source, но это может занять много места
+        # st.code(driver.page_source)
 
-        # Display the page source in Streamlit
-        st.code(driver.page_source)
-
-        # Optionally, close the driver (поместите кнопку в sidebar для надежности)
+        # Optional: Close the driver (put the button in the sidebar for better UX)
         if st.sidebar.button("Close Driver"):
             driver.quit()
-            st.write("Driver closed.") # Подтверждение закрытия
-
+            st.write("Driver closed.")
     except Exception as e:
-        st.error(f"Error during scraping: {e}")
+        st.error(f"Error accessing Yandex.ru: {e}")
 
 else:
-    st.warning("WebDriver initialization failed. Cannot proceed.")
+    st.warning("WebDriver could not be initialized.  Check the logs.")
 
 
 # import streamlit as st

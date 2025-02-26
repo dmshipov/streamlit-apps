@@ -1,8 +1,3 @@
 streamlit
-pandas    
-seleniumbase
-beautifulsoup4
-openpyxl 
-numpy
-selenium==4.16.0
-webdriver_manager==4.0.2
+selenium
+webdriver_manager
