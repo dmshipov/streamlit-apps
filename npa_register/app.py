@@ -1,33 +1,28 @@
-import streamlit as st
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ECfrom             
+from selenium.webdriver.chrome.options import Options
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--disable-gpu")
 
-# Установка заголовка страницы
-st.title("Открытие Yandex через Selenium")
 
-# Кнопка для открытия Yandex
-if st.button("Открыть Yandex"):
-    # Настройка драйвера Chrome
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')  # Запуск в фоновом режиме
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    
-    # Инициализация драйвера
-    with st.spinner("Загрузка Yandex..."):
-        # Убедитесь, что драйвер Chrome установлен
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        driver.get("https://www.yandex.ru")
-        
-        # Получение HTML-кода страницы
-        html = driver.page_source
-        
-        # Закрытие драйвера
-        driver.quit()
-        
-        # Отображение HTML-кода
-        st.markdown(html, unsafe_allow_html=True)
+#Open new browser window
+driver = webdriver.Chrome(options=chrome_options)
+
+#Browser goes to auth_url
+driver.get(auth_url)
+
+#Sets up waiting until the second url to copy the new url
+wait = WebDriverWait(driver, 170)
+wait.until(EC.url_contains("code="))
+url = driver.current_url
+
+#closes window
+driver.close()
 
 
 # import streamlit as st
