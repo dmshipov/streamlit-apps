@@ -1,29 +1,54 @@
 import streamlit as st
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ECfrom             
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+
+# Настройка опций Chrome
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-gpu")
 
+@st.cache_resource # Использование cache_resource
+def get_driver():
+    try:
+        # Установка ChromeDriver с помощью ChromeDriverManager
+        driver_path = ChromeDriverManager().install()
+        service = Service(executable_path=driver_path)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        return driver
+    except Exception as e:
+        st.error(f"Error initializing Chrome WebDriver: {e}")
+        return None
 
-#Open new browser window
-driver = webdriver.Chrome(options=chrome_options)
+driver = get_driver()
 
-#Browser goes to auth_url
-driver.get('www.yandex.ru')
+if driver:
+    try:
+        # Открытие страницы
+        driver.get('https://www.yandex.ru')
 
-#Sets up waiting until the second url to copy the new url
-wait = WebDriverWait(driver, 170)
-wait.until(EC.url_contains("code="))
-url = driver.current_url
+        # Установка ожидания (если это действительно необходимо)
+        # wait = WebDriverWait(driver, 170)
+        # wait.until(EC.url_contains("code=")) #Удалено, так как ожидается другая страница
 
-#closes window
-driver.close()
+        # Получение URL (если необходимо)
+        # url = driver.current_url
+        st.write("Successfully opened Yandex.ru")
+        st.write("Page Title:", driver.title)
+        # Закрытие окна (по кнопке в sidebar)
+        if st.sidebar.button("Close Driver"):
+            driver.quit()
+            st.write("Driver closed.")
+    except Exception as e:
+        st.error(f"Error accessing Yandex.ru: {e}")
+else:
+    st.warning("WebDriver could not be initialized. Check the logs.")
 
 
 # import streamlit as st
