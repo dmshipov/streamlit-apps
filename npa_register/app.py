@@ -1,54 +1,16 @@
 import streamlit as st
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.common.by import By
 
-# Настройка опций Chrome
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--disable-gpu")
+st.title("Пример использования Selenium")
 
-@st.cache_resource # Использование cache_resource
-def get_driver():
-    try:
-        # Установка ChromeDriver с помощью ChromeDriverManager
-        driver_path = ChromeDriverManager().install()
-        service = Service(executable_path=driver_path)
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-        return driver
-    except Exception as e:
-        st.error(f"Error initializing Chrome WebDriver: {e}")
-        return None
+if st.button("Запустить Selenium"):
+    # Пример кода с Selenium
+    driver = webdriver.Chrome(ChromeDriverManager().install())
+    driver.get("https://www.example.com")
+    st.write(driver.title)
+    driver.quit()
 
-driver = get_driver()
-
-if driver:
-    try:
-        # Открытие страницы
-        driver.get('https://www.yandex.ru')
-
-        # Установка ожидания (если это действительно необходимо)
-        # wait = WebDriverWait(driver, 170)
-        # wait.until(EC.url_contains("code=")) #Удалено, так как ожидается другая страница
-
-        # Получение URL (если необходимо)
-        # url = driver.current_url
-        st.write("Successfully opened Yandex.ru")
-        st.write("Page Title:", driver.title)
-        # Закрытие окна (по кнопке в sidebar)
-        if st.sidebar.button("Close Driver"):
-            driver.quit()
-            st.write("Driver closed.")
-    except Exception as e:
-        st.error(f"Error accessing Yandex.ru: {e}")
-else:
-    st.warning("WebDriver could not be initialized. Check the logs.")
 
 
 # import streamlit as st
