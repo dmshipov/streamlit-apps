@@ -1,55 +1,18 @@
-import streamlit as st
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-import os
 
-# Set up Chrome options
-options = Options()
+options = Options() 
+options.add_argument("--headless=new")
 options.add_argument('--disable-gpu')
-options.add_argument('--headless')  # Operate in headless mode
-options.add_argument('--no-sandbox')  # Needed in some environments
-options.add_argument('--disable-dev-shm-usage')  # Overcome resource problems
 
-@st.cache_resource
-def get_driver():
-    try:
-        # Попытаемся использовать ChromeDriverManager, но не полагаться на него полностью.
-        driver_path = ChromeDriverManager().install()
-        st.write(f"ChromeDriver path from ChromeDriverManager: {driver_path}") #Добавили вывод пути
+driver = webdriver.Chrome(options=options)
 
-        # Попробуем напрямую указать путь, чтобы избежать возможных проблем
-        # со Service, но это может работать не всегда, поэтому оставим Service
-        service = Service(executable_path=driver_path) # Использовать Service
-        driver = webdriver.Chrome(service=service, options=options) #Важно: использовать service
-        # driver = webdriver.Chrome(executable_path=driver_path, options=options) #Не использовать executable_path
+driver.get('https://www3.nohhi.co.jp/rktrace/trace.html')
 
-        return driver
-
-
-    except Exception as e:
-        st.error(f"Error initializing Chrome WebDriver: {e}")
-        return None
-
-driver = get_driver()
-
-if driver:
-    try:
-        driver.get("https://www.yandex.ru")
-        st.write("Successfully opened Yandex.ru!")
-        st.write("Page Title:", driver.title)
-        # st.code(driver.page_source)
-
-        if st.sidebar.button("Close Driver"):
-            driver.quit()
-            st.write("Driver closed.")
-    except Exception as e:
-        st.error(f"Error accessing Yandex.ru: {e}")
-else:
-    st.warning("WebDriver could not be initialized.  Check the logs.")
-
-
+search_bar = driver.find_element(By.NAME, "command5")
+search_bar.send_keys(num)
+search_bar.submit()
 
 # import streamlit as st
 # import pandas as pd
