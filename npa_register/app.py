@@ -15,7 +15,7 @@ chrome_options.add_argument("--disable-gpu")
 driver = webdriver.Chrome(options=chrome_options)
 
 #Browser goes to auth_url
-driver.get(auth_url)
+driver.get('www.yandex.ru')
 
 #Sets up waiting until the second url to copy the new url
 wait = WebDriverWait(driver, 170)
