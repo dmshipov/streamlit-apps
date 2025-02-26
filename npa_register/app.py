@@ -2,33 +2,33 @@ import streamlit as st
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options
 
-def open_yandex():
-    # Настройки для Chrome
-    options = Options()
-    options.headless = True  # Задаем режим безголового браузера
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+# Установка заголовка страницы
+st.title("Открытие Yandex через Selenium")
 
-    # Создание экземпляра WebDriver
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
-
-    # Переход на сайт
-    driver.get("https://www.yandex.ru")
-
-    # Получение заголовка страницы
-    page_title = driver.title
-    driver.quit()
-    
-    return page_title
-
-# Основной код приложения
-st.title("Открываем Yandex с Selenium")
+# Кнопка для открытия Yandex
 if st.button("Открыть Yandex"):
-    title = open_yandex()
-    st.write(f"Заголовок страницы: {title}")
+    # Настройка драйвера Chrome
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')  # Запуск в фоновом режиме
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    
+    # Инициализация драйвера
+    with st.spinner("Загрузка Yandex..."):
+        # Убедитесь, что драйвер Chrome установлен
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        driver.get("https://www.yandex.ru")
+        
+        # Получение HTML-кода страницы
+        html = driver.page_source
+        
+        # Закрытие драйвера
+        driver.quit()
+        
+        # Отображение HTML-кода
+        st.markdown(html, unsafe_allow_html=True)
+
 
 # import streamlit as st
 # import pandas as pd
