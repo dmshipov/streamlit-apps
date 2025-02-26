@@ -21,9 +21,10 @@ def get_driver():
 
         # Попробуем напрямую указать путь, чтобы избежать возможных проблем
         # со Service, но это может работать не всегда, поэтому оставим Service
-        # service = Service(executable_path=driver_path)
-        # driver = webdriver.Chrome(service=service, options=options)
-        driver = webdriver.Chrome(executable_path=driver_path, options=options)
+        service = Service(executable_path=driver_path) # Использовать Service
+        driver = webdriver.Chrome(service=service, options=options) #Важно: использовать service
+        # driver = webdriver.Chrome(executable_path=driver_path, options=options) #Не использовать executable_path
+
         return driver
 
 
@@ -47,6 +48,8 @@ if driver:
         st.error(f"Error accessing Yandex.ru: {e}")
 else:
     st.warning("WebDriver could not be initialized.  Check the logs.")
+
+
 
 # import streamlit as st
 # import pandas as pd
