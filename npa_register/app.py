@@ -1,22 +1,31 @@
 import streamlit as st
-
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
+# Set up Chrome options
+options = Options()
+options.add_argument('--disable-gpu')
+options.add_argument('--headless')  # Operate in headless mode
+options.add_argument('--no-sandbox')  # Needed in some environments (e.g., Docker)
+options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems in Docker
+
+# Create a singleton driver
 @st.experimental_singleton
 def get_driver():
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
-options = Options()
-options.add_argument('--disable-gpu')
-options.add_argument('--headless')
-
+# Retrieve the driver and get the webpage
 driver = get_driver()
 driver.get('https://pravo-search.minjust.ru/bigs/portal.html')
 
+# Display the page source in Streamlit
 st.code(driver.page_source)
+
+# Optionally, close the driver when the app stops
+if st.button("Close Driver"):
+    driver.quit()
 
 
 # import streamlit as st
