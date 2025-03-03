@@ -54,6 +54,7 @@ def detect_lines(image):
 
 def extract_table_data(results):
     table_dict = {}
+    text_data = []
 
     for (bbox, text, prob) in results:
         # Определяем координаты для обработки
@@ -64,6 +65,8 @@ def extract_table_data(results):
             if y not in table_dict:
                 table_dict[y] = []
             table_dict[y].append(text)  # Сохраняем текст в таблицу
+        else:
+            text_data.append(text)  # Сохраняем текст вне таблицы
 
     # Обрабатываем таблицу
     table_data = []
@@ -71,7 +74,7 @@ def extract_table_data(results):
         row = table_dict[y]  # Получаем все значения из строки
         table_data.append(row)
 
-    return table_data
+    return table_data, text_data
 
 def image_to_table(img_file_buffer):
     if img_file_buffer is not None:
@@ -90,14 +93,10 @@ def image_to_table(img_file_buffer):
             with st.spinner("Распознавание..."):
                 results = reader.readtext(image_resized, paragraph=False)
 
-                if has_lines:
-                    table_data = extract_table_data(results)
-                    text_data = []  # Текст вне таблицы не собираем пока
-                    return table_data, text_data
-                else:
-                    # Если линий нет, распознаем весь текст как обычный текст
-                    text_data = [text for (_, text, _) in results]
-                    return None, text_data
+                # Извлекаем данные таблицы и текст
+                table_data, text_data = extract_table_data(results)
+                
+                return table_data, text_data
                 
         except Exception as e:
             st.error(f"Ошибка при распознавании: {e}")
@@ -121,8 +120,7 @@ def save_to_docx(text_data):
     return doc_buffer
 
 img_file_buffer = None
-image_input = st.radio(
-    "Выберите способ ввода текста:",
+image_input = st.radio(    "Выберите способ ввода текста:",
     ["Изображение", "Камера"],
     horizontal=True,
 )
