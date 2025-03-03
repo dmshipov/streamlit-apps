@@ -200,7 +200,7 @@ if img_file_buffer:
     
     if extracted_text:
         st.markdown("##### Распознанный текст")
-        st.write(" ".join(extracted_text))
+        st.write(extracted_text)
 
         # Кнопка для скачивания текста в формате TXT
         txt_data = save_to_txt(extracted_text)
@@ -212,7 +212,7 @@ if img_file_buffer:
         )
 
         # Кнопка для скачивания текста в формате DOCX
-        docx_buffer = save_to_docx(" ".join(extracted_text))
+        docx_buffer = save_to_docx(extracted_text)
         st.download_button(
             label="Скачать DOCX",
             data=docx_buffer,
