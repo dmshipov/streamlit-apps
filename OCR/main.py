@@ -47,31 +47,42 @@ def detect_lines(image):
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, 50, 150, apertureSize=3)
     
-    # Находим линии с помощью преобразования Хафа
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=100, maxLineGap=10)
     
     return lines is not None
 
 def extract_table_data(results):
     table_dict = {}
+    text_data = []
 
-    for (bbox, text, prob) in results:
-        # Определяем координаты для обработки
+    # Определяем минимальное расстояние между строками для таблицы
+    min_row_distance = 15  # Этот параметр нужно настроить
+
+    for i, (bbox, text, prob) in enumerate(results):
         y = int(bbox[0][1])
 
-        # Если это текст, который в пределах допустимого диапазона для таблицы
-        if len(bbox) == 4:  # Примерно определяем, что это ячейка, если есть 4 угла
+        is_table_row = False
+        if i > 0:
+            prev_bbox, _, _ = results[i-1]
+            prev_y = int(prev_bbox[0][1])
+            
+            # Проверяем, находится ли текущая строка близко к предыдущей
+            if abs(y - prev_y) <= min_row_distance:
+                is_table_row = True
+
+        if is_table_row:
             if y not in table_dict:
                 table_dict[y] = []
-            table_dict[y].append(text)  # Сохраняем текст в таблицу
+            table_dict[y].append(text)
+        else:
+            text_data.append(text)  # Сохраняем текст вне таблицы
 
-    # Обрабатываем таблицу
     table_data = []
     for y in sorted(table_dict.keys()):
-        row = table_dict[y]  # Получаем все значения из строки
+        row = table_dict[y]
         table_data.append(row)
-
-    return table_data
+    
+    return table_data, text_data
 
 def image_to_table(img_file_buffer):
     if img_file_buffer is not None:
@@ -82,8 +93,6 @@ def image_to_table(img_file_buffer):
 
             with st.expander("Изображение загружено"):
                 st.image(image_resized, use_container_width=True)
-
-            # Преобразуем изображение для обнаружения линий
             img_array = cv2.cvtColor(np.array(image_resized), cv2.COLOR_RGB2BGR)
             has_lines = detect_lines(img_array)
 
@@ -91,8 +100,7 @@ def image_to_table(img_file_buffer):
                 results = reader.readtext(image_resized, paragraph=False)
 
                 if has_lines:
-                    table_data = extract_table_data(results)
-                    text_data = []  # Текст вне таблицы не собираем пока
+                    table_data, text_data = extract_table_data(results)
                     return table_data, text_data
                 else:
                     # Если линий нет, распознаем весь текст как обычный текст
@@ -139,12 +147,9 @@ if img_file_buffer:
     
     if extracted_data is not None:
         st.markdown("##### Распознанная таблица")
-        
-        # Преобразуем данные в DataFrame для отображения
+       
         df = pd.DataFrame(extracted_data)
         st.data_editor(extracted_data)
-
-        # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
         with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, header=False)
