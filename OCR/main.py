@@ -6,6 +6,8 @@ import io
 from PIL import ImageOps
 import docx
 import pandas as pd
+import cv2
+
 
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание")
@@ -31,13 +33,21 @@ reader = load_models(selected_langs)
 if reader is None:
     st.stop()
 
-def resize_image(image, max_size=1000):
-    width, height = image.size
-    if width > max_size or height > max_size:
-        ratio = min(max_size / width, max_size / height)
-        new_size = (int(width * ratio), int(height * ratio))
-        image = image.resize(new_size)
-    return image
+def resize_image(image):
+    # Преобразуем изображение в массив для обработки с OpenCV
+    img_array = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    
+    # Применяем предварительную обработку, например, увеличиваем контрастность
+    img_array = cv2.convertScaleAbs(img_array, alpha=1.5, beta=0)
+    
+    # Изменяем размер изображения, если это необходимо
+    desired_width = 800
+    height, width = img_array.shape[:2]
+    aspect_ratio = width / height
+    new_height = int(desired_width / aspect_ratio)
+    img_resized = cv2.resize(img_array, (desired_width, new_height))
+
+    return img_resized
 
 def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
@@ -50,15 +60,12 @@ def image_to_text(img_file_buffer):
                 st.image(image, use_container_width=True)
 
             with st.spinner("Распознавание текста..."):
-                img_array = np.array(image)
-                results = reader.readtext(img_array, paragraph=True)
+                results = reader.readtext(image, paragraph=True)
 
-                # Форматирование результатов для сохранения структуры
                 extracted_text = ""
                 for result in results:
-                    # Проверяем, сколько элементов в каждом результате
-                    if len(result) >= 2:  
-                        text = result[1]  # Извлекаем текст
+                    if len(result) >= 2:
+                        text = result[1]
                         extracted_text += f"{text}\n"
 
                 return extracted_text
