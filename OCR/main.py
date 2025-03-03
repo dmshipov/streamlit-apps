@@ -171,19 +171,20 @@ def save_to_txt(text_data):
     txt_buffer.seek(0)
     return txt_buffer.getvalue()
 
-def save_to_docx(table_data):
+def save_to_docx(text_data):
     # Создаем новый документ
     doc = Document()
-    
-    # Добавляем каждую строку таблицы как отдельный абзац
-    for row in table_data:
-        doc.add_paragraph(' '.join(row))
-    
+
+    # Объединяем весь текст в один параграф
+    full_text = ' '.join(text_data)
+    doc.add_paragraph(full_text)
+
     # Сохраняем документ в буфер
     doc_buffer = io.BytesIO()
     doc.save(doc_buffer)
     doc_buffer.seek(0)
     return doc_buffer
+
 
 img_file_buffer = None
 image_input = st.radio(
