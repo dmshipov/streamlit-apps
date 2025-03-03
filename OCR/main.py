@@ -53,6 +53,7 @@ def preprocess_image(image):
     # Увеличение контрастности
     enhancer = ImageEnhance.Contrast(Image.fromarray(img_gray))
     img_contrast = enhancer.enhance(2.0)  # Увеличение контрастности в 2 раза
+    img_contrast = np.array(img_contrast)  # Преобразуем в массив NumPy
     
     # Повышение резкости
     img_blur = cv2.GaussianBlur(img_contrast, (5, 5), 0)
