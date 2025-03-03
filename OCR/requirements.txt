@@ -5,3 +5,4 @@ easyocr
 pandas
 python-docx
 openpyxl
+xlsxwriter
