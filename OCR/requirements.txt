@@ -2,6 +2,6 @@ streamlit
 numpy
 Pillow
 easyocr
-python-docx
 pandas
-pytesseract
+python-docx
+openpyxl
