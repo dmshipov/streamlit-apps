@@ -52,17 +52,21 @@ def image_to_text(img_file_buffer):
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
                 results = reader.readtext(img_array, paragraph=True)
-                
+
                 # Форматирование результатов для сохранения структуры
                 extracted_text = ""
-                for (bbox, text, prob) in results:
-                    extracted_text += f"{text}\n"
+                for result in results:
+                    # Проверяем, сколько элементов в каждом результате
+                    if len(result) >= 2:  
+                        text = result[1]  # Извлекаем текст
+                        extracted_text += f"{text}\n"
 
                 return extracted_text
         except Exception as e:
             st.error(f"Ошибка при распознавании текста: {e}")
             return None
     return None
+
 
 img_file_buffer = None
 image_input = st.radio(
