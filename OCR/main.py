@@ -51,21 +51,18 @@ def detect_lines(image):
     
     return lines is not None
 
-def extract_table_and_text_data(results):
+def extract_table_data(results):
     table_dict = {}
-    text_data = []
 
     for (bbox, text, prob) in results:
         # Определяем координаты для обработки
         y = int(bbox[0][1])
 
-        # Если это текст, который не в пределах допустимого диапазона для таблицы
+        # Если это текст, который в пределах допустимого диапазона для таблицы
         if len(bbox) == 4:  # Примерно определяем, что это ячейка, если есть 4 угла
             if y not in table_dict:
                 table_dict[y] = []
             table_dict[y].append(text)  # Сохраняем текст в таблицу
-        else:
-            text_data.append(text)  # Сохраняем отдельный текст
 
     # Обрабатываем таблицу
     table_data = []
@@ -73,7 +70,7 @@ def extract_table_and_text_data(results):
         row = table_dict[y]  # Получаем все значения из строки
         table_data.append(row)
 
-    return table_data, text_data
+    return table_data
 
 def image_to_table(img_file_buffer):
     if img_file_buffer is not None:
@@ -91,12 +88,13 @@ def image_to_table(img_file_buffer):
 
             with st.spinner("Распознавание..."):
                 results = reader.readtext(image_resized, paragraph=False)
-                
+
                 if has_lines:
-                    table_data, text_data = extract_table_and_text_data(results)
+                    table_data = extract_table_data(results)
+                    text_data = []  # Текст вне таблицы не собираем пока
                     return table_data, text_data
                 else:
-                    # Если линий нет, распознаем текст как обычный текст
+                    # Если линий нет, распознаем весь текст как обычный текст
                     text_data = [text for (_, text, _) in results]
                     return None, text_data
                 
@@ -117,7 +115,7 @@ if image_input == "Камера":
 elif image_input == "Изображение":
     img_file_buffer = st.file_uploader(
         "Загрузите изображение", type=["png", "jpg", "jpeg"]
-    )
+            )
 
 if img_file_buffer:
     extracted_data, extracted_text = image_to_table(img_file_buffer)
