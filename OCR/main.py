@@ -138,13 +138,9 @@ if img_file_buffer:
     extracted_data, extracted_text = image_to_table(img_file_buffer)
     
     if extracted_data is not None:
-        st.markdown("##### Распознанная таблица")
-        
-        # Преобразуем данные в DataFrame для отображения
-        df = pd.DataFrame(extracted_data)
-        st.dataframe(df)
+        st.markdown("##### Распознанная таблица")      
 
-          
+         
         st.markdown("##### Распознанный текст")
         st.write("\n".join(extracted_text))
 
@@ -166,6 +162,11 @@ if img_file_buffer:
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
+
+        # Преобразуем данные в DataFrame для отображения
+        df = pd.DataFrame(extracted_data)
+        st.dataframe(df)
+        
         # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
         with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
