@@ -135,17 +135,14 @@ elif image_input == "Изображение":
     )
 
 if img_file_buffer:
-    extracted_data, extracted_text = image_to_table(img_file_buffer)
+    extracted_data = image_to_table(img_file_buffer)
     
-    if extracted_data is not None:
-        st.markdown("##### Распознанная таблица")      
+    if extracted_data is not None:            
 
-         
-        st.markdown("##### Распознанный текст")
-        st.write("\n".join(extracted_text))
+        st.write("\n".join(extracted_data))
 
         # Кнопка для скачивания текста в формате TXT
-        txt_data = save_to_txt(extracted_text)
+        txt_data = save_to_txt(extracted_data)
         st.download_button(
             label="Скачать TXT",
             data=txt_data,
@@ -154,7 +151,7 @@ if img_file_buffer:
         )
 
         # Кнопка для скачивания текста в формате DOCX
-        docx_buffer = save_to_docx(extracted_text)
+        docx_buffer = save_to_docx(extracted_data)
         st.download_button(
             label="Скачать DOCX",
             data=docx_buffer,
@@ -162,11 +159,11 @@ if img_file_buffer:
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
-
+    else:
         # Преобразуем данные в DataFrame для отображения
         df = pd.DataFrame(extracted_data)
         st.dataframe(df)
-        
+
         # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
         with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
