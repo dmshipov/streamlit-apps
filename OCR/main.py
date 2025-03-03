@@ -3,12 +3,12 @@ import numpy as np
 import easyocr as ocr
 import io
 from PIL import Image, ImageOps
-import docx
 import pandas as pd
 import cv2
+from openpyxl import Workbook
 
 st.set_page_config(layout="wide")
-st.markdown("#### Оптическое распознавание")
+st.markdown("#### Оптическое распознавание таблиц")
 
 @st.cache_resource()
 def load_models(langs):
@@ -43,7 +43,7 @@ def resize_image(image):
 
     return img_resized
 
-def image_to_text(img_file_buffer):
+def image_to_table(img_file_buffer):
     if img_file_buffer is not None:
         try:
             image = Image.open(img_file_buffer)
@@ -53,17 +53,17 @@ def image_to_text(img_file_buffer):
             with st.expander("Изображение загружено"):
                 st.image(image, use_container_width=True)
 
-            with st.spinner("Распознавание текста..."):
-                results = reader.readtext(image, paragraph=True)
-
-                structured_data = []
+            with st.spinner("Распознавание таблицы..."):
+                results = reader.readtext(image, paragraph=False)
+                
+                table_data = []
                 for result in results:
                     if len(result) >= 2:
-                        structured_data.append([result[1]])  # Сохраняем текст в виде списка
+                        table_data.append(result[1].split("\t"))  # Разделяем строки по табуляции
 
-                return structured_data
+                return table_data
         except Exception as e:
-            st.error(f"Ошибка при распознавании текста: {e}")
+            st.error(f"Ошибка при распознавании таблицы: {e}")
             return None
     return None
 
@@ -83,41 +83,23 @@ elif image_input == "Изображение":
     )
 
 if img_file_buffer:
-    extracted_data = image_to_text(img_file_buffer)
+    extracted_data = image_to_table(img_file_buffer)
     if extracted_data:
-        st.markdown("##### Распознанный текст")
-        extracted_text = "\n".join([text[0] for text in extracted_data])
-        st.text_area("", value=extracted_text, height=200, key="text_area")
+        st.markdown("##### Распознанная таблица")
+        
+        # Преобразуем данные в DataFrame для отображения
+        df = pd.DataFrame(extracted_data)
+        st.dataframe(df)
 
-        txt_buffer = io.BytesIO()
-        txt_buffer.write(extracted_text.encode())
-        txt_buffer.seek(0)  
-        st.download_button(
-            label="Скачать TXT",
-            data=txt_buffer,
-            file_name="extracted_text.txt",
-            mime="text/plain",
-        )
-
-        docx_buffer = io.BytesIO()
-        doc = docx.Document()
-        doc.add_paragraph(extracted_text)
-        doc.save(docx_buffer)
-        docx_buffer.seek(0)
-        st.download_button(
-            label="Скачать DOCX",
-            data=docx_buffer,
-            file_name="extracted_text.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-
+        # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
-        df = pd.DataFrame(extracted_data)  # Формируем DataFrame из списка списков
-        df.to_excel(xlsx_buffer, index=False, header=False)  # Убираем заголовки
+        with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, header=False)  # Убираем заголовки
+        
         xlsx_buffer.seek(0)
         st.download_button(
             label="Скачать XLSX",
             data=xlsx_buffer,
-            file_name="extracted_text.xlsx",
+            file_name="extracted_table.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
