@@ -60,27 +60,24 @@ def preprocess_image(image):
     
     return Image.fromarray(img_sharp)
 
-def image_to_text(img_file_buffer):
-    if img_file_buffer is not None:
-        try:
-            image = Image.open(img_file_buffer)
-            image = ImageOps.exif_transpose(image)
-            
-            # Предобработка изображения
-            image = preprocess_image(image)
-            
-            image = resize_image(image)
+def image_to_text(image):
+    try:
+        image = ImageOps.exif_transpose(image)
+        
+        # Предобработка изображения
+        image = preprocess_image(image)
+        
+        image = resize_image(image)
 
-            with st.expander("Предобработанное изображение"):
-                st.image(image, use_container_width=True)
+        with st.expander("Предобработанное изображение"):
+            st.image(image, use_container_width=True)
 
-            with st.spinner("Распознавание текста..."):
-                img_array = np.array(image)
-                results = reader.readtext(img_array, paragraph=True, detail=1, text_threshold=0.7, low_text=0.4, contrast_ths=0.1)
-                return results
-        except Exception as e:
-            st.error(f"Ошибка при распознавании текста: {e}")
-            return None
+        with st.spinner("Распознавание текста..."):
+            img_array = np.array(image)
+            results = reader.readtext(img_array, paragraph=True, detail=1, text_threshold=0.7, low_text=0.4, contrast_ths=0.1)
+            return results
+    except Exception as e:
+        st.error(f"Ошибка при распознавании текста: {e}")
         return None
 
 def extract_tables(results):
