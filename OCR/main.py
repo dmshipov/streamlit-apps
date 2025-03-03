@@ -7,7 +7,7 @@ import pandas as pd
 import cv2
 
 st.set_page_config(layout="wide")
-st.markdown("#### Оптическое распознавание таблиц")
+st.markdown("#### Оптическое распознавание таблиц и текста")
 
 @st.cache_resource()
 def load_models(langs):
@@ -41,25 +41,29 @@ def resize_image(image):
 
     return img_resized
 
-def extract_table_data(results):
-    # Создаем словарь для хранения ячеек
+def extract_table_and_text_data(results):
     table_dict = {}
-    
+    text_data = []
+
     for (bbox, text, prob) in results:
-        # Извлекаем координаты ячейки
-        for coord in bbox:
-            x, y = int(coord[0]), int(coord[1])
+        # Определяем координаты для обработки
+        y = int(bbox[0][1])
+
+        # Если это текст, который не в пределах допустимого диапазона для таблицы
+        if len(bbox) == 4:  # Примерно определяем, что это ячейка, если есть 4 угла
             if y not in table_dict:
                 table_dict[y] = []
-            table_dict[y].append((x, text))
+            table_dict[y].append(text)  # Сохраняем текст в таблицу
+        else:
+            text_data.append(text)  # Сохраняем отдельный текст
 
-    # Сортируем строки по координате y и объединяем по x
+    # Обрабатываем таблицу
     table_data = []
     for y in sorted(table_dict.keys()):
-        row = sorted(table_dict[y], key=lambda x: x[0])  # Сортировка по x
-        table_data.append([cell[1] for cell in row])  # Собираем текст ячеек
+        row = table_dict[y]  # Получаем все значения из строки
+        table_data.append(row)
 
-    return table_data
+    return table_data, text_data
 
 def image_to_table(img_file_buffer):
     if img_file_buffer is not None:
@@ -71,33 +75,32 @@ def image_to_table(img_file_buffer):
             with st.expander("Изображение загружено"):
                 st.image(image, use_container_width=True)
 
-            with st.spinner("Распознавание таблицы..."):
+            with st.spinner("Распознавание..."):
                 results = reader.readtext(image, paragraph=False)
-                table_data = extract_table_data(results)
-                
-                return table_data
+                table_data, text_data = extract_table_and_text_data(results)
+
+                return table_data, text_data
         except Exception as e:
-            st.error(f"Ошибка при распознавании таблицы: {e}")
-            return None
-    return None
+            st.error(f"Ошибка при распознавании: {e}")
+            return None, None
+    return None, None
 
 img_file_buffer = None
 image_input = st.radio(
     "Выберите способ ввода текста:",
     ["Изображение", "Камера"],
     horizontal=True,
-    help="Выберите, как вы хотите загрузить изображение.",
 )
 
 if image_input == "Камера":
     img_file_buffer = st.camera_input("Сделайте фото", key="camera_input")
 elif image_input == "Изображение":
     img_file_buffer = st.file_uploader(
-        "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
+        "Загрузите изображение", type=["png", "jpg", "jpeg"]
     )
 
 if img_file_buffer:
-    extracted_data = image_to_table(img_file_buffer)
+    extracted_data, extracted_text = image_to_table(img_file_buffer)
     if extracted_data:
         st.markdown("##### Распознанная таблица")
         
@@ -105,14 +108,19 @@ if img_file_buffer:
         df = pd.DataFrame(extracted_data)
         st.dataframe(df)
 
+        # Отображаем отдельный текст
+        if extracted_text:
+            st.markdown("##### Распознанный текст")
+            st.write("\n".join(extracted_text))
+
         # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
         with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, header=False)  # Убираем заголовки
-        
+            df.to_excel(writer, index=False, header=False)
+
         xlsx_buffer.seek(0)
         st.download_button(
-            label="Скачать XLSX",
+            label="Скачать XLSX",            
             data=xlsx_buffer,
             file_name="extracted_table.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
