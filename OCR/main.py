@@ -107,9 +107,8 @@ def extract_table_data(results, table_bboxes):
         if is_in_table:
             # Добавляем текст в таблицу
             table_data.append(text)
-        else:
-            # Добавляем текст как обычный текст
-            text_data.append(text)
+
+        text_data.append(text)
 
     # Преобразуем плоский список table_data в двумерный список (строки таблицы)
     table_rows = []
