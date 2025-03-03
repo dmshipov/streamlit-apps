@@ -142,6 +142,7 @@ if img_file_buffer:
         
         # Преобразуем данные в DataFrame для отображения
         st.data_editor(extracted_data)
+        extracted_data = st.data_editor(extracted_data)
         df = pd.DataFrame(extracted_data)
         # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
