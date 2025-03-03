@@ -47,42 +47,100 @@ def detect_lines(image):
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blurred, 50, 150, apertureSize=3)
     
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=100, maxLineGap=10)
+    # Настроим параметры HoughLinesP для лучшего обнаружения линий таблиц
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=50, maxLineGap=20)
     
     return lines is not None
 
-def extract_table_data(results):
-    table_dict = {}
+def find_tables(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+
+    # Горизонтальные линии
+    horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
+    remove_horizontal = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, horizontal_kernel, iterations=2)
+    cnts = cv2.findContours(remove_horizontal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    for c in cnts:
+        cv2.drawContours(thresh, [c], -1, (0, 0, 0), 5)
+
+    # Вертикальные линии
+    vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
+    remove_vertical = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, vertical_kernel, iterations=2)
+    cnts = cv2.findContours(remove_vertical, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+    for c in cnts:
+        cv2.drawContours(thresh, [c], -1, (0, 0, 0), 5)
+
+    # Инвертируем изображение для поиска таблиц
+    invert = 255 - thresh
+
+    # Морфологическое закрытие для соединения близких элементов
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    morphed = cv2.morphologyEx(invert, cv2.MORPH_CLOSE, kernel)
+
+    # Находим контуры таблиц
+    cnts = cv2.findContours(morphed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+
+    table_bboxes = []
+    for c in cnts:
+        x, y, w, h = cv2.boundingRect(c)
+        table_bboxes.append((x, y, w, h))
+    
+    return table_bboxes
+
+def extract_table_data(results, table_bboxes):
+    table_data = []
     text_data = []
 
-    # Определяем минимальное расстояние между строками для таблицы
-    min_row_distance = 15  # Этот параметр нужно настроить
+    for bbox, text, prob in results:
+        x1, y1 = int(bbox[0][0]), int(bbox[0][1])
+        x2, y2 = int(bbox[2][0]), int(bbox[2][1])
+        
+        is_in_table = False
+        for x, y, w, h in table_bboxes:
+            if x1 >= x and y1 >= y and x2 <= x+w and y2 <= y+h:
+                is_in_table = True
+                break
 
-    for i, (bbox, text, prob) in enumerate(results):
-        y = int(bbox[0][1])
-
-        is_table_row = False
-        if i > 0:
-            prev_bbox, _, _ = results[i-1]
-            prev_y = int(prev_bbox[0][1])
-            
-            # Проверяем, находится ли текущая строка близко к предыдущей
-            if abs(y - prev_y) <= min_row_distance:
-                is_table_row = True
-
-        if is_table_row:
-            if y not in table_dict:
-                table_dict[y] = []
-            table_dict[y].append(text)
+        if is_in_table:
+            # Добавляем текст в таблицу
+            table_data.append(text)
         else:
-            text_data.append(text)  # Сохраняем текст вне таблицы
+            # Добавляем текст как обычный текст
+            text_data.append(text)
 
-    table_data = []
-    for y in sorted(table_dict.keys()):
-        row = table_dict[y]
-        table_data.append(row)
+    # Преобразуем плоский список table_data в двумерный список (строки таблицы)
+    table_rows = []
+    current_row = []
+    row_y = -1  # Инициализируем значением, которое не может быть координатой
+    row_height_threshold = 15  # Порог высоты строки
     
-    return table_data, text_data
+    for bbox, text, prob in results:
+        x1, y1 = int(bbox[0][0]), int(bbox[0][1])
+        
+        is_in_table = False
+        for x, y, w, h in table_bboxes:
+            if x1 >= x and y1 >= y and x1 <= x+w and y1 <= y+h:
+                is_in_table = True
+                break
+        
+        if is_in_table:
+            if row_y == -1 or abs(y1 - row_y) > row_height_threshold:
+                # Начинаем новую строку
+                if current_row:
+                    table_rows.append(current_row)
+                current_row = [text]
+                row_y = y1
+            else:
+                # Добавляем в текущую строку
+                current_row.append(text)
+    
+    if current_row:
+        table_rows.append(current_row)
+    
+    return table_rows, text_data
 
 def image_to_table(img_file_buffer):
     if img_file_buffer is not None:
@@ -95,17 +153,13 @@ def image_to_table(img_file_buffer):
                 st.image(image_resized, use_container_width=True)
             img_array = cv2.cvtColor(np.array(image_resized), cv2.COLOR_RGB2BGR)
             has_lines = detect_lines(img_array)
+            table_bboxes = find_tables(img_array)
 
             with st.spinner("Распознавание..."):
                 results = reader.readtext(image_resized, paragraph=False)
+                table_data, text_data = extract_table_data(results, table_bboxes)
 
-                if has_lines:
-                    table_data, text_data = extract_table_data(results)
-                    return table_data, text_data
-                else:
-                    # Если линий нет, распознаем весь текст как обычный текст
-                    text_data = [text for (_, text, _) in results]
-                    return None, text_data
+                return table_data, text_data
                 
         except Exception as e:
             st.error(f"Ошибка при распознавании: {e}")
