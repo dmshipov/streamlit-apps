@@ -164,7 +164,7 @@ if img_file_buffer:
     
     if extracted_text:
         st.markdown("##### Распознанный текст")
-        st.write("\n".join(extracted_text))
+        st.write(" ".join(extracted_text))
 
         # Кнопка для скачивания текста в формате TXT
         txt_data = save_to_txt(extracted_text)
