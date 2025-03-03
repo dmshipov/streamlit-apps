@@ -135,11 +135,11 @@ elif image_input == "Изображение":
     )
 
 if img_file_buffer:
-    extracted_data = image_to_table(img_file_buffer)
+    extracted_data, extracted_text = image_to_table(img_file_buffer)
     
     if extracted_data is not None:            
 
-        st.write("\n".join(extracted_data))
+        st.write("\n".join(extracted_text))
 
         # Кнопка для скачивания текста в формате TXT
         txt_data = save_to_txt(extracted_data)
