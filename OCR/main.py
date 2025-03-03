@@ -137,29 +137,9 @@ elif image_input == "Изображение":
 if img_file_buffer:
     extracted_data, extracted_text = image_to_table(img_file_buffer)
     
-    if extracted_data is not None:            
-
-        st.write("\n".join(extracted_text))
-
-        # Кнопка для скачивания текста в формате TXT
-        txt_data = save_to_txt(extracted_data)
-        st.download_button(
-            label="Скачать TXT",
-            data=txt_data,
-            file_name="extracted_text.txt",
-            mime="text/plain",
-        )
-
-        # Кнопка для скачивания текста в формате DOCX
-        docx_buffer = save_to_docx(extracted_data)
-        st.download_button(
-            label="Скачать DOCX",
-            data=docx_buffer,
-            file_name="extracted_text.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-
-    else:
+    if extracted_data is not None:
+        st.markdown("##### Распознанная таблица")
+        
         # Преобразуем данные в DataFrame для отображения
         df = pd.DataFrame(extracted_data)
         st.dataframe(df)
@@ -175,4 +155,26 @@ if img_file_buffer:
             data=xlsx_buffer,
             file_name="extracted_table.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    
+    if extracted_text:
+        st.markdown("##### Распознанный текст")
+        st.write("\n".join(extracted_text))
+
+        # Кнопка для скачивания текста в формате TXT
+        txt_data = save_to_txt(extracted_text)
+        st.download_button(
+            label="Скачать TXT",
+            data=txt_data,
+            file_name="extracted_text.txt",
+            mime="text/plain",
+        )
+
+        # Кнопка для скачивания текста в формате DOCX
+        docx_buffer = save_to_docx(extracted_text)
+        st.download_button(
+            label="Скачать DOCX",
+            data=docx_buffer,
+            file_name="extracted_text.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
