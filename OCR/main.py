@@ -1,12 +1,11 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import easyocr as ocr
+import easyocr
 import io
 from PIL import ImageOps
 import docx
 import pandas as pd
-import pytesseract
 
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание")
@@ -14,7 +13,7 @@ st.markdown("#### Оптическое распознавание")
 @st.cache_resource()
 def load_models(langs):
     try:
-        reader = ocr.Reader(langs, model_storage_directory=".")
+        reader = easyocr.Reader(langs, model_storage_directory=".")
         return reader
     except Exception as e:
         st.error(f"Ошибка при загрузке моделей EasyOCR: {e}")
@@ -26,7 +25,7 @@ default_langs = ["ru", "en"]
 selected_langs = st.multiselect(
     "Выберите языки для распознавания:",
     available_langs,
-    default=default_langs, 
+    default=default_langs,
 )
 
 reader = load_models(selected_langs)
@@ -41,7 +40,6 @@ def resize_image(image, max_size=1000):
         image = image.resize(new_size)
     return image
 
-
 def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
         try:
@@ -54,49 +52,46 @@ def image_to_text(img_file_buffer):
 
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
-                
-                # Используем EasyOCR для распознавания текста
                 results = reader.readtext(img_array, paragraph=True)
 
-                # Обработка результатов
-                extracted_text = "\n".join([result[1] for result in results])
-                
-                # Если необходимо улучшить распознавание таблиц, можно использовать pytesseract:
-                tables_results = pytesseract.image_to_string(image, config='--psm 6')
-                extracted_text += "\n\n" + "Таблицы:\n" + tables_results
+                # Обработка результата для структурирования текста и сохранения таблиц
+                extracted_text = ""
+                table_data = []
+                for result in results:
+                    bbox, text, confidence = result
+                    extracted_text += text + "\n"
+                    # Здесь вы можете добавить логику для сбора данных таблицы
 
-                return extracted_text
+                return extracted_text, table_data
         except Exception as e:
             st.error(f"Ошибка при распознавании текста: {e}")
-            return None
-    return None
-
+            return None, None
+    return None, None
 
 img_file_buffer = None
 image_input = st.radio(
     "Выберите способ ввода текста:",
     ["Изображение", "Камера"],
     horizontal=True,
-    help="Выберите, как вы хотите загрузить изображение.",
 )
 
 if image_input == "Камера":
     img_file_buffer = st.camera_input("Сделайте фото", key="camera_input")
 elif image_input == "Изображение":
     img_file_buffer = st.file_uploader(
-        "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
+        "Загрузите изображение", type=["png", "jpg", "jpeg"],
     )
 
 if img_file_buffer:
-    extracted_text = image_to_text(img_file_buffer)
+    extracted_text, table_data = image_to_text(img_file_buffer)
     if extracted_text:
         st.markdown("##### Распознанный текст")
-        st.text_area("", value=extracted_text, height=300, key="text_area")
+        st.text_area("", value=extracted_text, height=200, key="text_area")
 
-        # Скачать TXT
+        # Сохранение текста в TXT
         txt_buffer = io.BytesIO()
         txt_buffer.write(extracted_text.encode())
-        txt_buffer.seek(0)
+        txt_buffer.seek(0)  
         st.download_button(
             label="Скачать TXT",
             data=txt_buffer,
@@ -104,10 +99,24 @@ if img_file_buffer:
             mime="text/plain",
         )
 
-        # Скачать DOCX
+        # Сохранение текста в DOCX
         docx_buffer = io.BytesIO()
         doc = docx.Document()
-        doc.add_paragraph(extracted_text)
+        # Сохранение текста с возможностью добавления таблицы
+        lines = extracted_text.splitlines()
+        for line in lines:
+            doc.add_paragraph(line)
+        # Если есть сохраненные данные таблицы, добавляем их
+        if table_data:
+            table = doc.add_table(rows=1, cols=len(table_data[0]))
+            hdr_cells = table.rows[0].cells
+            for i, column_name in enumerate(table_data[0]):
+                hdr_cells[i].text = str(column_name)
+            for row_data in table_data[1:]:
+                row_cells = table.add_row().cells
+                for i, cell_data in enumerate(row_data):
+                    row_cells[i].text = str(cell_data)
+
         doc.save(docx_buffer)
         docx_buffer.seek(0)
         st.download_button(
@@ -117,9 +126,9 @@ if img_file_buffer:
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
-        # Скачать XLSX
+        # Сохранение в XLSX
+        df = pd.DataFrame([extracted_text.splitlines()])
         xlsx_buffer = io.BytesIO()
-        df = pd.DataFrame([extracted_text.splitlines()])  # Каждая строка текста в отдельной ячейке
         df.to_excel(xlsx_buffer, index=False)
         xlsx_buffer.seek(0)
         st.download_button(
