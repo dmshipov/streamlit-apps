@@ -172,10 +172,17 @@ def save_to_txt(text_data):
     return txt_buffer.getvalue()
 
 def save_to_docx(text_data):
+    # Создаем новый документ
     doc = Document()
-    for line in text_data:
-        doc.add_paragraph(line)
     
+    # Соединяем все строки в один текст и разбиваем по пробелам
+    words = ' '.join(text_data).split()
+    
+    # Добавляем каждое слово как отдельный абзац
+    for word in words:
+        doc.add_paragraph(word)
+    
+    # Сохраняем документ в буфер
     doc_buffer = io.BytesIO()
     doc.save(doc_buffer)
     doc_buffer.seek(0)
@@ -200,7 +207,7 @@ if img_file_buffer:
     
     if extracted_text:
         st.markdown("##### Распознанный текст")
-        st.write(extracted_text)
+        st.write(" ".join(extracted_text))
 
         # Кнопка для скачивания текста в формате TXT
         txt_data = save_to_txt(extracted_text)
