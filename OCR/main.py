@@ -5,6 +5,7 @@ import io
 from PIL import Image, ImageOps
 import pandas as pd
 import cv2
+from docx import Document
 
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание таблиц и текста")
@@ -103,6 +104,22 @@ def image_to_table(img_file_buffer):
             return None, None
     return None, None
 
+def save_to_txt(text_data):
+    txt_buffer = io.StringIO()
+    txt_buffer.write("\n".join(text_data))
+    txt_buffer.seek(0)
+    return txt_buffer.getvalue()
+
+def save_to_docx(text_data):
+    doc = Document()
+    for line in text_data:
+        doc.add_paragraph(line)
+    
+    doc_buffer = io.BytesIO()
+    doc.save(doc_buffer)
+    doc_buffer.seek(0)
+    return doc_buffer
+
 img_file_buffer = None
 image_input = st.radio(
     "Выберите способ ввода текста:",
@@ -115,7 +132,7 @@ if image_input == "Камера":
 elif image_input == "Изображение":
     img_file_buffer = st.file_uploader(
         "Загрузите изображение", type=["png", "jpg", "jpeg"]
-            )
+    )
 
 if img_file_buffer:
     extracted_data, extracted_text = image_to_table(img_file_buffer)
@@ -143,3 +160,21 @@ if img_file_buffer:
     if extracted_text:
         st.markdown("##### Распознанный текст")
         st.write("\n".join(extracted_text))
+
+        # Кнопка для скачивания текста в формате TXT
+        txt_data = save_to_txt(extracted_text)
+        st.download_button(
+            label="Скачать TXT",
+            data=txt_data,
+            file_name="extracted_text.txt",
+            mime="text/plain",
+        )
+
+        # Кнопка для скачивания текста в формате DOCX
+        docx_buffer = save_to_docx(extracted_text)
+        st.download_button(
+            label="Скачать DOCX",
+            data=docx_buffer,
+            file_name="extracted_text.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
