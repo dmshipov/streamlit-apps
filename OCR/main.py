@@ -229,7 +229,7 @@ if img_file_buffer:
         )
 
         # Кнопка для скачивания текста в формате DOCX
-        docx_buffer = save_to_docx(extracted_text)
+        docx_buffer = save_to_docx(" ".join(extracted_text))
         st.download_button(
             label="Скачать DOCX",
             data=docx_buffer,
