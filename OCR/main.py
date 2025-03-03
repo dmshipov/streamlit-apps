@@ -169,7 +169,7 @@ elif image_input == "Изображение":
     )
 
 if img_file_buffer:
-    extracted_data, extracted_text = image_to_table(img_file_buffer)
+    extracted_text = image_to_table(img_file_buffer)
     if extracted_text:
         st.markdown("##### Распознанный текст")
         st.text_area("", value=extracted_text, height=200, key="text_area")
@@ -201,7 +201,7 @@ if img_file_buffer:
         )
     
         st.markdown("##### Распознанная таблица")
-        
+        extracted_data = image_to_table(img_file_buffer)
         # Преобразуем данные в DataFrame для отображения
         df = pd.DataFrame(extracted_data)
         st.dataframe(df)
