@@ -141,9 +141,8 @@ if img_file_buffer:
         st.markdown("##### Распознанная таблица")
         
         # Преобразуем данные в DataFrame для отображения
+        st.data_editor(extracted_data)
         df = pd.DataFrame(extracted_data)
-        st.write(extracted_data)
-
         # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
         with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
