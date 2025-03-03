@@ -198,23 +198,6 @@ elif image_input == "Изображение":
 if img_file_buffer:
     extracted_data, extracted_text = image_to_table(img_file_buffer)
     
-    if extracted_data is not None:
-        st.markdown("##### Распознанная таблица")
-       
-        df = pd.DataFrame(extracted_data)
-        st.data_editor(extracted_data)
-        xlsx_buffer = io.BytesIO()
-        with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, header=False)
-
-        xlsx_buffer.seek(0)
-        st.download_button(
-            label="Скачать XLSX",            
-            data=xlsx_buffer,
-            file_name="extracted_table.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-    
     if extracted_text:
         st.markdown("##### Распознанный текст")
         st.write(" ".join(extracted_text))
@@ -236,3 +219,21 @@ if img_file_buffer:
             file_name="extracted_text.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
+
+    if extracted_data is not None:
+        st.markdown("##### Распознанная таблица")
+       
+        df = pd.DataFrame(extracted_data)
+        st.data_editor(extracted_data)
+        xlsx_buffer = io.BytesIO()
+        with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, header=False)
+
+        xlsx_buffer.seek(0)
+        st.download_button(
+            label="Скачать XLSX",            
+            data=xlsx_buffer,
+            file_name="extracted_table.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    
