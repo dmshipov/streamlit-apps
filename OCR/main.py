@@ -171,13 +171,24 @@ def save_to_txt(text_data):
     txt_buffer.seek(0)
     return txt_buffer.getvalue()
 
-def save_to_docx(text_data):
+def save_to_docx(table_data, text_data):
     # Создаем новый документ
     doc = Document()
 
-    # Объединяем весь текст в один параграф
-    full_text = ' '.join(text_data)
-    doc.add_paragraph(full_text)
+    # Добавляем таблицу для распознанных данных
+    if table_data:
+        # Определяем количество столбцов
+        num_columns = max(len(row) for row in table_data)
+        table = doc.add_table(rows=len(table_data), cols=num_columns)
+
+        for i, row in enumerate(table_data):
+            for j, cell_value in enumerate(row):
+                table.cell(i, j).text = str(cell_value)
+
+    # Добавляем текст ниже таблицы
+    if text_data:
+        full_text = ' '.join(text_data)
+        doc.add_paragraph(full_text)
 
     # Сохраняем документ в буфер
     doc_buffer = io.BytesIO()
@@ -217,14 +228,13 @@ if img_file_buffer:
         )
 
         # Кнопка для скачивания текста в формате DOCX
-        docx_buffer = save_to_docx(extracted_text)
+        docx_buffer = save_to_docx(extracted_data, extracted_text)
         st.download_button(
             label="Скачать DOCX",
             data=docx_buffer,
             file_name="extracted_text.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
-
     if extracted_data is not None:
         st.markdown("##### Распознанная таблица")
        
