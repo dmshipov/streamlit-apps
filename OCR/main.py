@@ -29,12 +29,13 @@ default_langs = ["ru", "en"]
 selected_langs = st.multiselect(
     "Выберите языки для распознавания:",
     available_langs,
-    default=default_langs, # Устанавливаем default
+    default=default_langs,  # Устанавливаем default
 )
 
 reader = load_models(selected_langs)
 if reader is None:
     st.stop()
+
 
 def resize_image(image, max_size=1000):
     width, height = image.size
@@ -44,15 +45,12 @@ def resize_image(image, max_size=1000):
         image = image.resize(new_size)
     return image
 
+
 def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
         try:
             image = Image.open(img_file_buffer)
-
-            # Транспонируем фото
             image = ImageOps.exif_transpose(image)
-            
-            # Уменьшим размер фото
             image = resize_image(image)
 
             with st.expander("Изображение загруженно"):
@@ -60,11 +58,8 @@ def image_to_text(img_file_buffer):
 
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
-                # Изменение: добавление paragraph=True
                 results = reader.readtext(img_array, paragraph=True)
-                # Обработка результатов:  учитываем возможность отсутствия confidence
-                extracted_text = "\n".join([text for result in results for text in result[1:]])
-                return extracted_text
+                return results  # Возвращаем результаты, а не просто текст
         except Exception as e:
             st.error(f"Ошибка при распознавании текста: {e}")
             return None
@@ -83,31 +78,35 @@ if image_input == "Камера":
     img_file_buffer = st.camera_input("Сделайте фото", key="camera_input")
 elif image_input == "Изображение":
     img_file_buffer = st.file_uploader(
-        "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
+        "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG.",
     )
 
-
 if img_file_buffer:
-    extracted_text = image_to_text(img_file_buffer)
-    if extracted_text:
+    results = image_to_text(img_file_buffer)
+    if results:
         st.markdown("##### Распознанный текст")
+        extracted_text = "\n".join([text for result in results for text in result[1:]])
         st.text_area("", value=extracted_text, height=200, key="text_area")
 
         # --- Скачивание в TXT ---
         txt_buffer = io.BytesIO()
         txt_buffer.write(extracted_text.encode())
-        txt_buffer.seek(0)  # Перемещаем указатель в начало буфера
+        txt_buffer.seek(0)
         st.download_button(
             label="Скачать TXT",
             data=txt_buffer,
             file_name="extracted_text.txt",
             mime="text/plain",
         )
-        
-        # --- Скачивание в DOCX ---
+
+        # --- Скачивание в DOCX с сохранением структуры ---
         docx_buffer = io.BytesIO()
         doc = docx.Document()
-        doc.add_paragraph(extracted_text)
+
+        for result in results:
+            text = result[1]  # Текст из результата
+            doc.add_paragraph(text)
+
         doc.save(docx_buffer)
         docx_buffer.seek(0)
         st.download_button(
@@ -119,4 +118,12 @@ if img_file_buffer:
 
         # --- Скачивание в XLSX ---
         xlsx_buffer = io.BytesIO()
-        df = pd.DataFrame([extracted_text])
+        df = pd.DataFrame([text for result in results for text in result[1:]])
+        df.to_excel(xlsx_buffer, index=False)
+        xlsx_buffer.seek(0)
+        st.download_button(
+            label="Скачать XLSX",
+            data=xlsx_buffer,
+            file_name="extracted_text.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
