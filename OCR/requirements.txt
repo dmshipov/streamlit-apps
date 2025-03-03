@@ -6,3 +6,4 @@ watchdog==4.0.1
 pandas
 python-docx
 openpyxl
+zipfile
