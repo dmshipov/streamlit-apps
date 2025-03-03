@@ -5,7 +5,6 @@ import io
 from PIL import Image, ImageOps
 import pandas as pd
 import cv2
-from openpyxl import Workbook
 
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание таблиц")
@@ -33,8 +32,7 @@ if reader is None:
 
 def resize_image(image):
     img_array = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    img_array = cv2.convertScaleAbs(img_array, alpha=1.5, beta=0)
-    
+
     desired_width = 800
     height, width = img_array.shape[:2]
     aspect_ratio = width / height
@@ -42,6 +40,26 @@ def resize_image(image):
     img_resized = cv2.resize(img_array, (desired_width, new_height))
 
     return img_resized
+
+def extract_table_data(results):
+    # Создаем словарь для хранения ячеек
+    table_dict = {}
+    
+    for (bbox, text, prob) in results:
+        # Извлекаем координаты ячейки
+        for coord in bbox:
+            x, y = int(coord[0]), int(coord[1])
+            if y not in table_dict:
+                table_dict[y] = []
+            table_dict[y].append((x, text))
+
+    # Сортируем строки по координате y и объединяем по x
+    table_data = []
+    for y in sorted(table_dict.keys()):
+        row = sorted(table_dict[y], key=lambda x: x[0])  # Сортировка по x
+        table_data.append([cell[1] for cell in row])  # Собираем текст ячеек
+
+    return table_data
 
 def image_to_table(img_file_buffer):
     if img_file_buffer is not None:
@@ -55,12 +73,8 @@ def image_to_table(img_file_buffer):
 
             with st.spinner("Распознавание таблицы..."):
                 results = reader.readtext(image, paragraph=False)
+                table_data = extract_table_data(results)
                 
-                table_data = []
-                for result in results:
-                    if len(result) >= 2:
-                        table_data.append(result[1].split("\t"))  # Разделяем строки по табуляции
-
                 return table_data
         except Exception as e:
             st.error(f"Ошибка при распознавании таблицы: {e}")
