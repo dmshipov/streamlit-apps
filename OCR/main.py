@@ -132,3 +132,26 @@ if img_file_buffer:
             file_name="extracted_text.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+    if extracted_text is not None:
+        st.markdown("##### Распознанная таблица")
+        
+        # Преобразуем данные в DataFrame для отображения
+        df = pd.DataFrame(extracted_text)
+        st.dataframe(df)
+
+        # Сохраняем данные в формате XLSX
+        xlsx_buffer = io.BytesIO()
+        with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, header=False)
+
+        xlsx_buffer.seek(0)
+        st.download_button(
+            label="Скачать XLSX",            
+            data=xlsx_buffer,
+            file_name="extracted_table.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    
+    if extracted_text:
+        st.markdown("##### Распознанный текст")
+        st.write("\n".join(extracted_text))
