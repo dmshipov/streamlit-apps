@@ -4,9 +4,8 @@ from PIL import Image
 import easyocr as ocr
 import io
 from PIL import ImageOps
+import docx
 import pandas as pd
-from docx import Document
-
 
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание")
@@ -104,9 +103,13 @@ if img_file_buffer:
             file_name="extracted_text.txt",
             mime="text/plain",
         )
-
+        
         # --- Скачивание в DOCX ---
-        docx_buffer = save_as_docx(extracted_text)
+        docx_buffer = io.BytesIO()
+        doc = docx.Document()
+        doc.add_paragraph(extracted_text)
+        doc.save(docx_buffer)
+        docx_buffer.seek(0)
         st.download_button(
             label="Скачать DOCX",
             data=docx_buffer,
@@ -115,10 +118,5 @@ if img_file_buffer:
         )
 
         # --- Скачивание в XLSX ---
-        xlsx_buffer = save_as_xlsx(extracted_text)
-        st.download_button(
-            label="Скачать XLSX",
-            data=xlsx_buffer,
-            file_name="extracted_text.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        xlsx_buffer = io.BytesIO()
+        df = pd.DataFrame([extracted_text])
