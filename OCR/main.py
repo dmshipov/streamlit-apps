@@ -7,7 +7,7 @@ import pandas as pd
 import cv2
 
 st.set_page_config(layout="wide")
-st.markdown("#### Оптическое распознавание таблиц и текста")
+st.markdown("#### Оптическое распознавание таблиц и текста с определением разметки")
 
 @st.cache_resource()
 def load_models(langs):
@@ -41,26 +41,38 @@ def resize_image(image):
 
     return img_resized
 
+def has_table_lines(image):
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray_image, 50, 150, apertureSize=3)
+
+    # Находим контуры на изображении
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    line_count = 0
+    for contour in contours:
+        # Фильтруем контуры по размеру
+        if cv2.contourArea(contour) > 100:  # Подбирайте порог в зависимости от вашего изображения
+            line_count += 1
+
+    return line_count > 5  # Если найдено больше 5 линий, считаем, что это таблица
+
 def extract_table_and_text_data(results):
     table_dict = {}
     text_data = []
 
     for (bbox, text, prob) in results:
-        # Определяем координаты для обработки
         y = int(bbox[0][1])
 
-        # Если это текст, который не в пределах допустимого диапазона для таблицы
-        if len(bbox) == 4:  # Примерно определяем, что это ячейка, если есть 4 угла
+        if len(bbox) == 4:
             if y not in table_dict:
                 table_dict[y] = []
-            table_dict[y].append(text)  # Сохраняем текст в таблицу
+            table_dict[y].append(text)
         else:
-            text_data.append(text)  # Сохраняем отдельный текст
+            text_data.append(text)
 
-    # Обрабатываем таблицу
     table_data = []
     for y in sorted(table_dict.keys()):
-        row = table_dict[y]  # Получаем все значения из строки
+        row = table_dict[y]
         table_data.append(row)
 
     return table_data, text_data
@@ -75,9 +87,17 @@ def image_to_table(img_file_buffer):
             with st.expander("Изображение загружено"):
                 st.image(image, use_container_width=True)
 
+            img_array = np.array(image)
+
+            is_table = has_table_lines(img_array)
+
             with st.spinner("Распознавание..."):
                 results = reader.readtext(image, paragraph=False)
-                table_data, text_data = extract_table_and_text_data(results)
+                if is_table:
+                    table_data, text_data = extract_table_and_text_data(results)
+                else:
+                    table_data = []
+                    text_data = [text[1] for text in results]
 
                 return table_data, text_data
         except Exception as e:
@@ -104,23 +124,20 @@ if img_file_buffer:
     if extracted_data:
         st.markdown("##### Распознанная таблица")
         
-        # Преобразуем данные в DataFrame для отображения
         df = pd.DataFrame(extracted_data)
         st.dataframe(df)
 
-        # Отображаем отдельный текст
         if extracted_text:
             st.markdown("##### Распознанный текст")
             st.write("\n".join(extracted_text))
 
-        # Сохраняем данные в формате XLSX
         xlsx_buffer = io.BytesIO()
         with pd.ExcelWriter(xlsx_buffer, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, header=False)
 
         xlsx_buffer.seek(0)
         st.download_button(
-            label="Скачать XLSX",            
+            label="Скачать XLSX",
             data=xlsx_buffer,
             file_name="extracted_table.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
