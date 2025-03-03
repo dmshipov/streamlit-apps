@@ -4,6 +4,8 @@ from PIL import Image
 import easyocr as ocr
 import io
 from PIL import ImageOps
+import pandas as pd
+from docx import Document
 
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание")
@@ -46,7 +48,6 @@ def format_extracted_text(results):
     formatted_text = ""
     for result in results:
         text = result[1]
-        # Добавляем разметку для выделения текста
         formatted_text += f"{text}\n"
     return formatted_text.strip()
 
@@ -76,6 +77,26 @@ def image_to_text(img_file_buffer):
             return None
     return None
 
+def save_as_docx(text):
+    doc = Document()
+    doc.add_heading('Распознанный текст', level=1)
+    doc.add_paragraph(text)
+    
+    doc_buffer = io.BytesIO()
+    doc.save(doc_buffer)
+    doc_buffer.seek(0)  # Перемещаем указатель в начало буфера
+    return doc_buffer
+
+def save_as_xlsx(text):
+    df = pd.DataFrame({"Распознанный текст": [text]})
+    
+    xlsx_buffer = io.BytesIO()
+    with pd.ExcelWriter(xlsx_buffer, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    
+    xlsx_buffer.seek(0)  # Перемещаем указатель в начало буфера
+    return xlsx_buffer
+
 img_file_buffer = None
 image_input = st.radio(
     "Выберите способ ввода текста:",
@@ -102,8 +123,26 @@ if img_file_buffer:
         txt_buffer.write(extracted_text.encode())
         txt_buffer.seek(0)  # Перемещаем указатель в начало буфера
         st.download_button(
-            label="Скачать TXT",
-            data=txt_buffer,
-            file_name="extracted_text.txt",
-            mime="text/plain",
-        )
+        label="Скачать TXT",
+        data=txt_buffer,
+        file_name="extracted_text.txt",
+        mime="text/plain",
+    )
+
+    # --- Скачивание в DOCX ---
+    docx_buffer = save_as_docx(extracted_text)
+    st.download_button(
+        label="Скачать DOCX",
+        data=docx_buffer,
+        file_name="extracted_text.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+    # --- Скачивание в XLSX ---
+    xlsx_buffer = save_as_xlsx(extracted_text)
+    st.download_button(
+        label="Скачать XLSX",
+        data=xlsx_buffer,
+        file_name="extracted_text.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
