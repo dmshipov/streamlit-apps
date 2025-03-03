@@ -129,13 +129,15 @@ elif image_input == "Изображение":
     )
 
 if img_file_buffer:
-    results = image_to_text(img_file_buffer)
+    # Преобразуем UploadedFile в изображение
+    image = Image.open(img_file_buffer)
+
+    results = image_to_text(image)  # Передаем изображение в функцию
     if results:
         st.markdown("##### Распознанный текст")
         extracted_text = "\n".join([text for result in results for text in result[1:]])
         st.text_area("", value=extracted_text, height=200, key="text_area")
 
-        # --- Распознавание таблиц ---
         tables = extract_tables(results)
         if tables:
             st.markdown("##### Распознанные таблицы")
