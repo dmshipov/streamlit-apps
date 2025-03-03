@@ -114,7 +114,7 @@ def image_to_table(img_file_buffer):
 
 def save_to_txt(text_data):
     txt_buffer = io.StringIO()
-    txt_buffer.write("\n".join(text_data))
+    txt_buffer.write(" ".join(text_data))
     txt_buffer.seek(0)
     return txt_buffer.getvalue()
 
