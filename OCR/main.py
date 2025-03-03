@@ -48,7 +48,7 @@ def detect_lines(image):
     edges = cv2.Canny(blurred, 50, 150, apertureSize=3)
     
     # Настроим параметры HoughLinesP для лучшего обнаружения линий таблиц
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=2, minLineLength=80, maxLineGap=180)
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=3, minLineLength=180, maxLineGap=180)
     
     return lines is not None
 
