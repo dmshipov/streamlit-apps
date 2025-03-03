@@ -1,11 +1,7 @@
-easyocr
-numpy
-pillow
 streamlit
-pandas
+numpy
+Pillow
+easyocr
 python-docx
-openpyxl
-
-
-
-
+pandas
+pytesseract
