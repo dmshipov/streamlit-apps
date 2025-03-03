@@ -1,13 +1,11 @@
 import streamlit as st
 import numpy as np
-from PIL import Image
 import easyocr as ocr
 import io
-from PIL import ImageOps
+from PIL import Image, ImageOps
 import docx
 import pandas as pd
 import cv2
-
 
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание")
@@ -34,13 +32,9 @@ if reader is None:
     st.stop()
 
 def resize_image(image):
-    # Преобразуем изображение в массив для обработки с OpenCV
     img_array = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    
-    # Применяем предварительную обработку, например, увеличиваем контрастность
     img_array = cv2.convertScaleAbs(img_array, alpha=1.5, beta=0)
     
-    # Изменяем размер изображения, если это необходимо
     desired_width = 800
     height, width = img_array.shape[:2]
     aspect_ratio = width / height
@@ -62,18 +56,16 @@ def image_to_text(img_file_buffer):
             with st.spinner("Распознавание текста..."):
                 results = reader.readtext(image, paragraph=True)
 
-                extracted_text = ""
+                structured_data = []
                 for result in results:
                     if len(result) >= 2:
-                        text = result[1]
-                        extracted_text += f"{text}\n"
+                        structured_data.append([result[1]])  # Сохраняем текст в виде списка
 
-                return extracted_text
+                return structured_data
         except Exception as e:
             st.error(f"Ошибка при распознавании текста: {e}")
             return None
     return None
-
 
 img_file_buffer = None
 image_input = st.radio(
@@ -91,9 +83,10 @@ elif image_input == "Изображение":
     )
 
 if img_file_buffer:
-    extracted_text = image_to_text(img_file_buffer)
-    if extracted_text:
+    extracted_data = image_to_text(img_file_buffer)
+    if extracted_data:
         st.markdown("##### Распознанный текст")
+        extracted_text = "\n".join([text[0] for text in extracted_data])
         st.text_area("", value=extracted_text, height=200, key="text_area")
 
         txt_buffer = io.BytesIO()
@@ -119,8 +112,8 @@ if img_file_buffer:
         )
 
         xlsx_buffer = io.BytesIO()
-        df = pd.DataFrame([extracted_text.split("\n")])
-        df.to_excel(xlsx_buffer, index=False)
+        df = pd.DataFrame(extracted_data)  # Формируем DataFrame из списка списков
+        df.to_excel(xlsx_buffer, index=False, header=False)  # Убираем заголовки
         xlsx_buffer.seek(0)
         st.download_button(
             label="Скачать XLSX",
