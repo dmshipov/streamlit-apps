@@ -171,16 +171,13 @@ def save_to_txt(text_data):
     txt_buffer.seek(0)
     return txt_buffer.getvalue()
 
-def save_to_docx(text_data):
+def save_to_docx(table_data):
     # Создаем новый документ
     doc = Document()
     
-    # Соединяем все строки в один текст и разбиваем по пробелам
-    words = ' '.join(text_data).split()
-    
-    # Добавляем каждое слово как отдельный абзац
-    for word in words:
-        doc.add_paragraph(word)
+    # Добавляем каждую строку таблицы как отдельный абзац
+    for row in table_data:
+        doc.add_paragraph(' '.join(row))
     
     # Сохраняем документ в буфер
     doc_buffer = io.BytesIO()
