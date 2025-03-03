@@ -199,7 +199,7 @@ if img_file_buffer:
             file_name="extracted_text.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-    if extracted_data is not None:
+    
         st.markdown("##### Распознанная таблица")
         
         # Преобразуем данные в DataFrame для отображения
