@@ -10,6 +10,7 @@ from docx import Document
 st.set_page_config(layout="wide")
 st.markdown("#### Оптическое распознавание")
 
+# Загрузка моделей EasyOCR. Указываем языки явно
 @st.cache_resource()
 def load_models(langs):
     try:
@@ -19,13 +20,16 @@ def load_models(langs):
         st.error(f"Ошибка при загрузке моделей EasyOCR: {e}")
         return None
 
+# Список поддерживаемых языков
 available_langs = ["ru", "en", "es", "fr", "de"]
+
+# Русский и английский по умолчанию
 default_langs = ["ru", "en"]
 
 selected_langs = st.multiselect(
     "Выберите языки для распознавания:",
     available_langs,
-    default=default_langs,
+    default=default_langs,  # Устанавливаем default
 )
 
 reader = load_models(selected_langs)
@@ -51,7 +55,11 @@ def image_to_text(img_file_buffer):
     if img_file_buffer is not None:
         try:
             image = Image.open(img_file_buffer)
+
+            # Транспонируем фото
             image = ImageOps.exif_transpose(image)
+            
+            # Уменьшим размер фото
             image = resize_image(image)
 
             with st.expander("Изображение загружено"):
@@ -60,6 +68,8 @@ def image_to_text(img_file_buffer):
             with st.spinner("Распознавание текста..."):
                 img_array = np.array(image)
                 results = reader.readtext(img_array, paragraph=True)
+
+                # Форматируем извлеченный текст с учетом разметки
                 extracted_text = format_extracted_text(results)
                 return extracted_text
         except Exception as e:
@@ -74,7 +84,7 @@ def save_as_docx(text):
     
     doc_buffer = io.BytesIO()
     doc.save(doc_buffer)
-    doc_buffer.seek(0)
+    doc_buffer.seek(0)  # Перемещаем указатель в начало буфера
     return doc_buffer
 
 def save_as_xlsx(text):
@@ -84,7 +94,7 @@ def save_as_xlsx(text):
     with pd.ExcelWriter(xlsx_buffer, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False, sheet_name='Sheet1')
     
-    xlsx_buffer.seek(0)
+    xlsx_buffer.seek(0)  # Перемещаем указатель в начало буфера
     return xlsx_buffer
 
 img_file_buffer = None
@@ -92,13 +102,14 @@ image_input = st.radio(
     "Выберите способ ввода текста:",
     ["Изображение", "Камера"],
     horizontal=True,
+    help="Выберите, как вы хотите загрузить изображение.",
 )
 
 if image_input == "Камера":
     img_file_buffer = st.camera_input("Сделайте фото", key="camera_input")
 elif image_input == "Изображение":
     img_file_buffer = st.file_uploader(
-        "Загрузите изображение", type=["png", "jpg", "jpeg"]
+        "Загрузите изображение", type=["png", "jpg", "jpeg"], help="Загрузите изображение в формате PNG, JPG или JPEG."
     )
 
 if img_file_buffer:
@@ -107,28 +118,8 @@ if img_file_buffer:
         st.markdown("##### Распознанный текст")
         st.text_area("", value=extracted_text, height=200, key="text_area")
 
+        # --- Скачивание в TXT ---
         txt_buffer = io.BytesIO()
         txt_buffer.write(extracted_text.encode())
-        txt_buffer.seek(0)
-        st.download_button(
-            label="Скачать TXT",
-            data=txt_buffer,
-            file_name="extracted_text.txt",
-            mime="text/plain",
-        )
-
-        docx_buffer = save_as_docx(extracted_text)
-        st.download_button(
-            label="Скачать DOCX",
-            data=docx_buffer,
-            file_name="extracted_text.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
-
-        xlsx_buffer = save_as_xlsx(extracted_text)
-        st.download_button(
-            label="Скачать XLSX",
-            data=xlsx_buffer,
-            file_name="extracted_text.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        txt_buffer.seek(0)  # Перемещаем указатель в начало буфера
+        
