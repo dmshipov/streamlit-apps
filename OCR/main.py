@@ -218,7 +218,3 @@ if img_file_buffer:
             file_name="extracted_table.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-    
-    if extracted_text:
-        st.markdown("##### Распознанный текст")
-        st.write("\n".join(extracted_text))
