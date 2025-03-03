@@ -156,7 +156,7 @@ if img_file_buffer:
         )
 
         # Кнопка для скачивания текста в формате TXT
-        txt_data = save_to_txt(extracted_text)
+        txt_data = save_to_txt(df)
         st.download_button(
             label="Скачать TXT",
             data=txt_data,
@@ -165,7 +165,7 @@ if img_file_buffer:
         )
 
         # Кнопка для скачивания текста в формате DOCX
-        docx_buffer = save_to_docx(extracted_text)
+        docx_buffer = save_to_docx(df)
         st.download_button(
             label="Скачать DOCX",
             data=docx_buffer,
