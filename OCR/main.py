@@ -109,39 +109,8 @@ def extract_table_data(results, table_bboxes):
             table_data.append(text)
 
         text_data.append(text)
-
-            # Преобразуем плоский список table_data в двумерный список (строки таблицы)
-    table_rows = []
-    current_row = []
-    row_y = -1  # Инициализируем значением, которое не может быть координатой
-    row_height_threshold = 15  # Порог высоты строки
-    
-    for bbox, text, prob in results:
-        x1, y1 = int(bbox[0][0]), int(bbox[0][1])
-        
-        is_in_table = False
-        for x, y, w, h in table_bboxes:
-            if x1 >= x and y1 >= y and x1 <= x+w and y1 <= y+h:
-                is_in_table = True
-                break
-        
-        if is_in_table:
-            if row_y == -1 or abs(y1 - row_y) > row_height_threshold:
-                # Начинаем новую строку
-                if current_row:
-                    table_rows.append(current_row)
-                current_row = [text]
-                row_y = y1
-            else:
-                # Добавляем в текущую строку
-                current_row.append(text)
-    
-    if current_row:
-        table_rows.append(current_row)
-    df = pd.DataFrame(text_data, table_rows)
+    df = pd.DataFrame(text_data, columns=["Extracted Text"])
     return df
-    
-
 
 uploaded_files = st.file_uploader("Загрузите изображения для распознавания", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
@@ -171,7 +140,36 @@ if uploaded_files:
         st.markdown("---")  # Отделитель между изображениями
 
 
-
+    # # Преобразуем плоский список table_data в двумерный список (строки таблицы)
+    # table_rows = []
+    # current_row = []
+    # row_y = -1  # Инициализируем значением, которое не может быть координатой
+    # row_height_threshold = 15  # Порог высоты строки
+    
+    # for bbox, text, prob in results:
+    #     x1, y1 = int(bbox[0][0]), int(bbox[0][1])
+        
+    #     is_in_table = False
+    #     for x, y, w, h in table_bboxes:
+    #         if x1 >= x and y1 >= y and x1 <= x+w and y1 <= y+h:
+    #             is_in_table = True
+    #             break
+        
+    #     if is_in_table:
+    #         if row_y == -1 or abs(y1 - row_y) > row_height_threshold:
+    #             # Начинаем новую строку
+    #             if current_row:
+    #                 table_rows.append(current_row)
+    #             current_row = [text]
+    #             row_y = y1
+    #         else:
+    #             # Добавляем в текущую строку
+    #             current_row.append(text)
+    
+    # if current_row:
+    #     table_rows.append(current_row)
+    
+    # return table_rows, text_data
 
 def save_to_txt(text_data):
     txt_buffer = io.StringIO()
