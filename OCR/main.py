@@ -109,67 +109,61 @@ def extract_table_data(results, table_bboxes):
             table_data.append(text)
 
         text_data.append(text)
-    df = pd.DataFrame(text_data, columns=["Extracted Text"])
-    return df
-
-uploaded_files = st.file_uploader("Загрузите изображения для распознавания", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-
-if uploaded_files:
-    for uploaded_file in uploaded_files:
-        image = Image.open(uploaded_file)
-        st.image(image, caption=f"Загруженное изображение: {uploaded_file.name}", use_column_width=True)
-
-        img_resized = resize_image(image)
-        image_array = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
-
-        has_lines = detect_lines(image_array)
-        if has_lines:
-            st.warning("Обнаружены линии на изображении. Это может повлиять на точность распознавания.")
-        
-        table_bboxes = find_tables(image_array)
-
-        results = reader.readtext(image_array)
-
-        if table_bboxes:
-            st.success("Таблицы обнаружены. Извлечение данных...")
-            table_data_df = extract_table_data(results, table_bboxes)
-            st.dataframe(table_data_df)
-        else:
-            st.info("Таблицы не обнаружены на изображении.")
-
-        st.markdown("---")  # Отделитель между изображениями
-
-
-    # # Преобразуем плоский список table_data в двумерный список (строки таблицы)
-    # table_rows = []
-    # current_row = []
-    # row_y = -1  # Инициализируем значением, которое не может быть координатой
-    # row_height_threshold = 15  # Порог высоты строки
     
-    # for bbox, text, prob in results:
-    #     x1, y1 = int(bbox[0][0]), int(bbox[0][1])
-        
-    #     is_in_table = False
-    #     for x, y, w, h in table_bboxes:
-    #         if x1 >= x and y1 >= y and x1 <= x+w and y1 <= y+h:
-    #             is_in_table = True
-    #             break
-        
-    #     if is_in_table:
-    #         if row_y == -1 or abs(y1 - row_y) > row_height_threshold:
-    #             # Начинаем новую строку
-    #             if current_row:
-    #                 table_rows.append(current_row)
-    #             current_row = [text]
-    #             row_y = y1
-    #         else:
-    #             # Добавляем в текущую строку
-    #             current_row.append(text)
+    # Преобразуем плоский список table_data в двумерный список (строки таблицы)
+    table_rows = []
+    current_row = []
+    row_y = -1  # Инициализируем значением, которое не может быть координатой
+    row_height_threshold = 15  # Порог высоты строки
     
-    # if current_row:
-    #     table_rows.append(current_row)
+    for bbox, text, prob in results:
+        x1, y1 = int(bbox[0][0]), int(bbox[0][1])
+        
+        is_in_table = False
+        for x, y, w, h in table_bboxes:
+            if x1 >= x and y1 >= y and x1 <= x+w and y1 <= y+h:
+                is_in_table = True
+                break
+        
+        if is_in_table:
+            if row_y == -1 or abs(y1 - row_y) > row_height_threshold:
+                # Начинаем новую строку
+                if current_row:
+                    table_rows.append(current_row)
+                current_row = [text]
+                row_y = y1
+            else:
+                # Добавляем в текущую строку
+                current_row.append(text)
     
-    # return table_rows, text_data
+    if current_row:
+        table_rows.append(current_row)
+    
+    return table_rows, text_data
+
+def image_to_table(img_file_buffer):
+    if img_file_buffer is not None:
+        try:
+            image = Image.open(img_file_buffer)
+            image = ImageOps.exif_transpose(image)
+            image_resized = resize_image(image)
+
+            with st.expander("Изображение загружено"):
+                st.image(image_resized, use_container_width=True)
+            img_array = cv2.cvtColor(np.array(image_resized), cv2.COLOR_RGB2BGR)
+            has_lines = detect_lines(img_array)
+            table_bboxes = find_tables(img_array)
+
+            with st.spinner("Распознавание..."):
+                results = reader.readtext(image_resized, paragraph=False)
+                table_data, text_data = extract_table_data(results, table_bboxes)
+
+                return table_data, text_data
+                
+        except Exception as e:
+            st.error(f"Ошибка при распознавании: {e}")
+            return None, None
+    return None, None
 
 def save_to_txt(text_data):
     txt_buffer = io.StringIO()
@@ -202,29 +196,6 @@ def save_to_docx(table_data, text_data):
     doc_buffer.seek(0)
     return doc_buffer
 
-def image_to_table(img_file_buffer):
-    if img_file_buffer is not None:
-        try:
-            image = Image.open(img_file_buffer)
-            image = ImageOps.exif_transpose(image)
-            image_resized = resize_image(image)
-
-            with st.expander("Изображение загружено"):
-                st.image(image_resized, use_container_width=True)
-            img_array = cv2.cvtColor(np.array(image_resized), cv2.COLOR_RGB2BGR)
-            has_lines = detect_lines(img_array)
-            table_bboxes = find_tables(img_array)
-
-            with st.spinner("Распознавание..."):
-                results = reader.readtext(image_resized, paragraph=False)
-                table_data, text_data = extract_table_data(results, table_bboxes)
-
-                return table_data, text_data
-                
-        except Exception as e:
-            st.error(f"Ошибка при распознавании: {e}")
-            return None, None
-    return None, None
 
 img_file_buffer = None
 image_input = st.radio(
