@@ -136,7 +136,7 @@ with col1:
                 grouped_df['Макс._цена'] = grouped_df.apply(
                     lambda row: row['Премиум_Цена'] if str(row['Премиум_Цена']) != 'нет в наличии' else row['Стандарт_Цена'], axis=1
                 )
-                result = grouped_df[['Название', 'Сталь', 'Стандарт_Цена', 'Премиум_Цена', 'Макс._цена', 'Ключ']]
+                result = grouped_df[['Название', 'Сталь', 'Ключ', 'Стандарт_Цена', 'Премиум_Цена', 'Макс._цена']]
                 result['Макс._цена'] = result['Макс._цена'].str.strip().replace('', pd.NA)
                 result['Макс._цена'] = result['Макс._цена'].str.replace(r'[^\d.]', '', regex=True)
                 result['Макс._цена'] = pd.to_numeric(result['Макс._цена'], errors='coerce')
