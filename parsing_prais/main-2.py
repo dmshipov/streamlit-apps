@@ -5,6 +5,7 @@ import pandas as pd
 import io
 import datetime
 import time
+import pytz
 
 # --- Функции парсинга ---
 
@@ -135,8 +136,7 @@ with col1:
                 df['name'] = df['name'].str.replace('бесшовная', 'б/ш', regex=False)
                 df['stal'] = df['Сталь:'].str.replace('Ст', '', regex=False)
                 df['Ключ'] = (df['name'].str.split().str[0] + df['name'].str.split().str[1] +
-                              df['name'].str.extract(r'(\d+(?:,\d+)?(?:x\d+(?:,\d+)?)?)', expand=False) +
-                              df['stal'].fillna(''))
+                              df['name'].str.extract(r'(\d+(?:,\d+)?(?:x\d+(?:,\d+)?)?)', expand=False) + df['stal'].fillna(''))
                 df['Цена:'] = df['Цена:'].str.replace('₽/т', '', regex=False)
                 grouped_df = df.groupby('Название').agg(
                     Стандарт_Цена=('Цена:', lambda x: x[(df.loc[x.index]['Ценовая категория:'] == 'Стандарт')].iloc[0]
@@ -179,8 +179,9 @@ with col2:
                 currency_format = workbook.add_format({'num_format': '0.00'})
                 worksheet.set_column(max_price_col, max_price_col, None, currency_format)
 
-                now = datetime.datetime.now()
-                now_str = f"Дата создания: {now:%Y-%m-%d %H:%M}"
+                moscow_tz = pytz.timezone('Europe/Moscow')
+                now = datetime.datetime.now(moscow_tz)
+                now_str = f"Дата обновления: {now:%d-%m-%Y %H:%M}"
                 worksheet.write(0, 6, now_str)
 
             output.seek(0)
