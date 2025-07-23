@@ -145,16 +145,21 @@ with col1:
                 df['Цена:'] = df['Цена:'].str.replace('₽/т', '', regex=False)
                 grouped_df = df.groupby('Название').agg(
                     Стандарт_Цена=('Цена:', lambda x: x[(df.loc[x.index]['Ценовая категория:'] == 'Стандарт')].iloc[0]
-                                  if any(df.loc[x.index]['Ценовая категория:'] == 'Стандарт') else 'нет в наличии'),
+                                  if any(df.loc[x.index]['Ценовая категория:'] == 'Стандарт') else ''),
                     Премиум_Цена=('Цена:', lambda x: x[(df.loc[x.index]['Ценовая категория:'] == 'Премиум')].iloc[0]
-                                  if any(df.loc[x.index]['Ценовая категория:'] == 'Премиум') else 'нет в наличии'),
+                                  if any(df.loc[x.index]['Ценовая категория:'] == 'Премиум') else ''),
                     Ед_изм=('Ед. изм.:', 'first'),
                     Сталь=('Сталь:', 'first'),
                     Ключ=('Ключ', 'first')
                 ).reset_index()
+
+                # Проставляем "нет в наличии", если пустые или None
+                grouped_df['Стандарт_Цена'] = grouped_df['Стандарт_Цена'].replace(['', None, pd.NA], 'нет в наличии')
+                grouped_df['Премиум_Цена'] = grouped_df['Премиум_Цена'].replace(['', None, pd.NA], 'нет в наличии')
+
                 grouped_df['Макс._цена'] = grouped_df.apply(
-                lambda row: row['Премиум_Цена'] if row['Премиум_Цена'] not in ['нет в наличии', '', None] else row['Стандарт_Цена'], 
-                axis=1
+                    lambda row: row['Премиум_Цена'] if row['Премиум_Цена'] not in ['нет в наличии', '', None] else row['Стандарт_Цена'], 
+                    axis=1
                 )
                 result = grouped_df[['Название', 'Сталь', 'Ключ', 'Стандарт_Цена', 'Премиум_Цена', 'Макс._цена']]
                 result['Макс._цена'] = result['Макс._цена'].str.strip().replace('', pd.NA)
