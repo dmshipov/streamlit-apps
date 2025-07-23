@@ -153,11 +153,7 @@ with col1:
                     Ключ=('Ключ', 'first')
                 ).reset_index()
                 grouped_df['Макс._цена'] = grouped_df.apply(
-                lambda row: row['Премиум_Цена'] 
-                            if (not pd.isna(row['Премиум_Цена']) and 
-                                str(row['Премиум_Цена']).lower() != 'нет в наличии' and 
-                                str(row['Премиум_Цена']).strip() != '') 
-                            else row['Стандарт_Цена'], 
+                lambda row: row['Премиум_Цена'] if row['Премиум_Цена'] not in ['нет в наличии', '', None] else row['Стандарт_Цена'], 
                 axis=1
                 )
                 result = grouped_df[['Название', 'Сталь', 'Ключ', 'Стандарт_Цена', 'Премиум_Цена', 'Макс._цена']]
