@@ -142,6 +142,10 @@ with col1:
                 df['stal'] = df['Сталь:'].str.replace('Ст', '', regex=False)
                 df['Ключ'] = (df['name'].str.split().str[0] + df['name'].str.split().str[1] +
                               df['name'].str.extract(r'(\d+(?:,\d+)?(?:x\d+(?:,\d+)?)?)', expand=False) + df['stal'].fillna(''))
+                
+                # Добавляем " оцинкованная" к 'Ключ', если в названии есть слово "оцинкованная"
+                df.loc[df['Название'].str.contains('оцинкованная', case=False, na=False), 'Ключ'] += 'оцинкованная'
+                
                 df['Цена:'] = df['Цена:'].str.replace('₽/т', '', regex=False)
                 grouped_df = df.groupby('Название').agg(
                     Стандарт_Цена=('Цена:', lambda x: x[(df.loc[x.index]['Ценовая категория:'] == 'Стандарт')].iloc[0]
