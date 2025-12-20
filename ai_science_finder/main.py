@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 import bcrypt
 import os
+import base64
 from datetime import datetime
 
 # Функция для инициализации БД (создаёт таблицу users, если её нет)
@@ -36,17 +37,19 @@ def register_user(username, password):
     except Exception as e:
         return False, f"Ошибка при регистрации: {str(e)}"
 
-# Функция проверки входа
+# Функция проверки входа (возвращает: существует пользователь, правильный ли пароль)
 def check_credentials(username, password):
     try:
         with sqlite3.connect('users.db') as conn:
             result = conn.execute("SELECT password_hash FROM users WHERE username = ?", (username,)).fetchone()
         
         if result:
-            return bcrypt.checkpw(password.encode('utf-8'), result[0])
+            return True, bcrypt.checkpw(password.encode('utf-8'), result[0])
+        else:
+            return False, False
     except Exception as e:
         st.error(f"Ошибка при проверке: {str(e)}")
-    return False
+        return False, False
 
 # Функция для страницы описания сервиса
 def show_description_page():
@@ -65,11 +68,69 @@ def show_description_page():
     - Оптимизации: кэширование эмбеддингов, асинхронная обработка, мониторинг.
     
     Процесс: предобработка текста, векторизация (Sentence-Transformers/BERT), поиск соседей и ранжирование.
+    
+    **Новая функция: Загрузка файлов для анализа AI-агентом.**
+    - Загружайте документы (PDF, DOCX, TXT и др.) для автоматического анализа содержимого с помощью ИИ.
+    - Получите сводку, ключевые идеи, релевантные статьи или рекомендации.
     """)
     
-    # Кнопка для перехода на страницу поиска
+    # Кнопки для перехода
     if st.button("Перейти к поиску статей"):
         st.session_state.page = "search"
+        st.rerun()
+    if st.button("Перейти к загрузке файлов"):
+        st.session_state.page = "upload"
+        st.rerun()
+    
+    # Кнопка выхода из аккаунта
+    if st.button("Выйти из аккаунта", key="logout_desc"):
+        st.session_state.logged_in = False
+        st.session_state.page = None
+        del st.session_state.username
+        st.rerun()
+
+# Функция для страницы загрузки файлов
+def show_upload_page():
+    st.title("Загрузка файлов для анализа AI-агентом")
+    st.write(f"Привет, {st.session_state.username}! Здесь вы можете загрузить файлы для анализа.")
+    
+    st.subheader("Загрузка файла")
+    uploaded_file = st.file_uploader(
+        "Выберите файл для загрузки (PDF, DOCX, TXT и др.)",
+        type=['pdf', 'docx', 'txt', 'doc', 'rtf', 'odt', 'html'],  # Расширения файлов
+        help="Файл будет временно сохранён и передан на анализ AI-агенту."
+    )
+    
+    if uploaded_file is not None:
+        # Сохранение файла в временную папку (или обработка)
+        file_details = {"filename": uploaded_file.name, "filetype": uploaded_file.type, "filesize": uploaded_file.size}
+        st.write("**Детали файла:**")
+        st.json(file_details)
+        
+        # Сохранение файла (в реальном приложении можна зберегти в хмару или БД)
+        with open(os.path.join("temp_uploads", uploaded_file.name), "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success(f"Файл '{uploaded_file.name}' успешно загружен!")
+        
+        # Placeholder для анализа (поскольку бэкэнд агента добавят позже)
+        if st.button("Анализировать файл", key="analyze_btn"):
+            st.info("Анализ файла запущен... (Бэкэнд AI-агента буде доданий пізніше.)")
+            # Здесь можно добавить placeholder-результаты
+            st.subheader("Результаты анализа (пример)")
+            st.write("""
+            - **Сводка:** Документ описывает применение машинного обучения в медицине.
+            - **Ключевые идеи:** Диагностика рака с помощью нейросетей, предсказание заболеваний.
+            - **Рекомендации:** Проверьте статьи по теме 'ИИ в онкологии'.
+            """)
+    
+    # Кнопка выхода или перехода
+    if st.button("Вернуться", key="back_to_desc"):
+        st.session_state.page = "description"
+        st.rerun()
+    if st.button("Выйти из аккаунта", key="logout_upload"):
+        st.session_state.logged_in = False
+        st.session_state.page = None
+        del st.session_state.username
         st.rerun()
 
 # Функция для страницы поиска статей
@@ -91,7 +152,11 @@ def show_search_page():
     
     # Простой поиск
     st.subheader("Поиск")
-    query = st.text_input("Введите запрос (например, 'машинное обучение в медицине')", key="query")
+    # Разделяем на 2 столбца, чтобы поле запроса заняло ширину одной из двух (т.е. шире на одну колонку по сравнению с предыдущим 1/4)
+    search_col1, search_col2 = st.columns(2)
+    with search_col1:
+        query = st.text_input("Введите запрос (например, 'машинное обучение в медицине')", key="query")
+    # search_col2 оставляем пустым для симметрии, если нужно
     if st.button("Найти", key="search_btn"):
         if query.strip():
             st.write(f"Результаты поиска по запросу: '{query}'")
@@ -174,8 +239,13 @@ def show_search_page():
         else:
             st.warning("Введите запрос для поиска.")
     
+    # Кнопка назад
+    if st.button("Вернуться", key="back_to_desc_search"):
+        st.session_state.page = "description"
+        st.rerun()
+    
     # Кнопка выхода
-    if st.button("Выход", key="logout_btn"):
+    if st.button("Выйти из аккаунта", key="logout_btn"):
         st.session_state.logged_in = False
         st.session_state.page = None
         del st.session_state.username
@@ -188,10 +258,57 @@ def main():
     else:
         st.set_page_config(layout="centered")
     
+    # Преобразование локального изображения в base64 (чтобы фон отображался)
+    # Замените путь к вашему файлу, если необходимо, или выполните это отдельно
+    image_path = r".orig-scaled.jpg"
+    try:
+        with open(image_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        background_url = f"data:image/jpeg;base64,{encoded_string}"
+    except FileNotFoundError:
+        # Fallback: если файл не найден, используем оригинальную ссылку (HTTPS) или укажите другой путь/URL
+        background_url = "https://i.imgur.com/lqq1kG0.jpg"  # Оригинальная ссылка, замените на свой URL или base64
+        st.warning("Локальный файл не найден. Убедитесь, что путь верный, и файл доступен. Используется URL для фона.")
+
+    # Добавление фона через CSS с изображением и светло-серым цветом для всего текста
+    st.markdown(
+        f"""
+        <style>
+        /* Применяем фоновое изображение к основным элементам Streamlit */
+        body, html {{
+            background-image: url('{background_url}') !important;
+            background-size: cover !important;
+            background-repeat: no-repeat !important;
+            background-attachment: fixed !important;
+            background-position: center !important;
+            font-family: system-ui, "google-fonts:Inter", sans-serif !important;
+            color: #b8b8b8 !important;  /* Весь текст чуть темнее (средне-серый оттенок) */
+        }}
+        /* Наследуем фон для внутренних контейнеров */
+        .stApp, .main {{
+            background: inherit !important;
+        }}
+        /* Делаем labels (подписи полей ввода) чуть темнее */
+        label {{
+            color: #b8b8b8 !important;
+        }}
+        /* Дополнительные стили для заголовков и текста, если нужно */
+        h1, h2, h3, h4, h5, h6 {{
+            color: #b8b8b8 !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
     st.title("AI Science Finder")
     
     # Инициализация БД
     init_db()
+    
+    # Создание папки для временных загрузок, если её нет
+    if not os.path.exists("temp_uploads"):
+        os.makedirs("temp_uploads")
     
     # Инициализация сессии
     if "logged_in" not in st.session_state:
@@ -203,6 +320,8 @@ def main():
     if st.session_state.logged_in:
         if st.session_state.page == "search":
             show_search_page()
+        elif st.session_state.page == "upload":
+            show_upload_page()
         else:
             show_description_page()
         return
@@ -216,20 +335,24 @@ def main():
         password = st.text_input("Пароль", type="password", key="login_password")
         
         if st.button("Войти"):
-            if check_credentials(username, password):
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.page = "description"
-                st.success("Успешный вход! Перенаправление...")
-                st.rerun()
+            exists, correct = check_credentials(username, password)
+            if exists:
+                if correct:
+                    st.session_state.logged_in = True
+                    st.session_state.username = username
+                    st.session_state.page = "description"
+                    st.success("Успешный вход! Перенаправление...")
+                    st.rerun()
+                else:
+                    st.error("Неверный пароль.")
             else:
-                st.error("Неверный логин или пароль.")
+                st.error("Логин не зарегистрирован.")
 
     with tab2:
         st.subheader("Регистрация нового пользователя")
         reg_username = st.text_input("Логин", key="reg_username")
         reg_password = st.text_input("Пароль", type="password", key="reg_password")
-        confirm_password = st.text_input("Подтвердите пароль", type="password", key="confirm_password")
+        confirm_password = st.text_input("Подтвердите пароль", type="password", key="confirm_password")  # Исправлено: type="password"
         
         if st.button("Зарегистрироваться"):
             if reg_password != confirm_password:
