@@ -258,18 +258,9 @@ def main():
     else:
         st.set_page_config(layout="centered")
     
-    # Преобразование локального изображения в base64 (чтобы фон отображался)
-    # Замените путь к вашему файлу, если необходимо, или выполните это отдельно
-    image_path = r"https://gazeta.grsu.by/wp-content/uploads/2023/02/orig-scaled.jpg"
-    try:
-        with open(image_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode()
-        background_url = f"data:image/jpeg;base64,{encoded_string}"
-    except FileNotFoundError:
-        # Fallback: если файл не найден, используем оригинальную ссылку (HTTPS) или укажите другой путь/URL
-        background_url = "https://i.imgur.com/lqq1kG0.jpg"  # Оригинальная ссылка, замените на свой URL или base64
-        st.warning("Локальный файл не найден. Убедитесь, что путь верный, и файл доступен. Используется URL для фона.")
-
+    # Использование предоставленной ссылки как фонового изображения
+    background_url = "https://gazeta.grsu.by/wp-content/uploads/2023/02/orig-scaled.jpg"
+    
     # Добавление фона через CSS с изображением и светло-серым цветом для всего текста
     st.markdown(
         f"""
