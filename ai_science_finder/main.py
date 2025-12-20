@@ -260,7 +260,7 @@ def main():
     
     # Преобразование локального изображения в base64 (чтобы фон отображался)
     # Замените путь к вашему файлу, если необходимо, или выполните это отдельно
-    image_path = r".orig-scaled.jpg"
+    image_path = r"https://gazeta.grsu.by/wp-content/uploads/2023/02/orig-scaled.jpg"
     try:
         with open(image_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode()
