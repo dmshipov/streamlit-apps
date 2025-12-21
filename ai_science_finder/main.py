@@ -261,31 +261,61 @@ def main():
     # Использование предоставленной ссылки как фонового изображения
     background_url = "https://raw.githubusercontent.com/dmshipov/streamlit-apps/main/ai_science_finder/orig-scaled.jpg"
 
-    # Добавление фона через CSS с изображением и светло-серым цветом для всего текста
+    # Добавление фона через CSS с изображением и светло-серым цветом для всего текста + серой темой для элементов
     st.markdown(
         f"""
         <style>
-        /* Применяем фоновое изображение к основным элементам Streamlit */
+        /* Применяем фоновое изображение с наложением серого оттенка для темности */
         body, html {{
             background-image: url('{background_url}') !important;
             background-size: cover !important;
             background-repeat: no-repeat !important;
             background-attachment: fixed !important;
             background-position: center !important;
+            background-color: rgba(224, 224, 224, 0.95) !important; /* Полупрозрачный серый поверх изображения */
             font-family: system-ui, "google-fonts:Inter", sans-serif !important;
-            color: #b8b8b8 !important;  /* Весь текст чуть темнее (средне-серый оттенок) */
+            color: #555555 !important;  /* Тёмно-серый текст для хорошего контраста */
         }}
         /* Наследуем фон для внутренних контейнеров */
         .stApp, .main {{
             background: inherit !important;
         }}
-        /* Делаем labels (подписи полей ввода) чуть темнее */
+        /* Делаем labels чуть темнее */
         label {{
-            color: #b8b8b8 !important;
+            color: #555555 !important;
         }}
-        /* Дополнительные стили для заголовков и текста, если нужно */
+        /* Серый фон для заголовков */
         h1, h2, h3, h4, h5, h6 {{
-            color: #b8b8b8 !important;
+            color: #555555 !important;
+        }}
+        
+        /* Серый фон для всех полей ввода (text inputs, file uploader и т.д.) */
+        .stTextInput > div > input,
+        .stTextArea > div > textarea,
+        .stNumberInput > div > input,
+        .stSelectbox > div > div > input,
+        .stMultiselect > div > div > input,
+        .stFileUploader > div > div > input,
+        input[type="text"], input[type="password"], input[type="file"], textarea {{
+            background-color: #e0e0e0 !important;  /* Светло-серый фон для полей */
+            border: 1px solid #aaaaaa !important; /* Серый border */
+        }}
+        
+        /* Серый задний фон для dropdown и select элементов */
+        .stSelectbox, .stMultiselect {{
+            background-color: #e0e0e0 !important;
+        }}
+        
+        /* Серый фон для кнопок */
+        .stButton button {{
+            background-color: #cccccc !important;  /* Средне-серый для кнопок */
+            border: 1px solid #aaaaaa !important;
+            color: #333333 !important;  /* Тёмно-серый текст на кнопках */
+        }}
+        
+        /* Дополнительный серый фон для других элементов (например, expander) */
+        .stExpander, .stAlert {{
+            background-color: #f0f0f0 !important;  /* Ещё светлее для акцента */
         }}
         </style>
         """,
@@ -343,7 +373,7 @@ def main():
         st.subheader("Регистрация нового пользователя")
         reg_username = st.text_input("Логин", key="reg_username")
         reg_password = st.text_input("Пароль", type="password", key="reg_password")
-        confirm_password = st.text_input("Подтвердите пароль", type="password", key="confirm_password")  # Исправлено: type="password"
+        confirm_password = st.text_input("Подтвердите пароль", type="password", key="confirm_password")
         
         if st.button("Зарегистрироваться"):
             if reg_password != confirm_password:
