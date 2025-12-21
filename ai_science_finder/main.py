@@ -261,35 +261,35 @@ def main():
     # Использование предоставленной ссылки как фонового изображения
     background_url = "https://raw.githubusercontent.com/dmshipov/streamlit-apps/main/ai_science_finder/orig-scaled.jpg"
 
-    # Добавление фона через CSS с изображением и светло-серым цветом для всего текста + серой темой для элементов
+    # Добавление фона через CSS с изображением и тёмно-серым цветом для всей текста + серой темой для элементов (тёмнее)
     st.markdown(
         f"""
         <style>
-        /* Применяем фоновое изображение с наложением серого оттенка для темности */
+        /* Применяем фоновое изображение с наложением более тёмного серого оттенка для темности */
         body, html {{
             background-image: url('{background_url}') !important;
             background-size: cover !important;
             background-repeat: no-repeat !important;
             background-attachment: fixed !important;
             background-position: center !important;
-            background-color: rgba(224, 224, 224, 0.95) !important; /* Полупрозрачный серый поверх изображения */
+            background-color: rgba(180, 180, 180, 0.95) !important; /* Более тёмно-серый поверх изображения (#b4b4b4) */
             font-family: system-ui, "google-fonts:Inter", sans-serif !important;
-            color: #555555 !important;  /* Тёмно-серый текст для хорошего контраста */
+            color: #333333 !important;  /* Более тёмный текст для контраста */
         }}
         /* Наследуем фон для внутренних контейнеров */
         .stApp, .main {{
             background: inherit !important;
         }}
-        /* Делаем labels чуть темнее */
+        /* Делаем labels более тёмными */
         label {{
-            color: #555555 !important;
+            color: #333333 !important;
         }}
-        /* Серый фон для заголовков */
+        /* Тёмно-серый фон для заголовков */
         h1, h2, h3, h4, h5, h6 {{
-            color: #555555 !important;
+            color: #333333 !important;
         }}
         
-        /* Серый фон для всех полей ввода (text inputs, file uploader и т.д.) */
+        /* Более тёмно-серый фон для всех полей ввода (text inputs, file uploader и т.д.) */
         .stTextInput > div > input,
         .stTextArea > div > textarea,
         .stNumberInput > div > input,
@@ -297,25 +297,25 @@ def main():
         .stMultiselect > div > div > input,
         .stFileUploader > div > div > input,
         input[type="text"], input[type="password"], input[type="file"], textarea {{
-            background-color: #e0e0e0 !important;  /* Светло-серый фон для полей */
-            border: 1px solid #aaaaaa !important; /* Серый border */
+            background-color: #c0c0c0 !important;  /* Средне-серый фон для полей (тёмнее) */
+            border: 1px solid #888888 !important; /* Тёмно-серый border */
         }}
         
-        /* Серый задний фон для dropdown и select элементов */
+        /* Более тёмно-серый задний фон для dropdown и select элементов */
         .stSelectbox, .stMultiselect {{
-            background-color: #e0e0e0 !important;
+            background-color: #c0c0c0 !important;
         }}
         
-        /* Серый фон для кнопок */
+        /* Более тёмно-серый фон для кнопок */
         .stButton button {{
-            background-color: #cccccc !important;  /* Средне-серый для кнопок */
-            border: 1px solid #aaaaaa !important;
-            color: #333333 !important;  /* Тёмно-серый текст на кнопках */
+            background-color: #a8a8a8 !important;  /* Тёмно-серый для кнопок */
+            border: 1px solid #888888 !important;
+            color: #111111 !important;  /* Чёрно-серый текст на кнопках для контраста */
         }}
         
-        /* Дополнительный серый фон для других элементов (например, expander) */
+        /* Более тёмно-серый фон для других элементов (например, expander) */
         .stExpander, .stAlert {{
-            background-color: #f0f0f0 !important;  /* Ещё светлее для акцента */
+            background-color: #d0d0d0 !important;  /* Средне-серый для акцента */
         }}
         </style>
         """,
