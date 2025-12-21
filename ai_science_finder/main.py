@@ -259,8 +259,8 @@ def main():
         st.set_page_config(layout="centered")
     
     # Использование предоставленной ссылки как фонового изображения
-    background_url = "https://github.com/dmshipov/streamlit-apps/blob/main/ai_science_finder/orig-scaled.jpg"
-    
+    background_url = "https://raw.githubusercontent.com/dmshipov/streamlit-apps/main/ai_science_finder/orig-scaled.jpg"
+
     # Добавление фона через CSS с изображением и светло-серым цветом для всего текста
     st.markdown(
         f"""
