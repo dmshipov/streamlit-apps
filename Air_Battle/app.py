@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="AN-2 Ace Combat: VFX Edition", layout="wide")
+st.set_page_config(page_title="AN-2 Ace Combat: Explosion Edition", layout="wide")
 
 game_html = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -83,7 +83,6 @@ game_html = """
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, score: 0, color: '#00d2ff', state: 'alive' };
     let conn = null;
 
-    // Инициализация облаков
     for(let i=0; i<20; i++) {
         clouds.push({
             x: Math.random() * WORLD.w,
@@ -94,7 +93,6 @@ game_html = """
         });
     }
 
-    // Режимы
     const setLimit = (val, id) => {
         scoreLimit = val;
         document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active-mode'));
@@ -104,11 +102,10 @@ game_html = """
     document.getElementById('limit-5').onclick = () => setLimit(5, 'limit-5');
     document.getElementById('limit-10').onclick = () => setLimit(10, 'limit-10');
 
-    // Сеть
     document.getElementById('mode-net').onclick = () => {
         const peer = new Peer();
         peer.on('open', id => {
-            const connectId = prompt("Твой ID: " + id + "\\nВведи ID друга для подключения:");
+            const connectId = prompt("Твой ID: " + id + "\\nВведи ID друга:");
             if(connectId) { conn = peer.connect(connectId); setupConn(); }
         });
         peer.on('connection', c => { conn = c; setupConn(); });
@@ -118,6 +115,7 @@ game_html = """
         conn.on('data', d => {
             if(d.type === 'state') { opp.x=d.x; opp.y=d.y; opp.a=d.a; opp.hp=d.hp; opp.state=d.state; opp.score=d.score; }
             if(d.type === 'fire') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
+            if(d.type === 'explode') createExplosion(d.x, d.y);
         });
     }
 
@@ -129,18 +127,25 @@ game_html = """
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
         if(conn) conn.send({ type: 'fire', x: me.x, y: me.y, a: me.a });
     };
-    document.getElementById('fireBtn').ontouchstart = (e) => { e.preventDefault(); fire(); };
     document.getElementById('fireBtn').onclick = fire;
 
-    function createParticle(x, y, type) {
+    function createParticle(x, y, type, customVX, customVY) {
         particles.push({
             x, y, 
-            vx: (Math.random() - 0.5) * 2,
-            vy: (Math.random() - 0.5) * 2,
+            vx: customVX || (Math.random() - 0.5) * 2,
+            vy: customVY || (Math.random() - 0.5) * 2,
             life: 1.0,
-            size: type === 'smoke' ? 10 + Math.random() * 20 : 15 + Math.random() * 15,
-            type: type // 'smoke' или 'fire'
+            size: type === 'smoke' ? 10 + Math.random() * 20 : 20 + Math.random() * 20,
+            type: type 
         });
+    }
+
+    function createExplosion(x, y) {
+        for(let i=0; i<30; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let speed = 2 + Math.random() * 10;
+            createParticle(x, y, 'fire', Math.cos(angle) * speed, Math.sin(angle) * speed);
+        }
     }
 
     function checkVictory() {
@@ -154,25 +159,28 @@ game_html = """
     function update() {
         if(gameOver) return;
 
-        // Облака
         clouds.forEach(c => {
             c.x += c.speed;
             if(c.x > WORLD.w) c.x = -c.size;
         });
 
-        // Самолеты
         const movePlane = (p) => {
             if(p.state === 'alive') {
                 let r = p.a * Math.PI/180; p.x += Math.cos(r)*8; p.y += Math.sin(r)*8;
                 if(p.x < 0) p.x = WORLD.w; if(p.x > WORLD.w) p.x = 0;
                 if(p.y < 0) p.y = WORLD.h; if(p.y > WORLD.h) p.y = 0;
-                
-                // Дым при повреждениях
                 if(p.hp <= 3) createParticle(p.x, p.y, 'smoke');
             } else {
-                p.y += 6; p.a += 5;
-                createParticle(p.x, p.y, 'fire'); // Огонь при падении
-                if(--p.dt <= 0) { p.state='alive'; p.hp=5; p.x=Math.random()*WORLD.w; p.y=Math.random()*WORLD.h; }
+                // ПАДЕНИЕ (ДЛИТЕЛЬНЕЕ)
+                p.y += 4; p.x += Math.sin(p.dt * 0.1) * 5; // Спираль
+                p.a += 15; 
+                createParticle(p.x, p.y, 'fire');
+                p.dt--;
+                if(p.dt <= 0) {
+                    createExplosion(p.x, p.y); // ВЗРЫВ В КОНЦЕ
+                    if(conn && p === me) conn.send({type: 'explode', x: p.x, y: p.y});
+                    p.state='alive'; p.hp=5; p.x=Math.random()*WORLD.w; p.y=Math.random()*WORLD.h; 
+                }
             }
         };
 
@@ -186,7 +194,6 @@ game_html = """
             if(Math.random() < 0.02 && opp.state==='alive') bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
         }
 
-        // Пули
         bullets.forEach((b, i) => {
             let r = b.a * Math.PI/180; b.x += Math.cos(r)*22; b.y += Math.sin(r)*22;
             if(b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
@@ -194,17 +201,16 @@ game_html = """
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 80) {
                 target.hp--; bullets.splice(i, 1);
                 if(target.hp <= 0) { 
-                    target.state = 'falling'; target.dt = 120; 
+                    target.state = 'falling'; target.dt = 240; // УВЕЛИЧЕНО ВРЕМЯ ПАДЕНИЯ
                     if(b.owner === 'me') me.score++; else opp.score++;
                     checkVictory();
                 }
             }
         });
 
-        // Частицы
         particles.forEach((p, i) => {
             p.x += p.vx; p.y += p.vy;
-            p.life -= 0.02;
+            p.life -= 0.015;
             if(p.life <= 0) particles.splice(i, 1);
         });
 
@@ -217,22 +223,16 @@ game_html = """
         let scale = Math.min(canvas.width / WORLD.w, canvas.height / WORLD.h);
         ctx.scale(scale, scale);
 
-        // Облака
         clouds.forEach(c => {
             ctx.fillStyle = `rgba(255, 255, 255, ${c.opacity})`;
-            ctx.beginPath();
-            ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, 7); ctx.fill();
         });
 
-        // Частицы
         particles.forEach(p => {
             ctx.fillStyle = p.type === 'smoke' 
-                ? `rgba(100, 100, 100, ${p.life * 0.6})` 
-                : `rgba(255, ${Math.floor(200 * p.life)}, 0, ${p.life})`;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-            ctx.fill();
+                ? `rgba(100, 100, 100, ${p.life * 0.5})` 
+                : `rgba(255, ${Math.floor(255 * p.life)}, 0, ${p.life})`;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, 7); ctx.fill();
         });
 
         const drawPlane = (p, col) => {
