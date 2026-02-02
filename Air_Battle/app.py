@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="AN-2 Ace Combat: Online", layout="wide")
+st.set_page_config(page_title="AN-2 Ace Combat: Online Edition", layout="wide")
 
 game_html = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -37,7 +37,7 @@ game_html = """
         background: rgba(0,0,0,0.8); display: none; flex-direction: column;
         justify-content: center; align-items: center; z-index: 200;
     }
-    #net-status { position: absolute; top: 60px; left: 10px; font-size: 10px; color: #0f0; }
+    #net-status { position: absolute; top: 55px; left: 15px; font-size: 10px; color: #0f0; z-index: 60; }
 </style>
 
 <div id="top-bar">
@@ -49,7 +49,7 @@ game_html = """
     </div>
     <div style="font-size: 18px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
 </div>
-<div id="net-status"></div>
+<div id="net-status">Локальный режим (AI)</div>
 
 <div id="viewport">
     <canvas id="gameCanvas"></canvas>
@@ -84,24 +84,28 @@ game_html = """
     let me = { x: 500, y: 500, a: 0, hp: 5, score: 0, color: '#ff4b4b', state: 'alive', dt: 0 };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, score: 0, color: '#00d2ff', state: 'alive', dt: 0 };
     let conn = null;
-    let peer = null;
+
+    for(let i=0; i<20; i++) {
+        clouds.push({
+            x: Math.random() * WORLD.w, y: Math.random() * WORLD.h,
+            size: 100 + Math.random() * 150, speed: 0.2 + Math.random() * 0.5, opacity: 0.3 + Math.random() * 0.4
+        });
+    }
 
     // --- СЕТЕВАЯ ЛОГИКА ---
     document.getElementById('mode-net').onclick = () => {
-        if (peer) return;
-        peer = new Peer();
-        const status = document.getElementById('net-status');
-        status.innerText = "Подключение к серверу...";
+        const peer = new Peer();
+        const statusEl = document.getElementById('net-status');
+        statusEl.innerText = "Инициализация Peer...";
 
         peer.on('open', id => {
-            status.innerText = "Твой ID: " + id;
-            const connectId = prompt("Твой ID скопирован в консоль.\\nЧтобы подключиться к другу, введи его ID:");
-            if(connectId) {
-                conn = peer.connect(connectId);
+            statusEl.innerText = "Твой ID: " + id;
+            const targetId = prompt("Твой ID: " + id + "\\nВведи ID соперника (или отмена для ожидания):");
+            if(targetId) {
+                conn = peer.connect(targetId);
                 setupConn();
             }
         });
-
         peer.on('connection', c => {
             conn = c;
             setupConn();
@@ -109,12 +113,11 @@ game_html = """
     };
 
     function setupConn() {
-        const status = document.getElementById('net-status');
-        status.innerText = "СЕТЬ: ПОДКЛЮЧЕНО";
+        document.getElementById('net-status').innerText = "Статус: ПОДКЛЮЧЕНО";
         conn.on('data', d => {
             if(d.type === 'state') { 
-                opp.x=d.x; opp.y=d.y; opp.a=d.a; opp.hp=d.hp; 
-                opp.state=d.state; opp.score=d.score; opp.dt=d.dt; 
+                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
+                opp.state = d.state; opp.score = d.score; opp.dt = d.dt;
             }
             if(d.type === 'fire') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
             if(d.type === 'explode') createExplosion(d.x, d.y);
@@ -135,7 +138,7 @@ game_html = """
     fireBtn.addEventListener('touchstart', fireAction, { passive: false });
     fireBtn.addEventListener('mousedown', fireAction);
 
-    // --- ГРАФИКА И ЧАСТИЦЫ ---
+    // --- ФИЗИКА И ЭФФЕКТЫ ---
     function createParticle(x, y, type, customVX, customVY) {
         particles.push({
             x, y, vx: customVX || (Math.random() - 0.5) * 2, vy: customVY || (Math.random() - 0.5) * 2,
@@ -146,12 +149,19 @@ game_html = """
     function createExplosion(x, y) {
         for(let i=0; i<30; i++) {
             let angle = Math.random() * Math.PI * 2;
-            let speed = 2 + Math.random() * 12;
+            let speed = 2 + Math.random() * 10;
             createParticle(x, y, 'fire', Math.cos(angle) * speed, Math.sin(angle) * speed);
         }
     }
 
-    // --- ОБНОВЛЕНИЕ ---
+    function checkVictory() {
+        if (me.score >= scoreLimit || opp.score >= scoreLimit) {
+            gameOver = true;
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('win-text').innerText = me.score >= scoreLimit ? "ПОБЕДА!" : "ПРОИГРЫШ!";
+        }
+    }
+
     function update() {
         if(gameOver) return;
 
@@ -162,20 +172,20 @@ game_html = """
                 if(p.y < 0) p.y = WORLD.h; if(p.y > WORLD.h) p.y = 0;
                 if(p.hp <= 3) createParticle(p.x, p.y, 'smoke');
             } else {
-                p.y += 5; p.x += Math.sin(p.dt * 0.1) * 7; p.a += 15;
+                p.y += 4; p.x += Math.sin(p.dt * 0.1) * 5; p.a += 15; 
                 createParticle(p.x, p.y, 'fire');
                 p.dt--;
-                if(p.dt <= 0 && isMe) {
+                if(p.dt <= 0 && isMe) { // Только хозяин самолета респавнит себя
                     createExplosion(p.x, p.y);
                     if(conn) conn.send({type: 'explode', x: p.x, y: p.y});
-                    p.state='alive'; p.hp=5; p.x=Math.random()*WORLD.w; p.y=Math.random()*WORLD.h;
+                    p.state='alive'; p.hp=5; p.x=Math.random()*WORLD.w; p.y=Math.random()*WORLD.h; 
                 }
             }
         };
 
         movePlane(me, true);
         
-        if(!conn) { // AI если нет сети
+        if(!conn) { // Логика AI если нет соединения
             let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
             let diff = targetA - opp.a;
             while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
@@ -183,23 +193,29 @@ game_html = """
             movePlane(opp, false);
             if(Math.random() < 0.02 && opp.state==='alive') bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
         } else {
-            movePlane(opp, false);
+            // В сетевом режиме просто двигаем врага по его траектории падения (для плавности)
+            if(opp.state === 'falling') movePlane(opp, false);
         }
 
         bullets.forEach((b, i) => {
-            let r = b.a * Math.PI/180; b.x += Math.cos(r)*25; b.y += Math.sin(r)*25;
-            if(b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) bullets.splice(i, 1);
+            let r = b.a * Math.PI/180; b.x += Math.cos(r)*22; b.y += Math.sin(r)*22;
+            if(b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
             let target = b.owner === 'me' ? opp : me;
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 80) {
                 target.hp--; bullets.splice(i, 1);
                 if(target.hp <= 0) { 
-                    target.state = 'falling'; target.dt = 240;
-                    if(b.owner === 'me') { me.score++; checkVictory(); }
+                    target.state = 'falling'; target.dt = 240; 
+                    if(b.owner === 'me') me.score++; else opp.score++;
+                    checkVictory();
                 }
             }
         });
 
-        particles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; if(p.life <= 0) particles.splice(i, 1); });
+        particles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy; p.life -= 0.015;
+            if(p.life <= 0) particles.splice(i, 1);
+        });
+
         if(conn) conn.send({ type: 'state', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score, dt: me.dt });
     }
 
@@ -210,7 +226,7 @@ game_html = """
         ctx.scale(scale, scale);
 
         particles.forEach(p => {
-            ctx.fillStyle = p.type === 'smoke' ? `rgba(100,100,100,${p.life*0.5})` : `rgba(255,${255*p.life},0,${p.life})`;
+            ctx.fillStyle = p.type === 'smoke' ? `rgba(100, 100, 100, ${p.life * 0.5})` : `rgba(255, ${Math.floor(255 * p.life)}, 0, ${p.life})`;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, 7); ctx.fill();
         });
 
@@ -222,7 +238,7 @@ game_html = """
         };
 
         drawPlane(me, me.color); drawPlane(opp, opp.color);
-        bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 15, 0, 7); ctx.fill(); });
+        bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 20, 0, 7); ctx.fill(); });
         ctx.restore();
 
         document.getElementById('hp-fill').style.width = (me.hp/5*100) + "%";
@@ -230,13 +246,9 @@ game_html = """
         document.getElementById('sc-opp').innerText = opp.score;
     }
 
-    function checkVictory() {
-        if (me.score >= scoreLimit) { gameOver = true; document.getElementById('overlay').style.display = 'flex'; }
-    }
-
     function loop() { update(); draw(); requestAnimationFrame(loop); }
     loop();
 </script>
 """
 
-components.html(game_html, height=700)
+components.html(game_html, height=650)
