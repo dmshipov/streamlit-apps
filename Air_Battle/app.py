@@ -19,16 +19,17 @@ game_html = """
     }
     canvas { width: 100%; height: 100%; display: block; }
 
-    /* Панель управления */
+    /* Оверлей победы */
+    #overlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); display: none; flex-direction: column;
+        justify-content: center; align-items: center; z-index: 100; border-radius: 8px;
+    }
+    #overlay h2 { font-size: 40px; margin: 0; text-shadow: 0 0 10px red; }
+
     #lower-area { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: flex-end; /* Выравнивание по нижнему краю */
-        background: #2a2a2a; 
-        padding: 15px; 
-        margin-top: 10px; 
-        border-radius: 12px; 
-        border: 1px solid #444; 
+        display: flex; justify-content: space-between; align-items: flex-end; 
+        background: #2a2a2a; padding: 15px; margin-top: 10px; border-radius: 12px; border: 1px solid #444; 
     }
 
     #fire-zone { flex: 1; display: flex; justify-content: flex-start; }
@@ -49,39 +50,56 @@ game_html = """
 
     .btn-mode { background: #444; color: white; border: 1px solid #666; padding: 4px 8px; border-radius: 4px; font-size: 9px; cursor: pointer;}
     .active-mode { background: #00d2ff; color: black; font-weight: bold; }
+    .limit-info { font-size: 10px; color: #888; margin-top: 2px; }
 </style>
 
 <div id="top-bar">
-    <div style="display:flex; gap:5px;">
-        <button id="mode-ai-easy" class="btn-mode active-mode">КУРСАНТ</button>
-        <button id="mode-ai-hard" class="btn-mode">АС</button>
-        <button id="mode-net" class="btn-mode">СЕТЬ</button>
+    <div style="display:flex; flex-direction: column; gap:2px;">
+        <div style="display:flex; gap:5px;">
+            <button id="mode-ai-easy" class="btn-mode active-mode">КУРСАНТ</button>
+            <button id="mode-ai-hard" class="btn-mode">АС</button>
+            <button id="mode-net" class="btn-mode">СЕТЬ</button>
+        </div>
+        <div style="display:flex; gap:5px; margin-top:3px;">
+            <button id="lim-1" class="btn-mode">ДО 1</button>
+            <button id="lim-5" class="btn-mode active-mode">ДО 5</button>
+            <button id="lim-10" class="btn-mode">ДО 10</button>
+        </div>
     </div>
+    
     <div id="net-controls" style="display: none; gap: 4px;">
         <input type="text" id="remote-id" placeholder="ID" style="width: 40px; font-size: 9px;">
         <button id="connect-btn" style="background:#28a745; color:white; border:none; padding:2px 5px;">OK</button>
     </div>
-    <div style="font-size: 10px;">ID: <span id="my-peer-id" style="color:#00d2ff">...</span></div>
-    <div style="font-size: 14px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
+
+    <div style="text-align: center;">
+        <div style="font-size: 10px; color: #aaa;">РАУНДЫ</div>
+        <div style="font-size: 16px; font-weight: bold; color: #fbff00;"><span id="wins-me">0</span> : <span id="wins-opp">0</span></div>
+    </div>
+
+    <div style="text-align: right;">
+        <div style="font-size: 10px;">ID: <span id="my-peer-id" style="color:#00d2ff">...</span></div>
+        <div style="font-size: 18px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
+    </div>
 </div>
 
 <div id="viewport-container">
-    <div id="viewport"><canvas id="gameCanvas" width="1200" height="700"></canvas></div>
+    <div id="viewport">
+        <canvas id="gameCanvas" width="1200" height="700"></canvas>
+        <div id="overlay">
+            <h2 id="result-text">ПОБЕДА!</h2>
+            <p>Следующий раунд через 3 сек...</p>
+        </div>
+    </div>
 </div>
 
 <div id="lower-area">
-    <div id="fire-zone">
-        <button id="fireBtn">ОГОНЬ</button>
-    </div>
-
+    <div id="fire-zone"><button id="fireBtn">ОГОНЬ</button></div>
     <div id="hp-zone">
         <div class="hp-label">HP PILOT</div>
         <div id="hp-bar-container"><div id="hp-fill"></div></div>
     </div>
-
-    <div id="joy-zone">
-        <div id="joystick-zone"></div>
-    </div>
+    <div id="joy-zone"><div id="joystick-zone"></div></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.1/nipplejs.min.js"></script>
@@ -94,6 +112,11 @@ game_html = """
     
     let isSolo = true;
     let difficulty = 'easy';
+    let scoreLimit = 5;
+    let gameActive = true;
+    let totalWinsMe = 0;
+    let totalWinsOpp = 0;
+
     let bullets = [];
     let particles = [];
     let clouds = [];
@@ -103,19 +126,30 @@ game_html = """
     }
 
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
-    let opp = { x: 2500, y: 1500, a: 180, hp: 5, color: '#00d2ff', state: 'alive' };
+    let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
 
     function updateUI(mode) {
-        document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active-mode'));
+        document.querySelectorAll('#mode-ai-easy, #mode-ai-hard, #mode-net').forEach(b => b.classList.remove('active-mode'));
         document.getElementById('net-controls').style.display = (mode === 'net') ? 'flex' : 'none';
         if(mode === 'easy') document.getElementById('mode-ai-easy').classList.add('active-mode');
         if(mode === 'hard') document.getElementById('mode-ai-hard').classList.add('active-mode');
         if(mode === 'net') document.getElementById('mode-net').classList.add('active-mode');
     }
 
-    document.getElementById('mode-ai-easy').onclick = () => { isSolo=true; difficulty='easy'; updateUI('easy'); };
-    document.getElementById('mode-ai-hard').onclick = () => { isSolo=true; difficulty='hard'; updateUI('hard'); };
-    document.getElementById('mode-net').onclick = () => { isSolo=false; updateUI('net'); };
+    function setLimit(val) {
+        scoreLimit = val;
+        document.querySelectorAll('[id^="lim-"]').forEach(b => b.classList.remove('active-mode'));
+        document.getElementById('lim-'+val).classList.add('active-mode');
+        resetMatch();
+    }
+
+    document.getElementById('lim-1').onclick = () => setLimit(1);
+    document.getElementById('lim-5').onclick = () => setLimit(5);
+    document.getElementById('lim-10').onclick = () => setLimit(10);
+
+    document.getElementById('mode-ai-easy').onclick = () => { isSolo=true; difficulty='easy'; updateUI('easy'); resetMatch(); };
+    document.getElementById('mode-ai-hard').onclick = () => { isSolo=true; difficulty='hard'; updateUI('hard'); resetMatch(); };
+    document.getElementById('mode-net').onclick = () => { isSolo=false; updateUI('net'); resetMatch(); };
 
     let peer = new Peer();
     let conn = null;
@@ -125,45 +159,81 @@ game_html = """
 
     function setupConn() {
         conn.on('data', d => {
-            if(d.t === 's') { Object.assign(opp, d); }
+            if(d.t === 's') { 
+                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
+                opp.state = d.state; opp.score = d.score;
+            }
             if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
         });
     }
 
-    const joy = nipplejs.create({ 
-        zone: document.getElementById('joystick-zone'), 
-        mode: 'static', 
-        position: {left:'50%', top:'50%'} 
-    });
+    const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'} });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
 
     const fire = () => {
-        if(me.state !== 'alive') return;
+        if(!gameActive || me.state !== 'alive') return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
         if(conn) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
     };
-    document.getElementById('fireBtn').addEventListener('touchstart', (e) => { e.preventDefault(); fire(); });
     document.getElementById('fireBtn').onclick = fire;
+
+    function resetMatch() {
+        me.score = 0; opp.score = 0;
+        gameActive = true;
+        document.getElementById('overlay').style.display = 'none';
+        respawn(me); respawn(opp);
+    }
+
+    function respawn(p) {
+        p.hp = 5; p.state = 'alive';
+        if(p === me) { p.x = 500; p.y = 500; p.a = 0; }
+        else { p.x = 2500; p.y = 1500; p.a = 180; }
+    }
+
+    function checkWin() {
+        if(!gameActive) return;
+        let winner = null;
+        if(me.score >= scoreLimit) winner = "ME";
+        if(opp.score >= scoreLimit) winner = "OPP";
+
+        if(winner) {
+            gameActive = false;
+            const overlay = document.getElementById('overlay');
+            const resTxt = document.getElementById('result-text');
+            overlay.style.display = 'flex';
+            
+            if(winner === "ME") {
+                resTxt.innerText = "ПОБЕДА В РАУНДЕ!";
+                resTxt.style.color = "#00ff00";
+                totalWinsMe++;
+            } else {
+                resTxt.innerText = "ПРОИГРЫШ!";
+                resTxt.style.color = "#ff0000";
+                totalWinsOpp++;
+            }
+            
+            document.getElementById('wins-me').innerText = totalWinsMe;
+            document.getElementById('wins-opp').innerText = totalWinsOpp;
+            
+            setTimeout(resetMatch, 3000);
+        }
+    }
 
     function createPart(x, y, type) {
         let count = type === 'fire' ? 4 : 1;
         for(let i=0; i<count; i++) {
-            particles.push({
-                x, y, 
-                vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3,
-                life: 1.0, type: type
-            });
+            particles.push({ x, y, vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3, life: 1.0, type: type });
         }
     }
 
     function update() {
+        if(!gameActive) return;
+        
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
 
         const wrap = (obj) => {
-            if (obj.x < 0) obj.x = WORLD.w;
-            if (obj.x > WORLD.w) obj.x = 0;
-            if (obj.y < 0) obj.y = WORLD.h;
-            if (obj.y > WORLD.h) obj.y = 0;
+            if (obj.x < 0) obj.x = WORLD.w; if (obj.x > WORLD.w) obj.x = 0;
+            if (obj.y < 0) obj.y = WORLD.h; if (obj.y > WORLD.h) obj.y = 0;
         };
 
         if(me.state === 'alive') {
@@ -171,10 +241,10 @@ game_html = """
             me.x += Math.cos(r)*6; me.y += Math.sin(r)*6;
             wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
-            if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; }
-        } else {
+            if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; checkWin(); }
+        } else if (gameActive) {
             me.y += 8; me.a += 12; createPart(me.x, me.y, 'fire');
-            if(--me.dt <= 0) { me.state='alive'; me.hp=5; me.x=Math.random()*1000; me.y=Math.random()*1000; }
+            if(--me.dt <= 0) respawn(me);
         }
 
         if(isSolo) {
@@ -189,10 +259,10 @@ game_html = """
                 wrap(opp);
                 if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
                 if(Math.random() < (difficulty==='hard'?0.04:0.015) && Math.abs(diff) < 20) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
-                if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; }
-            } else {
+                if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; me.score++; checkWin(); }
+            } else if (gameActive) {
                 opp.y += 8; createPart(opp.x, opp.y, 'fire');
-                if(--opp.dt <= 0) { opp.state='alive'; opp.hp=5; opp.x=2500; opp.y=1500; }
+                if(--opp.dt <= 0) respawn(opp);
             }
         }
 
@@ -204,19 +274,15 @@ game_html = """
         bullets.forEach((b, i) => {
             let r = b.a * Math.PI/180;
             b.x += Math.cos(r)*16; b.y += Math.sin(r)*16;
-            if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) {
-                bullets.splice(i, 1);
-                return;
-            }
+            if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
             let target = b.owner === 'me' ? opp : me;
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 55) {
                 target.hp--;
-                if(target.hp <= 0 && b.owner === 'me') me.score++;
                 bullets.splice(i, 1);
             }
         });
 
-        if(conn && !isSolo) conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state });
+        if(conn && !isSolo) conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
     }
 
     function draw() {
@@ -243,7 +309,7 @@ game_html = """
         ctx.restore();
         document.getElementById('hp-fill').style.width = (me.hp/me.max*100) + "%";
         document.getElementById('sc-me').innerText = me.score;
-        document.getElementById('sc-opp').innerText = isSolo ? (difficulty==='hard'?"АС":"БОТ") : opp.score;
+        document.getElementById('sc-opp').innerText = opp.score;
     }
 
     function loop() { update(); draw(); requestAnimationFrame(loop); }
