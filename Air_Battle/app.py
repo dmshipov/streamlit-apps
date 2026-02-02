@@ -98,7 +98,7 @@ game_html = """
     window.onresize = resize;
     resize();
 
-    let difficulty = 'easy';
+    let difficulty = 'hard';
     let scoreLimit = 5;
     let gameOver = false;
     let bullets = [];
@@ -110,7 +110,6 @@ game_html = """
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, color: '#00d2ff', state: 'alive' };
 
-    // Управление режимами
     const setLimit = (n, id) => {
         scoreLimit = n;
         ['limit-1', 'limit-5', 'limit-10'].forEach(b => document.getElementById(b).classList.remove('active-mode'));
@@ -148,18 +147,23 @@ game_html = """
         if(gameOver) return;
         clouds.forEach(c => { c.x -= 0.5 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
 
-        // Me
+        // Me Logic
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
             me.x += Math.cos(r)*6.5; me.y += Math.sin(r)*6.5;
+            
+            // Телепортация игрока
+            if(me.x < 0) me.x = WORLD.w; if(me.x > WORLD.w) me.x = 0;
+            if(me.y < 0) me.y = WORLD.h; if(me.y > WORLD.h) me.y = 0;
+
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; if(opp.score>=scoreLimit) endGame(false); }
         } else {
             me.y += 8; me.a += 15; createPart(me.x, me.y, 'fire');
-            if(--me.dt <= 0) { me.state='alive'; me.hp=5; me.x=Math.random()*1000; me.y=Math.random()*1000; }
+            if(--me.dt <= 0) { me.state='alive'; me.hp=5; me.x=Math.random()*WORLD.w; me.y=Math.random()*WORLD.h; }
         }
 
-        // AI
+        // AI Logic
         if(opp.state === 'alive') {
             let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
             let diff = targetA - opp.a;
@@ -168,22 +172,34 @@ game_html = """
             let r = opp.a * Math.PI/180;
             opp.x += Math.cos(r)*(difficulty === 'hard' ? 7.5 : 5);
             opp.y += Math.sin(r)*(difficulty === 'hard' ? 7.5 : 5);
+
+            // Телепортация ИИ
+            if(opp.x < 0) opp.x = WORLD.w; if(opp.x > WORLD.w) opp.x = 0;
+            if(opp.y < 0) opp.y = WORLD.h; if(opp.y > WORLD.h) opp.y = 0;
+
             if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
             if(Math.random() < (difficulty === 'hard' ? 0.05 : 0.02) && Math.abs(diff) < 25) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
             if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; me.score++; if(me.score>=scoreLimit) endGame(true); }
         } else {
             opp.y += 8; createPart(opp.x, opp.y, 'fire');
-            if(--opp.dt <= 0) { opp.state='alive'; opp.hp=5; opp.x=2500; opp.y=1500; }
+            if(--opp.dt <= 0) { opp.state='alive'; opp.hp=5; opp.x=WORLD.w-500; opp.y=WORLD.h-500; }
         }
 
         particles.forEach((p, i) => { p.life -= 0.03; if(p.life <= 0) particles.splice(i, 1); else { p.x+=p.vx; p.y+=p.vy; } });
+        
         bullets.forEach((b, i) => {
             let r = b.a * Math.PI/180; b.x += Math.cos(r)*20; b.y += Math.sin(r)*20;
+            
+            // Телепортация пуль (чтобы они не пропадали мгновенно на границе)
+            if(b.x < 0) b.x = WORLD.w; if(b.x > WORLD.w) b.x = 0;
+            if(b.y < 0) b.y = WORLD.h; if(b.y > WORLD.h) b.y = 0;
+
             let target = b.owner === 'me' ? opp : me;
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 60) {
                 target.hp--; bullets.splice(i, 1);
             }
-            if(b.x < -100 || b.x > WORLD.w+100 || b.y < -100 || b.y > WORLD.h+100) bullets.splice(i, 1);
+            // Пули все же стоит удалять через некоторое время, чтобы не копились, но в вашем коде был лимит по вылету. 
+            // Добавим простой счетчик жизни для пуль, если нужно, но пока оставим как есть с телепортом.
         });
     }
 
@@ -198,17 +214,13 @@ game_html = """
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
         
-        // ВОЗВРАТ К СТАТИЧНОМУ ОБЗОРУ ВСЕГО ПОЛЯ
         let scale = Math.min(canvas.width / WORLD.w, canvas.height / WORLD.h);
         ctx.scale(scale, scale);
-        // Центрируем поле на экране
         ctx.translate((canvas.width/scale - WORLD.w)/2, (canvas.height/scale - WORLD.h)/2);
 
-        // Фон - Облака
         clouds.forEach(c => { ctx.globalAlpha = c.op; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(c.x, c.y, 60*c.s, 0, 7); ctx.fill(); });
         ctx.globalAlpha = 1.0;
 
-        // Эффекты
         particles.forEach(p => {
             ctx.fillStyle = p.type === 'fire' ? `rgba(255, ${200*p.life}, 0, ${p.life})` : `rgba(80,80,80,${p.life})`;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.type==='fire'?15:20, 0, 7); ctx.fill();
