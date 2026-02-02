@@ -75,7 +75,10 @@ game_html = """
     const ctx = canvas.getContext('2d');
     const WORLD = { w: 3000, h: 2000 };
     
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    function resize() { 
+        canvas.width = window.innerWidth; 
+        canvas.height = window.innerHeight; 
+    }
     window.onresize = resize; resize();
 
     let scoreLimit = 5;
@@ -85,10 +88,14 @@ game_html = """
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, score: 0, color: '#00d2ff', state: 'alive', dt: 0 };
     let conn = null;
 
-    for(let i=0; i<20; i++) {
+    // ВОЗВРАЩАЕМ ОБЛАКА
+    for(let i=0; i<25; i++) {
         clouds.push({
-            x: Math.random() * WORLD.w, y: Math.random() * WORLD.h,
-            size: 100 + Math.random() * 150, speed: 0.2 + Math.random() * 0.5, opacity: 0.3 + Math.random() * 0.4
+            x: Math.random() * WORLD.w, 
+            y: Math.random() * WORLD.h,
+            size: 120 + Math.random() * 180, 
+            speed: 0.3 + Math.random() * 0.7, 
+            opacity: 0.4 + Math.random() * 0.4
         });
     }
 
@@ -100,7 +107,7 @@ game_html = """
 
         peer.on('open', id => {
             statusEl.innerText = "Твой ID: " + id;
-            const targetId = prompt("Твой ID: " + id + "\\nВведи ID соперника (или отмена для ожидания):");
+            const targetId = prompt("Твой ID: " + id + "\\nВведи ID соперника (или ОК для ожидания):");
             if(targetId) {
                 conn = peer.connect(targetId);
                 setupConn();
@@ -124,7 +131,6 @@ game_html = """
         });
     }
 
-    // --- УПРАВЛЕНИЕ ---
     const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'}, color:'white', size:100 });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
 
@@ -138,7 +144,6 @@ game_html = """
     fireBtn.addEventListener('touchstart', fireAction, { passive: false });
     fireBtn.addEventListener('mousedown', fireAction);
 
-    // --- ФИЗИКА И ЭФФЕКТЫ ---
     function createParticle(x, y, type, customVX, customVY) {
         particles.push({
             x, y, vx: customVX || (Math.random() - 0.5) * 2, vy: customVY || (Math.random() - 0.5) * 2,
@@ -154,20 +159,19 @@ game_html = """
         }
     }
 
-    function checkVictory() {
-        if (me.score >= scoreLimit || opp.score >= scoreLimit) {
-            gameOver = true;
-            document.getElementById('overlay').style.display = 'flex';
-            document.getElementById('win-text').innerText = me.score >= scoreLimit ? "ПОБЕДА!" : "ПРОИГРЫШ!";
-        }
-    }
-
     function update() {
         if(gameOver) return;
+
+        // Движение облаков
+        clouds.forEach(c => {
+            c.x += c.speed;
+            if(c.x > WORLD.w) c.x = -c.size;
+        });
 
         const movePlane = (p, isMe) => {
             if(p.state === 'alive') {
                 let r = p.a * Math.PI/180; p.x += Math.cos(r)*8; p.y += Math.sin(r)*8;
+                // Телепортация по границам мира
                 if(p.x < 0) p.x = WORLD.w; if(p.x > WORLD.w) p.x = 0;
                 if(p.y < 0) p.y = WORLD.h; if(p.y > WORLD.h) p.y = 0;
                 if(p.hp <= 3) createParticle(p.x, p.y, 'smoke');
@@ -175,7 +179,7 @@ game_html = """
                 p.y += 4; p.x += Math.sin(p.dt * 0.1) * 5; p.a += 15; 
                 createParticle(p.x, p.y, 'fire');
                 p.dt--;
-                if(p.dt <= 0 && isMe) { // Только хозяин самолета респавнит себя
+                if(p.dt <= 0 && isMe) {
                     createExplosion(p.x, p.y);
                     if(conn) conn.send({type: 'explode', x: p.x, y: p.y});
                     p.state='alive'; p.hp=5; p.x=Math.random()*WORLD.w; p.y=Math.random()*WORLD.h; 
@@ -185,16 +189,13 @@ game_html = """
 
         movePlane(me, true);
         
-        if(!conn) { // Логика AI если нет соединения
+        if(!conn) { 
             let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
             let diff = targetA - opp.a;
             while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
             opp.a += diff * 0.05;
             movePlane(opp, false);
             if(Math.random() < 0.02 && opp.state==='alive') bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
-        } else {
-            // В сетевом режиме просто двигаем врага по его траектории падения (для плавности)
-            if(opp.state === 'falling') movePlane(opp, false);
         }
 
         bullets.forEach((b, i) => {
@@ -206,7 +207,11 @@ game_html = """
                 if(target.hp <= 0) { 
                     target.state = 'falling'; target.dt = 240; 
                     if(b.owner === 'me') me.score++; else opp.score++;
-                    checkVictory();
+                    if (me.score >= scoreLimit || opp.score >= scoreLimit) {
+                        gameOver = true;
+                        document.getElementById('overlay').style.display = 'flex';
+                        document.getElementById('win-text').innerText = me.score >= scoreLimit ? "ПОБЕДА!" : "ПРОИГРЫШ!";
+                    }
                 }
             }
         });
@@ -222,8 +227,20 @@ game_html = """
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
+        
+        // Исправленный масштаб: теперь мир всегда вписан в экран
         let scale = Math.min(canvas.width / WORLD.w, canvas.height / WORLD.h);
+        ctx.translate((canvas.width - WORLD.w * scale) / 2, (canvas.height - WORLD.h * scale) / 2);
         ctx.scale(scale, scale);
+
+        // Рисуем границы мира (тонкая рамка)
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.strokeRect(0, 0, WORLD.w, WORLD.h);
+
+        clouds.forEach(c => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${c.opacity})`;
+            ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, 7); ctx.fill();
+        });
 
         particles.forEach(p => {
             ctx.fillStyle = p.type === 'smoke' ? `rgba(100, 100, 100, ${p.life * 0.5})` : `rgba(255, ${Math.floor(255 * p.life)}, 0, ${p.life})`;
@@ -251,4 +268,4 @@ game_html = """
 </script>
 """
 
-components.html(game_html, height=650)
+components.html(game_html, height=700)
