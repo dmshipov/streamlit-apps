@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="AN-2 Ace Combat: Explosion Edition", layout="wide")
+st.set_page_config(page_title="AN-2 Ace Combat: Online", layout="wide")
 
 game_html = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -37,6 +37,7 @@ game_html = """
         background: rgba(0,0,0,0.8); display: none; flex-direction: column;
         justify-content: center; align-items: center; z-index: 200;
     }
+    #net-status { position: absolute; top: 60px; left: 10px; font-size: 10px; color: #0f0; }
 </style>
 
 <div id="top-bar">
@@ -48,6 +49,7 @@ game_html = """
     </div>
     <div style="font-size: 18px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
 </div>
+<div id="net-status"></div>
 
 <div id="viewport">
     <canvas id="gameCanvas"></canvas>
@@ -79,147 +81,126 @@ game_html = """
     let scoreLimit = 5;
     let gameOver = false;
     let bullets = [], particles = [], clouds = [];
-    let me = { x: 500, y: 500, a: 0, hp: 5, score: 0, color: '#ff4b4b', state: 'alive' };
-    let opp = { x: 2500, y: 1500, a: 180, hp: 5, score: 0, color: '#00d2ff', state: 'alive' };
+    let me = { x: 500, y: 500, a: 0, hp: 5, score: 0, color: '#ff4b4b', state: 'alive', dt: 0 };
+    let opp = { x: 2500, y: 1500, a: 180, hp: 5, score: 0, color: '#00d2ff', state: 'alive', dt: 0 };
     let conn = null;
+    let peer = null;
 
-    for(let i=0; i<20; i++) {
-        clouds.push({
-            x: Math.random() * WORLD.w,
-            y: Math.random() * WORLD.h,
-            size: 100 + Math.random() * 150,
-            speed: 0.2 + Math.random() * 0.5,
-            opacity: 0.3 + Math.random() * 0.4
-        });
-    }
-
-    const setLimit = (val, id) => {
-        scoreLimit = val;
-        document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active-mode'));
-        document.getElementById(id).classList.add('active-mode');
-    };
-    document.getElementById('limit-1').onclick = () => setLimit(1, 'limit-1');
-    document.getElementById('limit-5').onclick = () => setLimit(5, 'limit-5');
-    document.getElementById('limit-10').onclick = () => setLimit(10, 'limit-10');
-
+    // --- СЕТЕВАЯ ЛОГИКА ---
     document.getElementById('mode-net').onclick = () => {
-        const peer = new Peer();
+        if (peer) return;
+        peer = new Peer();
+        const status = document.getElementById('net-status');
+        status.innerText = "Подключение к серверу...";
+
         peer.on('open', id => {
-            const connectId = prompt("Твой ID: " + id + "\\nВведи ID друга:");
-            if(connectId) { conn = peer.connect(connectId); setupConn(); }
+            status.innerText = "Твой ID: " + id;
+            const connectId = prompt("Твой ID скопирован в консоль.\\nЧтобы подключиться к другу, введи его ID:");
+            if(connectId) {
+                conn = peer.connect(connectId);
+                setupConn();
+            }
         });
-        peer.on('connection', c => { conn = c; setupConn(); });
+
+        peer.on('connection', c => {
+            conn = c;
+            setupConn();
+        });
     };
 
     function setupConn() {
+        const status = document.getElementById('net-status');
+        status.innerText = "СЕТЬ: ПОДКЛЮЧЕНО";
         conn.on('data', d => {
-            if(d.type === 'state') { opp.x=d.x; opp.y=d.y; opp.a=d.a; opp.hp=d.hp; opp.state=d.state; opp.score=d.score; }
+            if(d.type === 'state') { 
+                opp.x=d.x; opp.y=d.y; opp.a=d.a; opp.hp=d.hp; 
+                opp.state=d.state; opp.score=d.score; opp.dt=d.dt; 
+            }
             if(d.type === 'fire') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
             if(d.type === 'explode') createExplosion(d.x, d.y);
         });
     }
 
+    // --- УПРАВЛЕНИЕ ---
     const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'}, color:'white', size:100 });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
 
-    // --- ИСПРАВЛЕННЫЙ МУЛЬТИТАЧ ---
     const fireBtn = document.getElementById('fireBtn');
     const fireAction = (e) => {
-        if(e) e.preventDefault(); // Запрещаем браузеру перехватывать событие
+        if(e) e.preventDefault();
         if(me.state !== 'alive' || gameOver) return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
         if(conn) conn.send({ type: 'fire', x: me.x, y: me.y, a: me.a });
     };
-
     fireBtn.addEventListener('touchstart', fireAction, { passive: false });
     fireBtn.addEventListener('mousedown', fireAction);
-    // ------------------------------
 
+    // --- ГРАФИКА И ЧАСТИЦЫ ---
     function createParticle(x, y, type, customVX, customVY) {
         particles.push({
-            x, y, 
-            vx: customVX || (Math.random() - 0.5) * 2,
-            vy: customVY || (Math.random() - 0.5) * 2,
-            life: 1.0,
-            size: type === 'smoke' ? 10 + Math.random() * 20 : 20 + Math.random() * 20,
-            type: type 
+            x, y, vx: customVX || (Math.random() - 0.5) * 2, vy: customVY || (Math.random() - 0.5) * 2,
+            life: 1.0, size: type === 'smoke' ? 15 : 25, type 
         });
     }
 
     function createExplosion(x, y) {
         for(let i=0; i<30; i++) {
             let angle = Math.random() * Math.PI * 2;
-            let speed = 2 + Math.random() * 10;
+            let speed = 2 + Math.random() * 12;
             createParticle(x, y, 'fire', Math.cos(angle) * speed, Math.sin(angle) * speed);
         }
     }
 
-    function checkVictory() {
-        if (me.score >= scoreLimit || opp.score >= scoreLimit) {
-            gameOver = true;
-            document.getElementById('overlay').style.display = 'flex';
-            document.getElementById('win-text').innerText = me.score >= scoreLimit ? "ПОБЕДА!" : "ПРОИГРЫШ!";
-        }
-    }
-
+    // --- ОБНОВЛЕНИЕ ---
     function update() {
         if(gameOver) return;
 
-        clouds.forEach(c => {
-            c.x += c.speed;
-            if(c.x > WORLD.w) c.x = -c.size;
-        });
-
-        const movePlane = (p) => {
+        const movePlane = (p, isMe) => {
             if(p.state === 'alive') {
                 let r = p.a * Math.PI/180; p.x += Math.cos(r)*8; p.y += Math.sin(r)*8;
                 if(p.x < 0) p.x = WORLD.w; if(p.x > WORLD.w) p.x = 0;
                 if(p.y < 0) p.y = WORLD.h; if(p.y > WORLD.h) p.y = 0;
                 if(p.hp <= 3) createParticle(p.x, p.y, 'smoke');
             } else {
-                p.y += 4; p.x += Math.sin(p.dt * 0.1) * 5; 
-                p.a += 15; 
+                p.y += 5; p.x += Math.sin(p.dt * 0.1) * 7; p.a += 15;
                 createParticle(p.x, p.y, 'fire');
                 p.dt--;
-                if(p.dt <= 0) {
+                if(p.dt <= 0 && isMe) {
                     createExplosion(p.x, p.y);
-                    if(conn && p === me) conn.send({type: 'explode', x: p.x, y: p.y});
-                    p.state='alive'; p.hp=5; p.x=Math.random()*WORLD.w; p.y=Math.random()*WORLD.h; 
+                    if(conn) conn.send({type: 'explode', x: p.x, y: p.y});
+                    p.state='alive'; p.hp=5; p.x=Math.random()*WORLD.w; p.y=Math.random()*WORLD.h;
                 }
             }
         };
 
-        movePlane(me);
-        if(!conn) { // AI
+        movePlane(me, true);
+        
+        if(!conn) { // AI если нет сети
             let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
             let diff = targetA - opp.a;
             while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
             opp.a += diff * 0.05;
-            movePlane(opp);
+            movePlane(opp, false);
             if(Math.random() < 0.02 && opp.state==='alive') bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
+        } else {
+            movePlane(opp, false);
         }
 
         bullets.forEach((b, i) => {
-            let r = b.a * Math.PI/180; b.x += Math.cos(r)*22; b.y += Math.sin(r)*22;
-            if(b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
+            let r = b.a * Math.PI/180; b.x += Math.cos(r)*25; b.y += Math.sin(r)*25;
+            if(b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) bullets.splice(i, 1);
             let target = b.owner === 'me' ? opp : me;
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 80) {
                 target.hp--; bullets.splice(i, 1);
                 if(target.hp <= 0) { 
-                    target.state = 'falling'; target.dt = 240; 
-                    if(b.owner === 'me') me.score++; else opp.score++;
-                    checkVictory();
+                    target.state = 'falling'; target.dt = 240;
+                    if(b.owner === 'me') { me.score++; checkVictory(); }
                 }
             }
         });
 
-        particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy;
-            p.life -= 0.015;
-            if(p.life <= 0) particles.splice(i, 1);
-        });
-
-        if(conn) conn.send({ type: 'state', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
+        particles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; if(p.life <= 0) particles.splice(i, 1); });
+        if(conn) conn.send({ type: 'state', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score, dt: me.dt });
     }
 
     function draw() {
@@ -228,15 +209,8 @@ game_html = """
         let scale = Math.min(canvas.width / WORLD.w, canvas.height / WORLD.h);
         ctx.scale(scale, scale);
 
-        clouds.forEach(c => {
-            ctx.fillStyle = `rgba(255, 255, 255, ${c.opacity})`;
-            ctx.beginPath(); ctx.arc(c.x, c.y, c.size, 0, 7); ctx.fill();
-        });
-
         particles.forEach(p => {
-            ctx.fillStyle = p.type === 'smoke' 
-                ? `rgba(100, 100, 100, ${p.life * 0.5})` 
-                : `rgba(255, ${Math.floor(255 * p.life)}, 0, ${p.life})`;
+            ctx.fillStyle = p.type === 'smoke' ? `rgba(100,100,100,${p.life*0.5})` : `rgba(255,${255*p.life},0,${p.life})`;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, 7); ctx.fill();
         });
 
@@ -248,7 +222,7 @@ game_html = """
         };
 
         drawPlane(me, me.color); drawPlane(opp, opp.color);
-        bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 20, 0, 7); ctx.fill(); });
+        bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 15, 0, 7); ctx.fill(); });
         ctx.restore();
 
         document.getElementById('hp-fill').style.width = (me.hp/5*100) + "%";
@@ -256,9 +230,13 @@ game_html = """
         document.getElementById('sc-opp').innerText = opp.score;
     }
 
+    function checkVictory() {
+        if (me.score >= scoreLimit) { gameOver = true; document.getElementById('overlay').style.display = 'flex'; }
+    }
+
     function loop() { update(); draw(); requestAnimationFrame(loop); }
     loop();
 </script>
 """
 
-components.html(game_html, height=600)
+components.html(game_html, height=700)
