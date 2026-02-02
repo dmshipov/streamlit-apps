@@ -19,7 +19,7 @@ game_html = """
     }
     canvas { width: 100%; height: 100%; display: block; }
 
-    /* Панель управления: Трёхзонная раскладка */
+    /* Панель управления */
     #lower-area { 
         display: flex; 
         justify-content: space-between; 
@@ -31,7 +31,6 @@ game_html = """
         border: 1px solid #444; 
     }
 
-    /* ЛЕВЫЙ УГОЛ: ОГОНЬ */
     #fire-zone { flex: 1; display: flex; justify-content: flex-start; }
     #fireBtn { 
         width: 90px; height: 90px; border-radius: 50%; background: #ff4b4b; 
@@ -40,13 +39,11 @@ game_html = """
     }
     #fireBtn:active { transform: translateY(3px); box-shadow: 0 2px #b33030; }
 
-    /* ЦЕНТР: HP PILOT */
     #hp-zone { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
     #hp-bar-container { width: 130px; height: 16px; background: #444; border-radius: 8px; overflow: hidden; border: 1px solid #000; }
     #hp-fill { width: 100%; height: 100%; background: #28a745; transition: 0.3s; }
     .hp-label { font-size: 10px; color: #aaa; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* ПРАВЫЙ УГОЛ: ДЖОЙСТИК */
     #joy-zone { flex: 1; display: flex; justify-content: flex-end; }
     #joystick-zone { width: 110px; height: 110px; background: rgba(255,255,255,0.05); border-radius: 50%; }
 
@@ -101,7 +98,6 @@ game_html = """
     let particles = [];
     let clouds = [];
     
-    // Генерация облаков
     for(let i=0; i<15; i++) {
         clouds.push({ x: Math.random()*WORLD.w, y: Math.random()*WORLD.h, s: 0.5 + Math.random(), op: 0.3 + Math.random()*0.4 });
     }
@@ -109,7 +105,6 @@ game_html = """
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, color: '#00d2ff', state: 'alive' };
 
-    // Управление режимами
     function updateUI(mode) {
         document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active-mode'));
         document.getElementById('net-controls').style.display = (mode === 'net') ? 'flex' : 'none';
@@ -122,7 +117,6 @@ game_html = """
     document.getElementById('mode-ai-hard').onclick = () => { isSolo=true; difficulty='hard'; updateUI('hard'); };
     document.getElementById('mode-net').onclick = () => { isSolo=false; updateUI('net'); };
 
-    // Сеть
     let peer = new Peer();
     let conn = null;
     peer.on('open', id => document.getElementById('my-peer-id').innerText = id);
@@ -136,8 +130,11 @@ game_html = """
         });
     }
 
-    // Джойстик и Огонь
-    const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'} });
+    const joy = nipplejs.create({ 
+        zone: document.getElementById('joystick-zone'), 
+        mode: 'static', 
+        position: {left:'50%', top:'50%'} 
+    });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
 
     const fire = () => {
@@ -162,9 +159,18 @@ game_html = """
     function update() {
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
 
+        // Механика прохода сквозь границы для самолетов
+        const wrap = (obj) => {
+            if (obj.x < 0) obj.x = WORLD.w;
+            if (obj.x > WORLD.w) obj.x = 0;
+            if (obj.y < 0) obj.y = WORLD.h;
+            if (obj.y > WORLD.h) obj.y = 0;
+        };
+
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
             me.x += Math.cos(r)*6; me.y += Math.sin(r)*6;
+            wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; }
         } else {
@@ -181,6 +187,7 @@ game_html = """
                 let r = opp.a * Math.PI/180;
                 opp.x += Math.cos(r)*(difficulty==='hard'?6:4.5);
                 opp.y += Math.sin(r)*(difficulty==='hard'?6:4.5);
+                wrap(opp);
                 if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
                 if(Math.random() < (difficulty==='hard'?0.04:0.015) && Math.abs(diff) < 20) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
                 if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; }
@@ -195,9 +202,16 @@ game_html = """
             if(p.life <= 0) particles.splice(i, 1);
         });
 
+        // Механика пуль: исчезают на границах
         bullets.forEach((b, i) => {
             let r = b.a * Math.PI/180;
             b.x += Math.cos(r)*16; b.y += Math.sin(r)*16;
+            
+            if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) {
+                bullets.splice(i, 1);
+                return;
+            }
+
             let target = b.owner === 'me' ? opp : me;
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 55) {
                 target.hp--;
