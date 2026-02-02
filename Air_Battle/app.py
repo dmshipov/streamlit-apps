@@ -37,6 +37,7 @@ game_html = """
         width: 90px; height: 90px; border-radius: 50%; background: #ff4b4b; 
         color: white; border: none; font-weight: bold; font-size: 14px; 
         box-shadow: 0 5px #b33030; cursor: pointer; -webkit-tap-highlight-color: transparent;
+        user-select: none; -webkit-user-select: none;
     }
     #fireBtn:active { transform: translateY(3px); box-shadow: 0 2px #b33030; }
 
@@ -50,7 +51,6 @@ game_html = """
 
     .btn-mode { background: #444; color: white; border: 1px solid #666; padding: 4px 8px; border-radius: 4px; font-size: 9px; cursor: pointer;}
     .active-mode { background: #00d2ff; color: black; font-weight: bold; }
-    .limit-info { font-size: 10px; color: #888; margin-top: 2px; }
 </style>
 
 <div id="top-bar">
@@ -170,12 +170,17 @@ game_html = """
     const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'} });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
 
-    const fire = () => {
+    const fire = (e) => {
+        if(e) { e.preventDefault(); e.stopPropagation(); }
         if(!gameActive || me.state !== 'alive') return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
         if(conn) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
     };
-    document.getElementById('fireBtn').onclick = fire;
+
+    // Мультитач поддержка
+    const fBtn = document.getElementById('fireBtn');
+    fBtn.addEventListener('touchstart', fire, {passive: false});
+    fBtn.addEventListener('mousedown', (e) => { if(!('ontouchstart' in window)) fire(e); });
 
     function resetMatch() {
         me.score = 0; opp.score = 0;
