@@ -23,7 +23,7 @@ game_html = """
     #lower-area { 
         display: flex; 
         justify-content: space-between; 
-        align-items: center; 
+        align-items: flex-end; /* Выравнивание по нижнему краю */
         background: #2a2a2a; 
         padding: 15px; 
         margin-top: 10px; 
@@ -39,13 +39,13 @@ game_html = """
     }
     #fireBtn:active { transform: translateY(3px); box-shadow: 0 2px #b33030; }
 
-    #hp-zone { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    #hp-zone { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding-bottom: 10px; }
     #hp-bar-container { width: 130px; height: 16px; background: #444; border-radius: 8px; overflow: hidden; border: 1px solid #000; }
     #hp-fill { width: 100%; height: 100%; background: #28a745; transition: 0.3s; }
     .hp-label { font-size: 10px; color: #aaa; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
 
-    #joy-zone { flex: 1; display: flex; justify-content: flex-end; }
-    #joystick-zone { width: 110px; height: 110px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+    #joy-zone { flex: 1; display: flex; justify-content: flex-end; align-items: flex-end; }
+    #joystick-zone { width: 110px; height: 110px; background: rgba(255,255,255,0.05); border-radius: 50%; position: relative; }
 
     .btn-mode { background: #444; color: white; border: 1px solid #666; padding: 4px 8px; border-radius: 4px; font-size: 9px; cursor: pointer;}
     .active-mode { background: #00d2ff; color: black; font-weight: bold; }
@@ -159,7 +159,6 @@ game_html = """
     function update() {
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
 
-        // Механика прохода сквозь границы для самолетов
         const wrap = (obj) => {
             if (obj.x < 0) obj.x = WORLD.w;
             if (obj.x > WORLD.w) obj.x = 0;
@@ -202,16 +201,13 @@ game_html = """
             if(p.life <= 0) particles.splice(i, 1);
         });
 
-        // Механика пуль: исчезают на границах
         bullets.forEach((b, i) => {
             let r = b.a * Math.PI/180;
             b.x += Math.cos(r)*16; b.y += Math.sin(r)*16;
-            
             if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) {
                 bullets.splice(i, 1);
                 return;
             }
-
             let target = b.owner === 'me' ? opp : me;
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 55) {
                 target.hp--;
@@ -227,18 +223,15 @@ game_html = """
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
         ctx.scale(canvas.width / WORLD.w, canvas.height / WORLD.h);
-
         clouds.forEach(c => {
             ctx.globalAlpha = c.op; ctx.fillStyle = "white";
             ctx.beginPath(); ctx.arc(c.x, c.y, 45*c.s, 0, 7); ctx.arc(c.x+35*c.s, c.y-15*c.s, 40*c.s, 0, 7); ctx.fill();
         });
         ctx.globalAlpha = 1.0;
-
         particles.forEach(p => {
             ctx.fillStyle = p.type === 'fire' ? `rgba(255, ${120*p.life}, 0, ${p.life})` : `rgba(70,70,70,${p.life})`;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.type==='fire'?10:14, 0, 7); ctx.fill();
         });
-
         const drawPlane = (p, col) => {
             ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a * Math.PI/180);
             ctx.fillStyle = col; ctx.fillRect(-15, -65, 30, 130);
@@ -247,7 +240,6 @@ game_html = """
         };
         drawPlane(me, me.color); drawPlane(opp, opp.color);
         bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 12, 0, 7); ctx.fill(); });
-
         ctx.restore();
         document.getElementById('hp-fill').style.width = (me.hp/me.max*100) + "%";
         document.getElementById('sc-me').innerText = me.score;
