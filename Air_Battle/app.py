@@ -1,11 +1,12 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="AN-2 Ace Combat: Open Sky", layout="wide")
+st.set_page_config(page_title="AN-2 Ace Combat: Fullscreen", layout="wide")
 st.markdown("""
     <style>
     .main .block-container { padding: 0; max-width: 100%; }
     iframe { display: block; border: none; width: 100vw; height: 100vh; }
+    body { overflow: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -22,7 +23,7 @@ game_html = """
     }
 
     #viewport { position: relative; width: 100vw; height: 100vh; background: #5d8aa8; overflow: hidden; }
-    canvas { display: block; width: 100%; height: 100%; }
+    canvas { display: block; width: 100vw; height: 100vh; }
 
     #controls-container {
         position: absolute; bottom: 30px; left: 0; width: 100%; height: 140px;
@@ -72,7 +73,7 @@ game_html = """
 </div>
 
 <div id="viewport">
-    <div id="round-announcer">РАУНД 1</div>
+    <div id="round-announcer"></div>
     <canvas id="gameCanvas"></canvas>
     
     <div id="win-overlay">
@@ -98,14 +99,13 @@ game_html = """
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    let W = window.innerWidth;
-    let H = window.innerHeight;
+    let W, H;
     
     function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        W = canvas.width;
-        H = canvas.height;
+        W = window.innerWidth;
+        H = window.innerHeight;
+        canvas.width = W;
+        canvas.height = H;
     }
     window.onresize = resize;
     resize();
@@ -116,12 +116,12 @@ game_html = """
     let isRoundTransition = false;
     let bullets = [], particles = [], clouds = [];
     
-    // Создаем облака
     for(let i=0; i<30; i++) clouds.push({ x: Math.random()*W, y: Math.random()*H, s: 0.5 + Math.random(), op: 0.2 + Math.random()*0.3 });
 
-    // Уменьшенные размеры самолетов
-    let me = { x: W*0.2, y: H*0.5, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
-    let opp = { x: W*0.8, y: H*0.5, a: 180, hp: 5, color: '#00d2ff', state: 'alive' };
+    let me = { x: 0, y: 0, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
+    let opp = { x: 0, y: 0, a: 180, hp: 5, color: '#00d2ff', state: 'alive' };
+
+    resetPositions();
 
     const joy = nipplejs.create({
         zone: document.getElementById('joystick-zone'),
@@ -144,8 +144,8 @@ game_html = """
     }
 
     function resetPositions() {
-        me.x = W*0.2; me.y = H/2; me.a = 0; me.hp = 5; me.state = 'alive';
-        opp.x = W*0.8; opp.y = H/2; opp.a = 180; opp.hp = 5; opp.state = 'alive';
+        me.x = W * 0.15; me.y = H * 0.5; me.a = 0; me.hp = 5; me.state = 'alive';
+        opp.x = W * 0.85; opp.y = H * 0.5; opp.a = 180; opp.hp = 5; opp.state = 'alive';
         bullets = [];
     }
 
@@ -173,7 +173,6 @@ game_html = """
         
         clouds.forEach(c => { c.x -= 0.5 * c.s; if(c.x < -150) c.x = W + 150; });
 
-        // Игрок
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
             me.x += Math.cos(r)*5; me.y += Math.sin(r)*5;
@@ -183,7 +182,6 @@ game_html = """
             if(me.hp <= 0) { me.state = 'falling'; opp.score++; startNextRound('opp'); }
         }
 
-        // Бот (более плавный ИИ)
         if(opp.state === 'alive') {
             let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
             let diff = targetA - opp.a;
@@ -219,8 +217,6 @@ game_html = """
 
     function draw() {
         ctx.clearRect(0, 0, W, H);
-        
-        // Отрисовка облаков
         clouds.forEach(c => { ctx.globalAlpha = c.op; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(c.x, c.y, 40*c.s, 0, 7); ctx.fill(); });
         ctx.globalAlpha = 1.0;
 
@@ -229,14 +225,10 @@ game_html = """
             ctx.beginPath(); ctx.arc(p.x, p.y, p.type==='fire'?5:8, 0, 7); ctx.fill();
         });
 
-        // САМОЛЕТЫ ТЕПЕРЬ МЕНЬШЕ И АККУРАТНЕЕ
         const drawPlane = (p, col) => {
             ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a * Math.PI/180);
-            // Корпус
             ctx.fillStyle = col; ctx.fillRect(-12, -25, 24, 50); 
-            // Крылья
             ctx.fillStyle = "#333"; ctx.fillRect(-40, -5, 80, 15);
-            // Хвост
             ctx.fillRect(-15, 20, 30, 8);
             ctx.restore();
         };
