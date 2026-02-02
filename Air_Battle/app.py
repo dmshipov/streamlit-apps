@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="AN-2 Ace Combat: Fixed Controls", layout="wide")
+st.set_page_config(page_title="AN-2 Ace Combat: Full Field View", layout="wide")
 
 game_html = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -21,45 +21,27 @@ game_html = """
     }
     canvas { width: 100%; height: 100%; display: block; }
 
-    /* --- НИЖНЯЯ ПАНЕЛЬ УПРАВЛЕНИЯ --- */
+    /* Панель управления */
     #controls-container {
-        position: absolute;
-        bottom: 20px;
-        left: 0;
-        width: 100%;
-        height: 120px;
-        pointer-events: none; /* Пропускает клики сквозь контейнер */
-        z-index: 100;
+        position: absolute; bottom: 20px; left: 0; width: 100%; height: 120px;
+        pointer-events: none; z-index: 100;
     }
 
-    /* КНОПКА ОГОНЬ - СЛЕВА */
     #fireBtn { 
-        position: absolute;
-        left: 30px;
-        bottom: 10px;
+        position: absolute; left: 30px; bottom: 10px;
         width: 90px; height: 90px; border-radius: 50%; background: #ff4b4b; 
         color: white; border: 4px solid #b33030; font-weight: bold; font-size: 14px; 
         box-shadow: 0 5px #000; cursor: pointer; pointer-events: auto;
         -webkit-tap-highlight-color: transparent;
     }
-    #fireBtn:active { transform: scale(0.95); background: #ff2222; }
 
-    /* ДЖОЙСТИК - СПРАВА */
     #joystick-wrapper {
-        position: absolute;
-        right: 30px;
-        bottom: 10px;
-        width: 120px;
-        height: 120px;
-        pointer-events: auto;
+        position: absolute; right: 30px; bottom: 10px;
+        width: 120px; height: 120px; pointer-events: auto;
     }
 
-    /* HP ПО ЦЕНТРУ */
     #hp-center {
-        position: absolute;
-        left: 50%;
-        bottom: 20px;
-        transform: translateX(-50%);
+        position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%);
         display: flex; flex-direction: column; align-items: center; gap: 5px;
     }
     #hp-bar-container { width: 120px; height: 12px; background: #444; border-radius: 6px; overflow: hidden; border: 1px solid #000; }
@@ -79,6 +61,7 @@ game_html = """
     <div style="display:flex; gap:3px;">
         <button id="limit-1" class="btn-mode">ДО 1</button>
         <button id="limit-5" class="btn-mode active-mode">ДО 5</button>
+        <button id="limit-10" class="btn-mode">ДО 10</button>
         <button id="mode-ai-hard" class="btn-mode">РЕЖИМ: АС</button>
     </div>
     <div style="font-size: 16px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
@@ -93,15 +76,11 @@ game_html = """
 
     <div id="controls-container">
         <button id="fireBtn">ОГОНЬ</button>
-        
         <div id="hp-center">
             <div style="font-size: 10px; color: #fff; text-shadow: 1px 1px 2px #000;">HP PILOT</div>
             <div id="hp-bar-container"><div id="hp-fill"></div></div>
         </div>
-
-        <div id="joystick-wrapper">
-            <div id="joystick-zone"></div>
-        </div>
+        <div id="joystick-wrapper"><div id="joystick-zone"></div></div>
     </div>
 </div>
 
@@ -110,8 +89,8 @@ game_html = """
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const WORLD = { w: 3000, h: 2000 };
     
-    // Растягиваем канвас на весь экран
     function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -119,7 +98,6 @@ game_html = """
     window.onresize = resize;
     resize();
 
-    const WORLD = { w: 3000, h: 2000 };
     let difficulty = 'easy';
     let scoreLimit = 5;
     let gameOver = false;
@@ -127,31 +105,31 @@ game_html = """
     let particles = [];
     let clouds = [];
     
-    for(let i=0; i<20; i++) clouds.push({ x: Math.random()*WORLD.w, y: Math.random()*WORLD.h, s: 0.5 + Math.random(), op: 0.2 + Math.random()*0.3 });
+    for(let i=0; i<15; i++) clouds.push({ x: Math.random()*WORLD.w, y: Math.random()*WORLD.h, s: 0.5 + Math.random(), op: 0.2 + Math.random()*0.3 });
 
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, color: '#00d2ff', state: 'alive' };
 
-    // Настройка сложности и лимитов
-    document.getElementById('limit-1').onclick = () => { scoreLimit = 1; resetActiveLimit('limit-1'); };
-    document.getElementById('limit-5').onclick = () => { scoreLimit = 5; resetActiveLimit('limit-5'); };
+    // Управление режимами
+    const setLimit = (n, id) => {
+        scoreLimit = n;
+        ['limit-1', 'limit-5', 'limit-10'].forEach(b => document.getElementById(b).classList.remove('active-mode'));
+        document.getElementById(id).classList.add('active-mode');
+    };
+    document.getElementById('limit-1').onclick = () => setLimit(1, 'limit-1');
+    document.getElementById('limit-5').onclick = () => setLimit(5, 'limit-5');
+    document.getElementById('limit-10').onclick = () => setLimit(10, 'limit-10');
+
     document.getElementById('mode-ai-hard').onclick = function() {
         difficulty = (difficulty === 'easy' ? 'hard' : 'easy');
         this.innerText = difficulty === 'hard' ? "РЕЖИМ: АС" : "РЕЖИМ: КУРСАНТ";
         this.classList.toggle('active-mode');
     };
 
-    function resetActiveLimit(id) {
-        document.getElementById('limit-1').classList.remove('active-mode');
-        document.getElementById('limit-5').classList.remove('active-mode');
-        document.getElementById(id).classList.add('active-mode');
-    }
-
-    // Инициализация джойстика (ТЕПЕРЬ СТРОГО СПРАВА)
     const joy = nipplejs.create({
         zone: document.getElementById('joystick-zone'),
         mode: 'static',
-        position: { left: '50%', top: '50%' }, // Внутри своего контейнера joystick-wrapper
+        position: { left: '50%', top: '50%' },
         color: 'white',
         size: 100
     });
@@ -159,7 +137,7 @@ game_html = """
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
 
     const fire = () => { if(!gameOver && me.state === 'alive') bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' }); };
-    document.getElementById('fireBtn').addEventListener('touchstart', (e) => { e.preventDefault(); fire(); });
+    document.getElementById('fireBtn').ontouchstart = (e) => { e.preventDefault(); fire(); };
     document.getElementById('fireBtn').onclick = fire;
 
     function createPart(x, y, type) {
@@ -173,7 +151,7 @@ game_html = """
         // Me
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
-            me.x += Math.cos(r)*7; me.y += Math.sin(r)*7;
+            me.x += Math.cos(r)*6.5; me.y += Math.sin(r)*6.5;
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; if(opp.score>=scoreLimit) endGame(false); }
         } else {
@@ -186,12 +164,12 @@ game_html = """
             let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
             let diff = targetA - opp.a;
             while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
-            opp.a += diff * (difficulty==='hard' ? 0.08 : 0.04);
+            opp.a += diff * (difficulty === 'hard' ? 0.08 : 0.04);
             let r = opp.a * Math.PI/180;
-            opp.x += Math.cos(r)*(difficulty==='hard'?7.5:5);
-            opp.y += Math.sin(r)*(difficulty==='hard'?7.5:5);
+            opp.x += Math.cos(r)*(difficulty === 'hard' ? 7.5 : 5);
+            opp.y += Math.sin(r)*(difficulty === 'hard' ? 7.5 : 5);
             if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
-            if(Math.random() < (difficulty==='hard'?0.05:0.02) && Math.abs(diff) < 25) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
+            if(Math.random() < (difficulty === 'hard' ? 0.05 : 0.02) && Math.abs(diff) < 25) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
             if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; me.score++; if(me.score>=scoreLimit) endGame(true); }
         } else {
             opp.y += 8; createPart(opp.x, opp.y, 'fire');
@@ -205,7 +183,7 @@ game_html = """
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 60) {
                 target.hp--; bullets.splice(i, 1);
             }
-            if(b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) bullets.splice(i, 1);
+            if(b.x < -100 || b.x > WORLD.w+100 || b.y < -100 || b.y > WORLD.h+100) bullets.splice(i, 1);
         });
     }
 
@@ -218,23 +196,21 @@ game_html = """
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Камера следует за игроком
         ctx.save();
-        let camX = -me.x * (canvas.width / WORLD.w) + canvas.width/2;
-        let camY = -me.y * (canvas.height / WORLD.h) + canvas.height/2;
-        // Ограничим камеру миром (опционально)
-        ctx.scale(canvas.width / 1500, canvas.height / 1000); // Зум для динамики
+        
+        // ВОЗВРАТ К СТАТИЧНОМУ ОБЗОРУ ВСЕГО ПОЛЯ
+        let scale = Math.min(canvas.width / WORLD.w, canvas.height / WORLD.h);
+        ctx.scale(scale, scale);
+        // Центрируем поле на экране
+        ctx.translate((canvas.width/scale - WORLD.w)/2, (canvas.height/scale - WORLD.h)/2);
 
-        ctx.translate(-me.x + 750, -me.y + 500);
-
-        // Облака
+        // Фон - Облака
         clouds.forEach(c => { ctx.globalAlpha = c.op; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(c.x, c.y, 60*c.s, 0, 7); ctx.fill(); });
         ctx.globalAlpha = 1.0;
 
-        // Частицы
+        // Эффекты
         particles.forEach(p => {
-            ctx.fillStyle = p.type === 'fire' ? `rgba(255, ${200*p.life}, 0, ${p.life})` : `rgba(100,100,100,${p.life})`;
+            ctx.fillStyle = p.type === 'fire' ? `rgba(255, ${200*p.life}, 0, ${p.life})` : `rgba(80,80,80,${p.life})`;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.type==='fire'?15:20, 0, 7); ctx.fill();
         });
 
@@ -245,7 +221,6 @@ game_html = """
             ctx.restore();
         };
         drawPlane(me, me.color); drawPlane(opp, opp.color);
-        
         bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 15, 0, 7); ctx.fill(); });
         
         ctx.restore();
