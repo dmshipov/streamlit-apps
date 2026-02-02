@@ -1,83 +1,57 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="AN-2 Ace Combat: Full Field View", layout="wide")
+st.set_page_config(page_title="AN-2 Network Ace Combat", layout="wide")
 
 game_html = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
     body { margin: 0; padding: 0; background: #111; font-family: sans-serif; overflow: hidden; color: white; touch-action: none; }
-    
     #top-bar { 
         position: absolute; top: 10px; left: 10px; right: 10px;
         background: rgba(34, 34, 34, 0.8); padding: 8px; border-radius: 8px; 
         display: flex; justify-content: space-between; align-items: center; 
         z-index: 50; font-size: 11px;
     }
-
-    #viewport { 
-        position: relative; width: 100vw; height: 100vh; 
-        background: #87CEEB; overflow: hidden; 
-    }
+    #viewport { position: relative; width: 100vw; height: 100vh; background: #87CEEB; overflow: hidden; }
     canvas { width: 100%; height: 100%; display: block; }
 
-    /* Панель управления */
-    #controls-container {
-        position: absolute; bottom: 20px; left: 0; width: 100%; height: 120px;
-        pointer-events: none; z-index: 100;
-    }
-
+    #controls-container { position: absolute; bottom: 20px; left: 0; width: 100%; height: 120px; pointer-events: none; z-index: 100; }
     #fireBtn { 
         position: absolute; left: 30px; bottom: 10px;
-        width: 90px; height: 90px; border-radius: 50%; background: #ff4b4b; 
-        color: white; border: 4px solid #b33030; font-weight: bold; font-size: 14px; 
+        width: 100px; height: 100px; border-radius: 50%; background: #ff4b4b; 
+        color: white; border: 4px solid #b33030; font-weight: bold; font-size: 16px; 
         box-shadow: 0 5px #000; cursor: pointer; pointer-events: auto;
-        -webkit-tap-highlight-color: transparent;
     }
-
-    #joystick-wrapper {
-        position: absolute; right: 30px; bottom: 10px;
-        width: 120px; height: 120px; pointer-events: auto;
-    }
-
-    #hp-center {
-        position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%);
-        display: flex; flex-direction: column; align-items: center; gap: 5px;
-    }
-    #hp-bar-container { width: 120px; height: 12px; background: #444; border-radius: 6px; overflow: hidden; border: 1px solid #000; }
+    #joystick-wrapper { position: absolute; right: 30px; bottom: 10px; width: 130px; height: 130px; pointer-events: auto; }
+    #hp-center { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    #hp-bar-container { width: 150px; height: 15px; background: #444; border-radius: 8px; overflow: hidden; border: 1px solid #000; }
     #hp-fill { width: 100%; height: 100%; background: #28a745; transition: 0.3s; }
 
-    .btn-mode { background: #444; color: white; border: 1px solid #666; padding: 4px 8px; border-radius: 4px; font-size: 9px; cursor: pointer;}
+    .btn-mode { background: #444; color: white; border: 1px solid #666; padding: 5px 10px; border-radius: 4px; font-size: 10px; cursor: pointer;}
     .active-mode { background: #00d2ff; color: black; font-weight: bold; }
-
-    #win-overlay {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.85); display: none; flex-direction: column;
-        justify-content: center; align-items: center; z-index: 200;
-    }
+    input { background: #333; color: white; border: 1px solid #555; padding: 4px; border-radius: 4px; width: 80px; font-size: 10px; }
 </style>
 
 <div id="top-bar">
-    <div style="display:flex; gap:3px;">
-        <button id="limit-1" class="btn-mode">ДО 1</button>
-        <button id="limit-5" class="btn-mode active-mode">ДО 5</button>
-        <button id="limit-10" class="btn-mode">ДО 10</button>
-        <button id="mode-ai-hard" class="btn-mode">РЕЖИМ: АС</button>
+    <div style="display:flex; gap:5px; align-items: center;">
+        <button id="mode-solo" class="btn-mode active-mode">БОТ</button>
+        <button id="mode-net" class="btn-mode">СЕТЬ</button>
+        <div id="net-ui" style="display:none; gap:5px;">
+            <span id="my-id" style="color:#0f0; font-weight:bold">ID: ...</span>
+            <input type="text" id="peer-id-input" placeholder="ID друга">
+            <button id="connect-btn" class="btn-mode">OK</button>
+        </div>
     </div>
-    <div style="font-size: 16px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
+    <div style="font-size: 18px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
 </div>
 
 <div id="viewport">
     <canvas id="gameCanvas"></canvas>
-    <div id="win-overlay">
-        <h1 id="win-text">ПОБЕДА!</h1>
-        <button onclick="location.reload()" style="padding: 15px 30px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 18px;">ИГРАТЬ СНОВА</button>
-    </div>
-
     <div id="controls-container">
         <button id="fireBtn">ОГОНЬ</button>
         <div id="hp-center">
-            <div style="font-size: 10px; color: #fff; text-shadow: 1px 1px 2px #000;">HP PILOT</div>
+            <div style="font-size: 11px; color: #fff; text-shadow: 1px 1px 2px #000;">HP PILOT</div>
             <div id="hp-bar-container"><div id="hp-fill"></div></div>
         </div>
         <div id="joystick-wrapper"><div id="joystick-zone"></div></div>
@@ -85,6 +59,7 @@ game_html = """
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.1/nipplejs.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
@@ -98,133 +73,137 @@ game_html = """
     window.onresize = resize;
     resize();
 
-    let difficulty = 'easy';
-    let scoreLimit = 5;
-    let gameOver = false;
-    let bullets = [];
-    let particles = [];
-    let clouds = [];
+    let isSolo = true;
+    let peer, conn;
+    let bullets = [], particles = [], clouds = [];
     
-    for(let i=0; i<15; i++) clouds.push({ x: Math.random()*WORLD.w, y: Math.random()*WORLD.h, s: 0.5 + Math.random(), op: 0.2 + Math.random()*0.3 });
+    for(let i=0; i<15; i++) clouds.push({ x: Math.random()*WORLD.w, y: Math.random()*WORLD.h, s: 0.5 + Math.random(), op: 0.3 });
 
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
-    let opp = { x: 2500, y: 1500, a: 180, hp: 5, color: '#00d2ff', state: 'alive' };
+    let opp = { x: 2500, y: 1500, a: 180, hp: 5, score: 0, color: '#00d2ff', state: 'alive' };
 
-    // Управление режимами
-    const setLimit = (n, id) => {
-        scoreLimit = n;
-        ['limit-1', 'limit-5', 'limit-10'].forEach(b => document.getElementById(b).classList.remove('active-mode'));
-        document.getElementById(id).classList.add('active-mode');
-    };
-    document.getElementById('limit-1').onclick = () => setLimit(1, 'limit-1');
-    document.getElementById('limit-5').onclick = () => setLimit(5, 'limit-5');
-    document.getElementById('limit-10').onclick = () => setLimit(10, 'limit-10');
-
-    document.getElementById('mode-ai-hard').onclick = function() {
-        difficulty = (difficulty === 'easy' ? 'hard' : 'easy');
-        this.innerText = difficulty === 'hard' ? "РЕЖИМ: АС" : "РЕЖИМ: КУРСАНТ";
-        this.classList.toggle('active-mode');
+    // --- СЕТЕВАЯ ЛОГИКА ---
+    document.getElementById('mode-solo').onclick = () => location.reload();
+    document.getElementById('mode-net').onclick = () => {
+        isSolo = false;
+        document.getElementById('mode-net').classList.add('active-mode');
+        document.getElementById('mode-solo').classList.remove('active-mode');
+        document.getElementById('net-ui').style.display = 'flex';
+        initPeer();
     };
 
-    const joy = nipplejs.create({
-        zone: document.getElementById('joystick-zone'),
-        mode: 'static',
-        position: { left: '50%', top: '50%' },
-        color: 'white',
-        size: 100
-    });
-
-    joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
-
-    const fire = () => { if(!gameOver && me.state === 'alive') bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' }); };
-    document.getElementById('fireBtn').ontouchstart = (e) => { e.preventDefault(); fire(); };
-    document.getElementById('fireBtn').onclick = fire;
-
-    function createPart(x, y, type) {
-        for(let i=0; i<(type==='fire'?3:1); i++) particles.push({ x, y, vx:(Math.random()-0.5)*3, vy:(Math.random()-0.5)*3, life:1.0, type });
+    function initPeer() {
+        peer = new Peer();
+        peer.on('open', id => document.getElementById('my-id').innerText = "ID: " + id);
+        peer.on('connection', c => { conn = c; setupConn(); });
     }
 
-    function update() {
-        if(gameOver) return;
-        clouds.forEach(c => { c.x -= 0.5 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
+    document.getElementById('connect-btn').onclick = () => {
+        const id = document.getElementById('peer-id-input').value;
+        conn = peer.connect(id);
+        setupConn();
+    };
 
-        // Me
-        if(me.state === 'alive') {
-            let r = me.a * Math.PI/180;
-            me.x += Math.cos(r)*6.5; me.y += Math.sin(r)*6.5;
-            if(me.hp < 3) createPart(me.x, me.y, 'smoke');
-            if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; if(opp.score>=scoreLimit) endGame(false); }
-        } else {
-            me.y += 8; me.a += 15; createPart(me.x, me.y, 'fire');
-            if(--me.dt <= 0) { me.state='alive'; me.hp=5; me.x=Math.random()*1000; me.y=Math.random()*1000; }
-        }
-
-        // AI
-        if(opp.state === 'alive') {
-            let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
-            let diff = targetA - opp.a;
-            while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
-            opp.a += diff * (difficulty === 'hard' ? 0.08 : 0.04);
-            let r = opp.a * Math.PI/180;
-            opp.x += Math.cos(r)*(difficulty === 'hard' ? 7.5 : 5);
-            opp.y += Math.sin(r)*(difficulty === 'hard' ? 7.5 : 5);
-            if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
-            if(Math.random() < (difficulty === 'hard' ? 0.05 : 0.02) && Math.abs(diff) < 25) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
-            if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; me.score++; if(me.score>=scoreLimit) endGame(true); }
-        } else {
-            opp.y += 8; createPart(opp.x, opp.y, 'fire');
-            if(--opp.dt <= 0) { opp.state='alive'; opp.hp=5; opp.x=2500; opp.y=1500; }
-        }
-
-        particles.forEach((p, i) => { p.life -= 0.03; if(p.life <= 0) particles.splice(i, 1); else { p.x+=p.vx; p.y+=p.vy; } });
-        bullets.forEach((b, i) => {
-            let r = b.a * Math.PI/180; b.x += Math.cos(r)*20; b.y += Math.sin(r)*20;
-            let target = b.owner === 'me' ? opp : me;
-            if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 60) {
-                target.hp--; bullets.splice(i, 1);
+    function setupConn() {
+        conn.on('data', data => {
+            if(data.type === 'state') {
+                opp.x = data.x; opp.y = data.y; opp.a = data.a; 
+                opp.hp = data.hp; opp.state = data.state;
             }
-            if(b.x < -100 || b.x > WORLD.w+100 || b.y < -100 || b.y > WORLD.h+100) bullets.splice(i, 1);
+            if(data.type === 'fire') {
+                bullets.push({ x: data.x, y: data.y, a: data.a, owner: 'opp' });
+            }
         });
     }
 
-    function endGame(win) {
-        gameOver = true;
-        document.getElementById('win-overlay').style.display = 'flex';
-        document.getElementById('win-text').innerText = win ? "ПОБЕДА!" : "ВЫ СБИТЫ!";
-        document.getElementById('win-text').style.color = win ? "#00ff00" : "#ff4b4b";
+    // --- УПРАВЛЕНИЕ ---
+    const joy = nipplejs.create({
+        zone: document.getElementById('joystick-zone'),
+        mode: 'static', position: { left: '50%', top: '50%' },
+        color: 'white', size: 100
+    });
+    joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
+
+    const fire = () => { 
+        if(me.state !== 'alive') return;
+        bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' }); 
+        if(conn) conn.send({ type: 'fire', x: me.x, y: me.y, a: me.a });
+    };
+    document.getElementById('fireBtn').ontouchstart = (e) => { e.preventDefault(); fire(); };
+    document.getElementById('fireBtn').onclick = fire;
+
+    function wrap(obj) {
+        if (obj.x < 0) obj.x = WORLD.w;
+        if (obj.x > WORLD.w) obj.x = 0;
+        if (obj.y < 0) obj.y = WORLD.h;
+        if (obj.y > WORLD.h) obj.y = 0;
+    }
+
+    function update() {
+        // Me
+        if(me.state === 'alive') {
+            let r = me.a * Math.PI/180;
+            me.x += Math.cos(r)*7.5; me.y += Math.sin(r)*7.5;
+            wrap(me);
+            if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; }
+        } else {
+            me.y += 5; me.a += 10;
+            if(--me.dt <= 0) { me.state='alive'; me.hp=5; me.x=Math.random()*WORLD.w; me.y=Math.random()*WORLD.h; }
+        }
+
+        // Opponent (AI or Net)
+        if(isSolo) {
+            if(opp.state === 'alive') {
+                let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
+                let diff = targetA - opp.a;
+                while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
+                opp.a += diff * 0.05;
+                let r = opp.a * Math.PI/180;
+                opp.x += Math.cos(r)*6; opp.y += Math.sin(r)*6;
+                wrap(opp);
+                if(Math.random() < 0.02) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
+                if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; me.score++; }
+            } else {
+                opp.y += 5;
+                if(--opp.dt <= 0) { opp.state='alive'; opp.hp=5; opp.x=Math.random()*WORLD.w; opp.y=Math.random()*WORLD.h; }
+            }
+        }
+
+        if(conn) conn.send({ type: 'state', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state });
+
+        bullets.forEach((b, i) => {
+            let r = b.a * Math.PI/180; b.x += Math.cos(r)*22; b.y += Math.sin(r)*22;
+            wrap(b);
+            let target = b.owner === 'me' ? opp : me;
+            if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 70) {
+                target.hp--; bullets.splice(i, 1);
+            }
+        });
     }
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
-        
-        // ВОЗВРАТ К СТАТИЧНОМУ ОБЗОРУ ВСЕГО ПОЛЯ
         let scale = Math.min(canvas.width / WORLD.w, canvas.height / WORLD.h);
         ctx.scale(scale, scale);
-        // Центрируем поле на экране
-        ctx.translate((canvas.width/scale - WORLD.w)/2, (canvas.height/scale - WORLD.h)/2);
-
-        // Фон - Облака
-        clouds.forEach(c => { ctx.globalAlpha = c.op; ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(c.x, c.y, 60*c.s, 0, 7); ctx.fill(); });
-        ctx.globalAlpha = 1.0;
-
-        // Эффекты
-        particles.forEach(p => {
-            ctx.fillStyle = p.type === 'fire' ? `rgba(255, ${200*p.life}, 0, ${p.life})` : `rgba(80,80,80,${p.life})`;
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.type==='fire'?15:20, 0, 7); ctx.fill();
-        });
 
         const drawPlane = (p, col) => {
             ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a * Math.PI/180);
-            ctx.fillStyle = col; ctx.fillRect(-20, -70, 40, 140); 
-            ctx.fillStyle = "#333"; ctx.fillRect(-60, -20, 120, 40);
+            ctx.fillStyle = col; 
+            ctx.fillRect(-30, -90, 60, 180); // Корпус (УВЕЛИЧЕН)
+            ctx.fillStyle = "#333"; 
+            ctx.fillRect(-80, -25, 160, 50); // Крылья (УВЕЛИЧЕНЫ)
             ctx.restore();
         };
-        drawPlane(me, me.color); drawPlane(opp, opp.color);
-        bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 15, 0, 7); ctx.fill(); });
-        
+
+        drawPlane(me, me.color);
+        drawPlane(opp, opp.color);
+
+        bullets.forEach(b => { 
+            ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 18, 0, 7); ctx.fill(); 
+        });
+
         ctx.restore();
-        
         document.getElementById('hp-fill').style.width = (me.hp/me.max*100) + "%";
         document.getElementById('sc-me').innerText = me.score;
         document.getElementById('sc-opp').innerText = opp.score;
