@@ -21,7 +21,6 @@ game_html = """
     }
     canvas { width: 100%; height: 100%; display: block; }
 
-    /* Панель управления */
     #controls-container {
         position: absolute; bottom: 20px; left: 0; width: 100%; height: 120px;
         pointer-events: none; z-index: 100;
@@ -152,7 +151,6 @@ game_html = """
             let r = me.a * Math.PI/180;
             me.x += Math.cos(r)*6.5; me.y += Math.sin(r)*6.5;
             
-            // Телепортация игрока
             if(me.x < 0) me.x = WORLD.w; if(me.x > WORLD.w) me.x = 0;
             if(me.y < 0) me.y = WORLD.h; if(me.y > WORLD.h) me.y = 0;
 
@@ -173,7 +171,6 @@ game_html = """
             opp.x += Math.cos(r)*(difficulty === 'hard' ? 7.5 : 5);
             opp.y += Math.sin(r)*(difficulty === 'hard' ? 7.5 : 5);
 
-            // Телепортация ИИ
             if(opp.x < 0) opp.x = WORLD.w; if(opp.x > WORLD.w) opp.x = 0;
             if(opp.y < 0) opp.y = WORLD.h; if(opp.y > WORLD.h) opp.y = 0;
 
@@ -187,20 +184,24 @@ game_html = """
 
         particles.forEach((p, i) => { p.life -= 0.03; if(p.life <= 0) particles.splice(i, 1); else { p.x+=p.vx; p.y+=p.vy; } });
         
-        bullets.forEach((b, i) => {
-            let r = b.a * Math.PI/180; b.x += Math.cos(r)*20; b.y += Math.sin(r)*20;
+        for (let i = bullets.length - 1; i >= 0; i--) {
+            let b = bullets[i];
+            let r = b.a * Math.PI/180;
+            b.x += Math.cos(r)*20; 
+            b.y += Math.sin(r)*20;
             
-            // Телепортация пуль (чтобы они не пропадали мгновенно на границе)
-            if(b.x < 0) b.x = WORLD.w; if(b.x > WORLD.w) b.x = 0;
-            if(b.y < 0) b.y = WORLD.h; if(b.y > WORLD.h) b.y = 0;
+            // ПУЛИ УДАЛЯЮТСЯ ПРИ ВЫХОДЕ ЗА ГРАНИЦЫ
+            if(b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) {
+                bullets.splice(i, 1);
+                continue;
+            }
 
             let target = b.owner === 'me' ? opp : me;
             if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 60) {
-                target.hp--; bullets.splice(i, 1);
+                target.hp--; 
+                bullets.splice(i, 1);
             }
-            // Пули все же стоит удалять через некоторое время, чтобы не копились, но в вашем коде был лимит по вылету. 
-            // Добавим простой счетчик жизни для пуль, если нужно, но пока оставим как есть с телепортом.
-        });
+        }
     }
 
     function endGame(win) {
