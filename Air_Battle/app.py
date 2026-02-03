@@ -66,10 +66,9 @@ game_html = """
         </div>
     </div>
     
-    <div id="net-controls" style="display: none; gap: 4px; align-items: center;">
-        <input type="text" id="remote-id" placeholder="ID противника" style="width: 80px; font-size: 9px; padding: 3px;">
-        <button id="connect-btn" style="background:#28a745; color:white; border:none; padding:4px 8px; font-size:9px; border-radius:3px; cursor:pointer;">OK</button>
-        <span id="connection-status" style="font-size:8px; color:#aaa;"></span>
+    <div id="net-controls" style="display: none; gap: 4px;">
+        <input type="text" id="remote-id" placeholder="ID" style="width: 40px; font-size: 9px;">
+        <button id="connect-btn" style="background:#28a745; color:white; border:none; padding:2px 5px;">OK</button>
     </div>
 
     <div style="text-align: center;">
@@ -117,7 +116,7 @@ game_html = """
     let totalWinsMe = 0;
     let totalWinsOpp = 0;
     let propellerRotation = 0;
-    let screenShake = 0;
+    let screenShake = 0; // Переменная для тряски
 
     let bullets = [];
     let particles = [];
@@ -129,148 +128,6 @@ game_html = """
 
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
-
-    // PeerJS setup
-    let peer = null;
-    let conn = null;
-    let myPeerId = '';
-
-    function showStatus(msg, color = '#ffaa00') {
-        const statusEl = document.getElementById('connection-status');
-        if (statusEl) {
-            statusEl.innerText = msg;
-            statusEl.style.color = color;
-        }
-        console.log('📡', msg);
-    }
-
-    function setupConn() {
-        if (!conn) return;
-        
-        conn.on('data', d => {
-            if(d.t === 's') { 
-                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
-                opp.state = d.state; opp.score = d.score;
-            }
-            if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
-        });
-        
-        conn.on('close', () => {
-            console.log('🔌 Отключено');
-            showStatus('Отключен', '#ff6600');
-            isSolo = true;
-            updateUI('easy');
-        });
-        
-        conn.on('error', err => {
-            console.error('❌ Ошибка связи:', err);
-            showStatus('Ошибка связи!', '#ff0000');
-        });
-    }
-
-    function initPeer() {
-        try {
-            peer = new Peer({
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
-                    ]
-                }
-            });
-            
-            peer.on('open', id => {
-                myPeerId = id;
-                document.getElementById('my-peer-id').innerText = id;
-                console.log('✅ Peer ID:', id);
-                showStatus('Готов', '#00ff00');
-            });
-            
-            peer.on('error', err => {
-                console.error('❌ Peer error:', err.type, err);
-                if (err.type === 'peer-unavailable') {
-                    showStatus('ID не найден!', '#ff0000');
-                    alert('Игрок не найден. Проверьте ID.');
-                } else {
-                    showStatus('Ошибка: ' + err.type, '#ff0000');
-                }
-            });
-            
-            peer.on('connection', c => {
-                console.log('📞 Входящее соединение от:', c.peer);
-                if (conn && conn.open) conn.close();
-                conn = c;
-                
-                // ВАЖНО: Регистрируем обработчики ДО события open
-                setupConn();
-                
-                c.on('open', () => {
-                    console.log('✅ Входящее соединение открыто');
-                    isSolo = false;
-                    updateUI('net');
-                    showStatus('Подключено!', '#00ff00');
-                    resetMatch();
-                });
-            });
-        } catch(e) {
-            console.error('💥 Init error:', e);
-            alert('Не удалось инициализировать PeerJS');
-        }
-    }
-
-    document.getElementById('connect-btn').onclick = () => {
-        const remoteId = document.getElementById('remote-id').value.trim();
-        if (!remoteId) {
-            alert('Введите ID противника');
-            return;
-        }
-        if (!peer || peer.destroyed) {
-            alert('Перезагрузите страницу');
-            return;
-        }
-        
-        console.log('🔗 Подключение к:', remoteId);
-        showStatus('Подключение...', '#ffaa00');
-        
-        try {
-            // ВАЖНО: Создаем соединение
-            conn = peer.connect(remoteId, {
-                reliable: true,
-                serialization: 'json'
-            });
-            
-            // ВАЖНО: Регистрируем обработчики СРАЗУ после создания
-            setupConn();
-            
-            const timeout = setTimeout(() => {
-                if (conn && !conn.open) {
-                    console.error('⏱️ Таймаут подключения');
-                    conn.close();
-                    showStatus('Таймаут!', '#ff0000');
-                    alert('Не удалось подключиться за 10 сек.\\nПроверьте ID и попробуйте снова.');
-                }
-            }, 10000);
-            
-            conn.on('open', () => {
-                clearTimeout(timeout);
-                console.log('✅ Исходящее соединение открыто');
-                isSolo = false;
-                updateUI('net');
-                showStatus('Подключено!', '#00ff00');
-                resetMatch();
-            });
-            
-            conn.on('error', err => {
-                clearTimeout(timeout);
-                console.error('❌ Ошибка подключения:', err);
-                showStatus('Ошибка!', '#ff0000');
-            });
-        } catch(e) {
-            console.error('💥 Ошибка connect:', e);
-            alert('Не удалось подключиться: ' + e.message);
-            showStatus('Ошибка!', '#ff0000');
-        }
-    };
 
     function updateUI(mode) {
         document.querySelectorAll('#mode-ai-easy, #mode-ai-hard, #mode-net').forEach(b => b.classList.remove('active-mode'));
@@ -293,7 +150,23 @@ game_html = """
 
     document.getElementById('mode-ai-easy').onclick = () => { isSolo=true; difficulty='easy'; updateUI('easy'); resetMatch(); };
     document.getElementById('mode-ai-hard').onclick = () => { isSolo=true; difficulty='hard'; updateUI('hard'); resetMatch(); };
-    document.getElementById('mode-net').onclick = () => { updateUI('net'); };
+    document.getElementById('mode-net').onclick = () => { isSolo=false; updateUI('net'); resetMatch(); };
+
+    let peer = new Peer();
+    let conn = null;
+    peer.on('open', id => document.getElementById('my-peer-id').innerText = id);
+    peer.on('connection', c => { conn = c; isSolo = false; updateUI('net'); setupConn(); });
+    document.getElementById('connect-btn').onclick = () => { conn = peer.connect(document.getElementById('remote-id').value); setupConn(); };
+
+    function setupConn() {
+        conn.on('data', d => {
+            if(d.t === 's') { 
+                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
+                opp.state = d.state; opp.score = d.score;
+            }
+            if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
+        });
+    }
 
     const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'} });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
@@ -302,11 +175,7 @@ game_html = """
         if(e) { e.preventDefault(); e.stopPropagation(); }
         if(!gameActive || me.state !== 'alive') return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
-        if(conn && conn.open) {
-            try {
-                conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
-            } catch(e) { console.error('Ошибка отправки fire:', e); }
-        }
+        if(conn) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
     };
 
     const fBtn = document.getElementById('fireBtn');
@@ -409,15 +278,6 @@ game_html = """
             if(--me.dt <= 0) { 
                 createPart(me.x, me.y, 'explode', me.color); 
                 respawn(me); 
-            }
-        }
-
-        // Send state to opponent if connected
-        if(conn && conn.open && !isSolo) {
-            try {
-                conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
-            } catch(e) {
-                console.error('Ошибка отправки:', e);
             }
         }
 
@@ -534,9 +394,6 @@ game_html = """
     }
 
     function loop() { update(); draw(); requestAnimationFrame(loop); }
-    
-    // Initialize PeerJS on load
-    initPeer();
     loop();
 </script>
 """
