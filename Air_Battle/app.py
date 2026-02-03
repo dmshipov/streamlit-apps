@@ -133,6 +133,7 @@ game_html = """
     // PeerJS setup
     let peer = null;
     let conn = null;
+    let myPeerId = '';
 
     function showStatus(msg, color = '#ffaa00') {
         const statusEl = document.getElementById('connection-status');
@@ -140,88 +141,97 @@ game_html = """
             statusEl.innerText = msg;
             statusEl.style.color = color;
         }
+        console.log('📡', msg);
     }
 
     function initPeer() {
-        // Добавляем несколько STUN серверов для пробития NAT разных провайдеров
-        peer = new Peer({
-            config: {
-                'iceServers': [
-                    { 'urls': 'stun:stun.l.google.com:19302' },
-                    { 'urls': 'stun:global.stun.twilio.com:3478' },
-                    { 'urls': 'stun:stun1.l.google.com:19302' },
-                    { 'urls': 'stun:stun2.l.google.com:19302' }
-                ]
-            }
-        });
-
-        peer.on('open', id => {
-            const idEl = document.getElementById('my-peer-id');
-            idEl.innerText = id;
-            // Удобное копирование ID
-            idEl.onclick = () => {
-                navigator.clipboard.writeText(id);
-                showStatus('ID скопирован!', '#00d2ff');
-            };
-            showStatus('Готов к бою');
-        });
-
-        // Обработка входящего звонка (вы — "сервер")
-        peer.on('connection', newConn => {
-            if (conn) conn.close(); // Закрываем старое, если было
-            conn = newConn;
-            isSolo = false;
-            setupConnHandlers(conn);
-            updateUI('net');
-        });
-
-        peer.on('error', err => {
-            console.error('Peer error:', err);
-            showStatus('Ошибка: ' + err.type, '#ff0000');
-        });
+        try {
+            peer = new Peer({
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
+            });
+            
+            peer.on('open', id => {
+                myPeerId = id;
+                document.getElementById('my-peer-id').innerText = id;
+                console.log('My peer ID:', id);
+                showStatus('Готов');
+            });
+            
+            peer.on('error', err => {
+                console.error('❌ Peer error:', err.type, err);
+                if (err.type === 'peer-unavailable') {
+                    showStatus('ID не найден!', '#ff0000');
+                    alert('Игрок не найден. Проверьте ID.');
+                } else {
+                    showStatus('Ошибка: ' + err.type, '#ff0000');
+                }
+            });
+            
+            peer.on('connection', c => {
+                console.log('Incoming connection from:', c.peer);
+                conn = c;
+                isSolo = false;
+                updateUI('net');
+                setupConn();
+                showStatus('Подключен: ' + c.peer.substring(0, 8));
+            });
+        } catch(e) {
+            console.error('Failed to initialize PeerJS:', e);
+            alert('Не удалось инициализировать PeerJS');
+        }
     }
 
-    // Универсальные обработчики для обеих сторон
-    function setupConnHandlers(connection) {
-        // Важно: вешаем обработчик data СРАЗУ, до события 'open'
-        connection.on('data', d => {
-            if (d.t === 's') { 
-                opp.x = d.x; opp.y = d.y; opp.a = d.a; 
-                opp.hp = d.hp; opp.state = d.state; opp.score = d.score;
+    function setupConn() {
+        if (!conn) return;
+        
+        conn.on('open', () => {
+            console.log('Connection fully established');
+        });
+        
+        conn.on('data', d => {
+            if(d.t === 's') { 
+                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
+                opp.state = d.state; opp.score = d.score;
             }
-            if (d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
+            if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
         });
-
-        connection.on('open', () => {
-            showStatus('В СЕТИ!', '#00ff00');
-            resetMatch();
-        });
-
-        connection.on('close', () => {
-            showStatus('Разрыв связи', '#ff0000');
+        
+        conn.on('close', () => {
+            console.log('Connection closed');
+            showStatus('Отключен');
             isSolo = true;
-            conn = null;
+            updateUI('easy');
         });
-
-        connection.on('error', err => {
-            showStatus('Ошибка связи', '#ff0000');
+        
+        conn.on('error', err => {
+            console.error('Connection error:', err);
+            showStatus('Ошибка связи!');
         });
     }
 
-    // Исправленная логика кнопки подключения (вы — "клиент")
     document.getElementById('connect-btn').onclick = () => {
         const remoteId = document.getElementById('remote-id').value.trim();
-        if (!remoteId || (peer && remoteId === peer.id)) {
-            alert("Введите корректный ID противника");
+        if (!remoteId) {
+            alert('Введите ID противника');
             return;
         }
-
-        showStatus('Вызов...', '#ffff00');
+        if (!peer || peer.destroyed) {
+            alert('Перезагрузите страницу');
+            return;
+        }
         
-        // Создаем подключение
-        conn = peer.connect(remoteId, {
-            reliable: true
-        });
+        console.log('🔗 Подключение к:', remoteId);
+        showStatus('Подключение...', '#ffaa00');
+        
+        try {
+            conn = peer.connect(remoteId, {
+                reliable: true
+            });
             
             const timeout = setTimeout(() => {
                 if (conn && !conn.open) {
