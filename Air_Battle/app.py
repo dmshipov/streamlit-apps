@@ -115,7 +115,8 @@ game_html = """
     let gameActive = true;
     let totalWinsMe = 0;
     let totalWinsOpp = 0;
-    let propellerRotation = 0; // Глобальный угол вращения
+    let propellerRotation = 0;
+    let screenShake = 0; // Переменная для тряски
 
     let bullets = [];
     let particles = [];
@@ -213,51 +214,49 @@ game_html = """
     }
 
     function createPart(x, y, type, color = null) {
-    if(type === 'explode') { 
-        screenShake = 20; // Тряска экрана при взрыве
-        for(let i=0; i<60; i++) { // Создаем 60 частиц огня и дыма
-            particles.push({
-                x, y, 
-                vx: (Math.random()-0.5)*25, 
-                vy: (Math.random()-0.5)*25, 
-                life: 1.0 + Math.random(), 
-                type: Math.random() > 0.3 ? 'fire' : 'smoke',
-                size: 10 + Math.random()*30
-            });
+        if(type === 'explode') { 
+            screenShake = 25;
+            for(let i=0; i<60; i++) {
+                particles.push({
+                    x, y, 
+                    vx: (Math.random()-0.5)*30, 
+                    vy: (Math.random()-0.5)*30, 
+                    life: 1.0 + Math.random(), 
+                    type: Math.random() > 0.3 ? 'fire' : 'smoke',
+                    size: 10 + Math.random()*35
+                });
+            }
+            for(let i=0; i<10; i++) {
+                particles.push({
+                    x, y, 
+                    vx: (Math.random()-0.5)*15, 
+                    vy: (Math.random()-0.5)*15, 
+                    life: 2.5, 
+                    type: 'debris',
+                    color: color,
+                    a: Math.random()*360,
+                    va: (Math.random()-0.5)*25,
+                    size: 15 + Math.random()*25
+                });
+            }
+            return;
         }
-        for(let i=0; i<8; i++) { // Создаем 8 обломков самолета
-            particles.push({
+        
+        let count = type === 'fire' ? 4 : 1;
+        for(let i=0; i<count; i++) {
+            particles.push({ 
                 x, y, 
-                vx: (Math.random()-0.5)*15, 
-                vy: (Math.random()-0.5)*15, 
-                life: 2.0, 
-                type: 'debris',
-                color: color,
-                a: Math.random()*360,
-                va: (Math.random()-0.5)*20,
-                size: 15 + Math.random()*20
-            });
-        }
-        return;
-    }
-    
-    let count = type === 'fire' ? 4 : 1;
-    for(let i=0; i<count; i++) {
-        particles.push({ 
-            x, y, 
-            vx: (Math.random()-0.5)*5, 
-            vy: (Math.random()-0.5)*5, 
-            life: 1.0, 
-            type: type,
-            size: type === 'fire' ? 12 : 15
+                vx: (Math.random()-0.5)*5, 
+                vy: (Math.random()-0.5)*5, 
+                life: 1.0, 
+                type: type,
+                size: type === 'fire' ? 12 : 15
             });
         }
     }
 
     function update() {
         if(!gameActive) return;
-        
-        // Вращаем пропеллер быстрее, чтобы визуально соответствовать скорости
         propellerRotation += 0.9; 
 
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
@@ -267,67 +266,57 @@ game_html = """
             if (obj.y < 0) obj.y = WORLD.h; if (obj.y > WORLD.h) obj.y = 0;
         };
 
-        // --- ЛОГИКА ИГРОКА ---
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
-            me.x += Math.cos(r) * 15; // Скорость игрока увеличена до 15
+            me.x += Math.cos(r) * 15;
             me.y += Math.sin(r) * 15;
             wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
-            if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; checkWin(); }
+            if(me.hp <= 0) { me.state = 'falling'; me.dt = 90; opp.score++; checkWin(); }
         } else if (gameActive) {
-            me.y += 8; me.a += 12; createPart(me.x, me.y, 'fire');
+            me.y += 10; me.a += 12; createPart(me.x, me.y, 'fire');
             if(--me.dt <= 0) { 
-            createPart(me.x, me.y, 'explode', me.color); 
-            respawn(me); 
+                createPart(me.x, me.y, 'explode', me.color); 
+                respawn(me); 
+            }
         }
 
-        // --- ЛОГИКА ПРОТИВНИКА (AI) ---
         if(isSolo) {
             if(opp.state === 'alive') {
                 let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
                 let diff = targetA - opp.a;
                 while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
-                
-                // Увеличена маневренность (0.12 и 0.06), чтобы бот мог поворачивать на скорости 15
                 opp.a += diff * (difficulty === 'hard' ? 0.12 : 0.06); 
-                
                 let r = opp.a * Math.PI/180;
-                // Скорость бота (15 для Аса, 12 для Курсанта)
                 opp.x += Math.cos(r) * (difficulty === 'hard' ? 15 : 12);
                 opp.y += Math.sin(r) * (difficulty === 'hard' ? 15 : 12);
-                
                 wrap(opp);
                 if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
                 if(Math.random() < (difficulty==='hard'?0.04:0.015) && Math.abs(diff) < 20) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
-                if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 120; me.score++; checkWin(); }
+                if(opp.hp <= 0) { opp.state = 'falling'; opp.dt = 90; me.score++; checkWin(); }
             } else if (gameActive) {
-                opp.y += 8; createPart(opp.x, opp.y, 'fire');
-                if(--opp.dt <= 0) respawn(opp);
+                opp.y += 10; createPart(opp.x, opp.y, 'fire');
+                if(--opp.dt <= 0) { 
+                    createPart(opp.x, opp.y, 'explode', opp.color); 
+                    respawn(opp); 
+                }
             }
         }
 
-        // --- ЧАСТИЦЫ ---
         particles.forEach((p, i) => {
             p.x += p.vx; p.y += p.vy; 
-            p.life -= 0.04; // Дым исчезает быстрее, чтобы хвост был плотнее
+            if(p.type === 'debris') { p.a += p.va; p.vy += 0.4; }
+            p.life -= (p.type === 'debris' ? 0.015 : 0.04);
             if(p.life <= 0) particles.splice(i, 1);
-    });
+        });
 
-    // --- ПУЛИ ---
-    bullets.forEach((b, i) => {
-        let r = b.a * Math.PI/180;
-        // Скорость пуль увеличена до 35, чтобы они улетали от самолета (который летит 15)
-        b.x += Math.cos(r) * 35; 
-        b.y += Math.sin(r) * 35;
-        
-        if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
-        
-        let target = b.owner === 'me' ? opp : me;
-        // Немного увеличен радиус попадания (до 65), так как объекты движутся очень быстро
-        if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 65) {
-            target.hp--; 
-            bullets.splice(i, 1);
+        bullets.forEach((b, i) => {
+            let r = b.a * Math.PI/180;
+            b.x += Math.cos(r) * 35; b.y += Math.sin(r) * 35;
+            if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
+            let target = b.owner === 'me' ? opp : me;
+            if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 65) {
+                target.hp--; bullets.splice(i, 1);
             }
         });
     }
@@ -335,24 +324,26 @@ game_html = """
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
-        ctx.save();
+        
         if(screenShake > 1) {
             ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
-            screenShake *= 0.9; // Постепенное затухание
+            screenShake *= 0.9;
         }
+
         ctx.scale(canvas.width / WORLD.w, canvas.height / WORLD.h);
         clouds.forEach(c => {
             ctx.globalAlpha = c.op; ctx.fillStyle = "white";
-            ctx.beginPath(); ctx.arc(c.x, c.y, 45*c.s, 0, 7); ctx.arc(c.x+35*c.s, c.y-15*c.s, 40*c.s, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(c.x, c.y, 45*c.s, 0, 7); ctx.fill();
         });
         ctx.globalAlpha = 1.0;
+
         particles.forEach(p => {
             if(p.type === 'debris') {
                 ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.a * Math.PI/180);
                 ctx.fillStyle = p.color;
-                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size/3); // Рисуем кусок крыла
+                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size/3);
                 ctx.restore();
             } else {
                 ctx.fillStyle = p.type === 'fire' ? `rgba(255, ${150*p.life}, 0, ${p.life})` : `rgba(100,100,100,${p.life})`;
@@ -361,98 +352,42 @@ game_html = """
         });
 
         const drawPlane = (p, col) => {
+            if(p.state !== 'alive' && p.dt <= 0) return;
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.a * Math.PI / 180);
-
-            // Тень под самолетом (небольшое смещение для глубины)
+            
             ctx.fillStyle = "rgba(0,0,0,0.2)";
-            ctx.beginPath();
-            ctx.ellipse(0, 15, 50, 15, 0, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.ellipse(0, 15, 50, 15, 0, 0, Math.PI * 2); ctx.fill();
 
-            // 1. Хвостовое оперение (стабилизаторы)
             ctx.fillStyle = col;
-            ctx.beginPath();
-            ctx.moveTo(-35, 0);
-            ctx.lineTo(-55, -25);
-            ctx.lineTo(-55, 25);
-            ctx.closePath();
-            ctx.fill();
+            ctx.beginPath(); ctx.moveTo(-35, 0); ctx.lineTo(-55, -25); ctx.lineTo(-55, 25); ctx.fill();
 
-            // 2. Фюзеляж (основной корпус - обтекаемый)
             let grad = ctx.createLinearGradient(0, -15, 0, 15);
-            grad.addColorStop(0, col);
-            grad.addColorStop(0.5, "#fff"); // Блик сверху
-            grad.addColorStop(1, col);
-            
+            grad.addColorStop(0, col); grad.addColorStop(0.5, "#fff"); grad.addColorStop(1, col);
             ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.moveTo(-45, -8); // Хвост
-            ctx.quadraticCurveTo(0, -22, 45, -15); // Верх к носу
-            ctx.lineTo(45, 15); // Нос
-            ctx.quadraticCurveTo(0, 22, -45, 8); // Низ к хвосту
-            ctx.closePath();
-            ctx.fill();
+            ctx.beginPath(); ctx.moveTo(-45, -8); ctx.quadraticCurveTo(0, -22, 45, -15); ctx.lineTo(45, 15); ctx.quadraticCurveTo(0, 22, -45, 8); ctx.fill();
 
-            // 3. Кабина пилота
-            ctx.fillStyle = "#333"; // Рамка
-            ctx.fillRect(5, -10, 15, 20);
-            let glassGrad = ctx.createLinearGradient(0, -8, 0, 8);
-            glassGrad.addColorStop(0, "#88e1ff");
-            glassGrad.addColorStop(1, "#005588");
-            ctx.fillStyle = glassGrad;
-            ctx.fillRect(7, -8, 12, 16);
+            ctx.fillStyle = "#333"; ctx.fillRect(5, -10, 15, 20);
+            ctx.fillStyle = "#88e1ff"; ctx.fillRect(7, -8, 12, 16);
 
-            // 4. Крылья (Ан-2 - биплан, рисуем верхнее крыло с деталями)
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = "rgba(0,0,0,0.5)";
             ctx.fillStyle = col;
-            // Закругленное крыло
-            ctx.beginPath();
-            ctx.roundRect(-8, -65, 25, 130, 8);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            
-            // Полоски на крыльях для "военного" стиля
-            ctx.fillStyle = "rgba(0,0,0,0.2)";
-            ctx.fillRect(0, -60, 10, 120);
+            ctx.beginPath(); ctx.roundRect(-8, -65, 25, 130, 8); ctx.fill();
 
-            // 5. Пропеллер (с эффектом вращения)
             if (p.state === 'alive') {
                 ctx.save();
-                ctx.translate(45, 0);
-                ctx.rotate(propellerRotation);
-                
-                // Эффект размытых лопастей (диск)
+                ctx.translate(45, 0); ctx.rotate(propellerRotation);
                 ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
-                ctx.beginPath();
-                ctx.arc(0, 0, 40, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Реальные лопасти
-                ctx.fillStyle = "#222";
-                for(let i=0; i<3; i++) { // Трехлопастной винт
-                    ctx.rotate((Math.PI * 2) / 3);
-                    ctx.beginPath();
-                    ctx.ellipse(0, 20, 4, 20, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                // Кок (центр винта)
-                ctx.fillStyle = "#111";
-                ctx.beginPath();
-                ctx.arc(0, 0, 7, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
             }
-
             ctx.restore();
         };
 
         drawPlane(me, me.color); drawPlane(opp, opp.color);
         bullets.forEach(b => { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(b.x, b.y, 12, 0, 7); ctx.fill(); });
         ctx.restore();
+
         document.getElementById('hp-fill').style.width = (me.hp/me.max*100) + "%";
         document.getElementById('sc-me').innerText = me.score;
         document.getElementById('sc-opp').innerText = opp.score;
