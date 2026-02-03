@@ -151,27 +151,7 @@ game_html = """
     document.getElementById('mode-ai-hard').onclick = () => { isSolo=true; difficulty='hard'; updateUI('hard'); resetMatch(); };
     document.getElementById('mode-net').onclick = () => { isSolo=false; updateUI('net'); resetMatch(); };
 
-    // Настройка конфигурации для обхода NAT и работы через HTTPS
-    let peer = new Peer(null, {
-        config: {
-            'iceServers': [
-                { url: 'stun:stun.l.google.com:19302' },
-                { url: 'stun:stun1.l.google.com:19302' },
-                { url: 'stun:stun2.l.google.com:19302' }
-            ]
-        },
-        debug: 2
-    });
-
-    // Добавим обработку ошибок, чтобы понимать, что идет не так
-    peer.on('error', err => {
-        console.error('Ошибка PeerJS:', err.type);
-        if(err.type === 'browser-incompatible') {
-            alert('Ваш браузер не поддерживает WebRTC');
-        } else if (err.type === 'network') {
-            alert('Проблема с сетью (возможно, нужен VPN)');
-        }
-    });
+    let peer = new Peer();
     let conn = null;
     peer.on('open', id => document.getElementById('my-peer-id').innerText = id);
     peer.on('connection', c => { conn = c; isSolo = false; updateUI('net'); setupConn(); });
