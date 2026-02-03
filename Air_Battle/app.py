@@ -232,7 +232,7 @@ game_html = """
         };
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
-            me.x += Math.cos(r)*10; me.y += Math.sin(r)*10;
+            me.x += Math.cos(r)*12; me.y += Math.sin(r)*12;
             wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; checkWin(); }
@@ -247,8 +247,8 @@ game_html = """
                 while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
                 opp.a += diff * (difficulty==='hard' ? 0.07 : 0.03);
                 let r = opp.a * Math.PI/180;
-                opp.x += Math.cos(r)*(difficulty==='hard'?6:4.5);
-                opp.y += Math.sin(r)*(difficulty==='hard'?6:4.5);
+                opp.x += Math.cos(r)*(difficulty==='hard'?12:9.7);
+                opp.y += Math.sin(r)*(difficulty==='hard'?12:9.7);
                 wrap(opp);
                 if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
                 if(Math.random() < (difficulty==='hard'?0.04:0.015) && Math.abs(diff) < 20) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
