@@ -144,30 +144,6 @@ game_html = """
         console.log('📡', msg);
     }
 
-    function setupConn() {
-        if (!conn) return;
-        
-        conn.on('data', d => {
-            if(d.t === 's') { 
-                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
-                opp.state = d.state; opp.score = d.score;
-            }
-            if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
-        });
-        
-        conn.on('close', () => {
-            console.log('🔌 Отключено');
-            showStatus('Отключен', '#ff6600');
-            isSolo = true;
-            updateUI('easy');
-        });
-        
-        conn.on('error', err => {
-            console.error('❌ Ошибка связи:', err);
-            showStatus('Ошибка связи!', '#ff0000');
-        });
-    }
-
     function initPeer() {
         try {
             peer = new Peer({
@@ -182,8 +158,8 @@ game_html = """
             peer.on('open', id => {
                 myPeerId = id;
                 document.getElementById('my-peer-id').innerText = id;
-                console.log('✅ Peer ID:', id);
-                showStatus('Готов', '#00ff00');
+                console.log('My peer ID:', id);
+                showStatus('Готов');
             });
             
             peer.on('error', err => {
@@ -197,25 +173,45 @@ game_html = """
             });
             
             peer.on('connection', c => {
-                console.log('📞 Входящее соединение от:', c.peer);
-                if (conn && conn.open) conn.close();
+                console.log('Incoming connection from:', c.peer);
                 conn = c;
-                
-                // ВАЖНО: Регистрируем обработчики ДО события open
+                isSolo = false;
+                updateUI('net');
                 setupConn();
-                
-                c.on('open', () => {
-                    console.log('✅ Входящее соединение открыто');
-                    isSolo = false;
-                    updateUI('net');
-                    showStatus('Подключено!', '#00ff00');
-                    resetMatch();
-                });
+                showStatus('Подключен: ' + c.peer.substring(0, 8));
             });
         } catch(e) {
-            console.error('💥 Init error:', e);
+            console.error('Failed to initialize PeerJS:', e);
             alert('Не удалось инициализировать PeerJS');
         }
+    }
+
+    function setupConn() {
+        if (!conn) return;
+        
+        conn.on('open', () => {
+            console.log('Connection fully established');
+        });
+        
+        conn.on('data', d => {
+            if(d.t === 's') { 
+                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
+                opp.state = d.state; opp.score = d.score;
+            }
+            if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
+        });
+        
+        conn.on('close', () => {
+            console.log('Connection closed');
+            showStatus('Отключен');
+            isSolo = true;
+            updateUI('easy');
+        });
+        
+        conn.on('error', err => {
+            console.error('Connection error:', err);
+            showStatus('Ошибка связи!');
+        });
     }
 
     document.getElementById('connect-btn').onclick = () => {
@@ -233,42 +229,36 @@ game_html = """
         showStatus('Подключение...', '#ffaa00');
         
         try {
-            // ВАЖНО: Создаем соединение
             conn = peer.connect(remoteId, {
-                reliable: true,
-                serialization: 'json'
+                reliable: true
             });
-            
-            // ВАЖНО: Регистрируем обработчики СРАЗУ после создания
-            setupConn();
             
             const timeout = setTimeout(() => {
                 if (conn && !conn.open) {
-                    console.error('⏱️ Таймаут подключения');
                     conn.close();
                     showStatus('Таймаут!', '#ff0000');
-                    alert('Не удалось подключиться за 10 сек.\\nПроверьте ID и попробуйте снова.');
                 }
             }, 10000);
             
             conn.on('open', () => {
                 clearTimeout(timeout);
-                console.log('✅ Исходящее соединение открыто');
+                console.log('✅ Подключено!');
                 isSolo = false;
                 updateUI('net');
-                showStatus('Подключено!', '#00ff00');
+                setupConn();
+                showStatus('Подключен!');
                 resetMatch();
             });
             
             conn.on('error', err => {
-                clearTimeout(timeout);
-                console.error('❌ Ошибка подключения:', err);
-                showStatus('Ошибка!', '#ff0000');
+                console.error('Connection error:', err);
+                alert('Ошибка подключения: ' + err);
+                showStatus('Ошибка!');
             });
         } catch(e) {
-            console.error('💥 Ошибка connect:', e);
-            alert('Не удалось подключиться: ' + e.message);
-            showStatus('Ошибка!', '#ff0000');
+            console.error('Failed to connect:', e);
+            alert('Не удалось подключиться');
+            showStatus('Ошибка!');
         }
     };
 
@@ -302,11 +292,7 @@ game_html = """
         if(e) { e.preventDefault(); e.stopPropagation(); }
         if(!gameActive || me.state !== 'alive') return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
-        if(conn && conn.open) {
-            try {
-                conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
-            } catch(e) { console.error('Ошибка отправки fire:', e); }
-        }
+        if(conn && conn.open) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
     };
 
     const fBtn = document.getElementById('fireBtn');
@@ -414,11 +400,7 @@ game_html = """
 
         // Send state to opponent if connected
         if(conn && conn.open && !isSolo) {
-            try {
-                conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
-            } catch(e) {
-                console.error('Ошибка отправки:', e);
-            }
+            conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
         }
 
         if(isSolo) {
