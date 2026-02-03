@@ -212,25 +212,34 @@ game_html = """
         }
     }
 
-    function createPart(x, y, type) {
-        let count = type === 'fire' ? 4 : 1;
-        for(let i=0; i<count; i++) {
-            particles.push({ x, y, vx: (Math.random()-0.5)*3, vy: (Math.random()-0.5)*3, life: 1.0, type: type });
+    function createPart(x, y, type, color = null) {
+    if(type === 'explode') { 
+        screenShake = 20; // Тряска экрана
+        for(let i=0; i<60; i++) { // Огонь и дым
+            particles.push({
+                x, y, 
+                vx: (Math.random()-0.5)*25, 
+                vy: (Math.random()-0.5)*25, 
+                life: 1.0 + Math.random(), 
+                type: Math.random() > 0.3 ? 'fire' : 'smoke',
+                size: 10 + Math.random()*30
+            });
         }
-    }
-
-    function update() {
-        if(!gameActive) return;
-        
-        // Вращаем пропеллер быстрее, чтобы визуально соответствовать скорости
-        propellerRotation += 0.9; 
-
-        clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
-        
-        const wrap = (obj) => {
-            if (obj.x < 0) obj.x = WORLD.w; if (obj.x > WORLD.w) obj.x = 0;
-            if (obj.y < 0) obj.y = WORLD.h; if (obj.y > WORLD.h) obj.y = 0;
-        };
+        for(let i=0; i<8; i++) { // Обломки корпуса
+            particles.push({
+                x, y, 
+                vx: (Math.random()-0.5)*15, 
+                vy: (Math.random()-0.5)*15, 
+                life: 2.0, 
+                type: 'debris',
+                color: color,
+                a: Math.random()*360,
+                va: (Math.random()-0.5)*20,
+                size: 15 + Math.random()*20
+            });
+        }
+        return;
+    };
 
         // --- ЛОГИКА ИГРОКА ---
         if(me.state === 'alive') {
