@@ -173,17 +173,16 @@ game_html = """
             });
             
             peer.on('connection', c => {
-                console.log('📞 Входящее соединение:', c.peer);
+                console.log('📞 Входящее соединение от:', c.peer);
                 if (conn && conn.open) conn.close();
                 conn = c;
                 
-                // ЖДЕМ пока соединение откроется, ПОТОМ настраиваем
                 c.on('open', () => {
                     console.log('✅ Входящее соединение открыто');
                     isSolo = false;
                     updateUI('net');
-                    setupConn();
                     showStatus('Подключено!', '#00ff00');
+                    setupConn(); // Настраиваем обработчики данных
                     resetMatch();
                 });
             });
@@ -196,11 +195,6 @@ game_html = """
     function setupConn() {
         if (!conn) return;
         
-        conn.on('open', () => {
-            console.log('✅ Соединение установлено');
-            showStatus('Играем!', '#00ff00');
-        });
-        
         conn.on('data', d => {
             if(d.t === 's') { 
                 opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
@@ -210,15 +204,15 @@ game_html = """
         });
         
         conn.on('close', () => {
-            console.log('Connection closed');
-            showStatus('Отключен');
+            console.log('🔌 Отключено');
+            showStatus('Отключен', '#ff6600');
             isSolo = true;
             updateUI('easy');
         });
         
         conn.on('error', err => {
-            console.error('Connection error:', err);
-            showStatus('Ошибка связи!');
+            console.error('❌ Ошибка связи:', err);
+            showStatus('Ошибка связи!', '#ff0000');
         });
     }
 
@@ -250,11 +244,11 @@ game_html = """
             
             conn.on('open', () => {
                 clearTimeout(timeout);
-                console.log('✅ Подключено!');
+                console.log('✅ Исходящее соединение открыто');
                 isSolo = false;
                 updateUI('net');
-                showStatus('Играем!', '#00ff00');
-                setupConn(); // ВАЖНО: setupConn должен быть ПОСЛЕ установки статуса
+                showStatus('Подключено!', '#00ff00');
+                setupConn(); // Настраиваем обработчики данных
                 resetMatch();
             });
             
