@@ -173,12 +173,19 @@ game_html = """
             });
             
             peer.on('connection', c => {
-                console.log('Incoming connection from:', c.peer);
+                console.log('📞 Входящее соединение:', c.peer);
+                if (conn && conn.open) conn.close();
                 conn = c;
-                isSolo = false;
-                updateUI('net');
-                setupConn();
-                showStatus('Подключен: ' + c.peer.substring(0, 8));
+                
+                // ЖДЕМ пока соединение откроется, ПОТОМ настраиваем
+                c.on('open', () => {
+                    console.log('✅ Входящее соединение открыто');
+                    isSolo = false;
+                    updateUI('net');
+                    setupConn();
+                    showStatus('Подключено!', '#00ff00');
+                    resetMatch();
+                });
             });
         } catch(e) {
             console.error('Failed to initialize PeerJS:', e);
@@ -190,7 +197,8 @@ game_html = """
         if (!conn) return;
         
         conn.on('open', () => {
-            console.log('Connection fully established');
+            console.log('✅ Соединение установлено');
+            showStatus('Играем!', '#00ff00');
         });
         
         conn.on('data', d => {
@@ -245,8 +253,8 @@ game_html = """
                 console.log('✅ Подключено!');
                 isSolo = false;
                 updateUI('net');
-                setupConn();
                 showStatus('Играем!', '#00ff00');
+                setupConn(); // ВАЖНО: setupConn должен быть ПОСЛЕ установки статуса
                 resetMatch();
             });
             
@@ -400,7 +408,11 @@ game_html = """
 
         // Send state to opponent if connected
         if(conn && conn.open && !isSolo) {
-            conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
+            try {
+                conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
+            } catch(e) {
+                console.error('Ошибка отправки:', e);
+            }
         }
 
         if(isSolo) {
