@@ -232,7 +232,7 @@ game_html = """
         };
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
-            me.x += Math.cos(r)*6; me.y += Math.sin(r)*6;
+            me.x += Math.cos(r)*10; me.y += Math.sin(r)*10;
             wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; checkWin(); }
