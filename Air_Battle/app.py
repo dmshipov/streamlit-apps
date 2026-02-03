@@ -10,7 +10,7 @@ game_html = """
     #top-bar { 
         background: #222; padding: 8px; border-radius: 8px; 
         display: flex; justify-content: space-between; align-items: center; 
-        gap: 5px; margin-bottom: 5px; font-size: 11px;
+        gap: 5px; margin-bottom: 5px; font-size: 11px; flex-wrap: wrap;
     }
     #viewport-container { position: relative; width: 100%; margin: 0 auto; touch-action: none; }
     #viewport { 
@@ -50,6 +50,8 @@ game_html = """
 
     .btn-mode { background: #444; color: white; border: 1px solid #666; padding: 4px 8px; border-radius: 4px; font-size: 9px; cursor: pointer;}
     .active-mode { background: #00d2ff; color: black; font-weight: bold; }
+    
+    #help-text { font-size: 9px; color: #888; margin-top: 5px; width: 100%; text-align: center; }
 </style>
 
 <div id="top-bar">
@@ -66,10 +68,12 @@ game_html = """
         </div>
     </div>
     
-    <div id="net-controls" style="display: none; gap: 4px; align-items: center;">
-        <input type="text" id="remote-id" placeholder="ID противника" style="width: 80px; font-size: 9px; padding: 3px;">
-        <button id="connect-btn" style="background:#28a745; color:white; border:none; padding:4px 8px; font-size:9px; border-radius:3px; cursor:pointer;">OK</button>
-        <span id="connection-status" style="font-size:8px; color:#aaa;"></span>
+    <div id="net-controls" style="display: none; flex-direction: column; gap: 4px; align-items: center;">
+        <div style="display: flex; gap: 4px; align-items: center;">
+            <input type="text" id="remote-id" placeholder="ID противника" style="width: 100px; font-size: 9px; padding: 4px; border-radius: 3px; border: 1px solid #666;">
+            <button id="connect-btn" style="background:#28a745; color:white; border:none; padding:5px 10px; font-size:9px; border-radius:3px; cursor:pointer; font-weight: bold;">OK</button>
+        </div>
+        <span id="connection-status" style="font-size:9px; color:#ffaa00;">Ожидание...</span>
     </div>
 
     <div style="text-align: center;">
@@ -78,8 +82,9 @@ game_html = """
     </div>
 
     <div style="text-align: right;">
-        <div style="font-size: 10px;">ID: <span id="my-peer-id" style="color:#00d2ff">...</span></div>
-        <div style="font-size: 18px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
+        <div style="font-size: 9px; color: #aaa;">МОЙ ID:</div>
+        <div style="font-size: 11px; font-weight: bold; color:#00d2ff; cursor: pointer; user-select: all;" id="my-peer-id" title="Нажмите чтобы скопировать">...</div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 3px;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
     </div>
 </div>
 
@@ -100,6 +105,10 @@ game_html = """
         <div id="hp-bar-container"><div id="hp-fill"></div></div>
     </div>
     <div id="joy-zone"><div id="joystick-zone"></div></div>
+</div>
+
+<div id="help-text">
+    💡 Для сетевой игры: 1) Скопируйте свой ID 2) Отправьте другу 3) Друг вводит ваш ID и нажимает OK
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.9.1/nipplejs.min.js"></script>
@@ -130,50 +139,102 @@ game_html = """
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
 
-    // PeerJS setup
+    // PeerJS setup with multiple server options
     let peer = null;
     let conn = null;
     let myPeerId = '';
+    let connectionAttempts = 0;
 
-    function showStatus(msg) {
+    function showStatus(msg, color = '#ffaa00') {
         const statusEl = document.getElementById('connection-status');
         if (statusEl) {
             statusEl.innerText = msg;
-            statusEl.style.color = '#00ff00';
-            setTimeout(() => {
-                statusEl.style.color = '#aaa';
-            }, 2000);
+            statusEl.style.color = color;
         }
+        console.log('Status:', msg);
     }
 
     function initPeer() {
         try {
-            peer = new Peer();
+            // Use cloud PeerJS server with config
+            const config = {
+                host: '0.peerjs.com',
+                port: 443,
+                path: '/',
+                secure: true,
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                },
+                debug: 2 // Enable detailed logs
+            };
+
+            peer = new Peer(config);
             
             peer.on('open', id => {
                 myPeerId = id;
-                document.getElementById('my-peer-id').innerText = id;
-                console.log('My peer ID:', id);
-                showStatus('Готов');
+                const idElement = document.getElementById('my-peer-id');
+                idElement.innerText = id;
+                idElement.title = 'Нажмите чтобы скопировать: ' + id;
+                console.log('✅ My peer ID:', id);
+                showStatus('Готов к игре', '#00ff00');
+                
+                // Click to copy ID
+                idElement.onclick = () => {
+                    navigator.clipboard.writeText(id).then(() => {
+                        showStatus('ID скопирован!', '#00ff00');
+                        setTimeout(() => showStatus('Готов к игре', '#00ff00'), 2000);
+                    });
+                };
             });
             
             peer.on('error', err => {
-                console.error('Peer error:', err);
-                alert('Ошибка PeerJS: ' + err.type);
-                showStatus('Ошибка!');
+                console.error('❌ Peer error:', err.type, err);
+                
+                if (err.type === 'peer-unavailable') {
+                    showStatus('Игрок не найден! Проверьте ID', '#ff0000');
+                    alert('Игрок с таким ID не найден.\n\nПричины:\n- ID введен неправильно\n- Игрок не в сети\n- Игрок закрыл страницу\n\nПроверьте ID и попробуйте снова.');
+                } else if (err.type === 'network') {
+                    showStatus('Ошибка сети', '#ff0000');
+                    alert('Ошибка сети. Проверьте интернет-соединение.');
+                } else if (err.type === 'server-error') {
+                    showStatus('Ошибка сервера', '#ff0000');
+                    alert('Ошибка сервера PeerJS. Попробуйте позже.');
+                } else {
+                    showStatus('Ошибка: ' + err.type, '#ff0000');
+                }
+            });
+            
+            peer.on('disconnected', () => {
+                console.warn('⚠️ Peer disconnected, attempting reconnect...');
+                showStatus('Переподключение...', '#ffaa00');
+                setTimeout(() => {
+                    if (!peer.destroyed) {
+                        peer.reconnect();
+                    }
+                }, 1000);
             });
             
             peer.on('connection', c => {
-                console.log('Incoming connection from:', c.peer);
+                console.log('📞 Incoming connection from:', c.peer);
+                
+                // Close existing connection if any
+                if (conn && conn.open) {
+                    conn.close();
+                }
+                
                 conn = c;
                 isSolo = false;
                 updateUI('net');
                 setupConn();
-                showStatus('Подключен: ' + c.peer.substring(0, 8));
+                showStatus('Подключен: ' + c.peer.substring(0, 8) + '...', '#00ff00');
             });
         } catch(e) {
-            console.error('Failed to initialize PeerJS:', e);
-            alert('Не удалось инициализировать PeerJS');
+            console.error('💥 Failed to initialize PeerJS:', e);
+            showStatus('Ошибка инициализации', '#ff0000');
+            alert('Не удалось инициализировать PeerJS: ' + e.message);
         }
     }
 
@@ -181,7 +242,9 @@ game_html = """
         if (!conn) return;
         
         conn.on('open', () => {
-            console.log('Connection fully established');
+            console.log('✅ Connection fully established');
+            showStatus('Подключено! Играем...', '#00ff00');
+            connectionAttempts = 0;
         });
         
         conn.on('data', d => {
@@ -193,53 +256,89 @@ game_html = """
         });
         
         conn.on('close', () => {
-            console.log('Connection closed');
-            showStatus('Отключен');
+            console.log('🔌 Connection closed');
+            showStatus('Противник отключился', '#ff6600');
             isSolo = true;
             updateUI('easy');
+            setTimeout(() => {
+                alert('Противник отключился. Переход в одиночный режим.');
+            }, 500);
         });
         
         conn.on('error', err => {
-            console.error('Connection error:', err);
-            showStatus('Ошибка связи!');
+            console.error('❌ Connection error:', err);
+            showStatus('Ошибка связи', '#ff0000');
         });
     }
 
     document.getElementById('connect-btn').onclick = () => {
         const remoteId = document.getElementById('remote-id').value.trim();
+        
         if (!remoteId) {
             alert('Введите ID противника');
             return;
         }
-        if (!peer) {
+        
+        if (remoteId === myPeerId) {
+            alert('Нельзя подключиться к самому себе!');
+            return;
+        }
+        
+        if (!peer || peer.destroyed) {
             alert('PeerJS не инициализирован. Перезагрузите страницу.');
             return;
         }
         
-        console.log('Connecting to:', remoteId);
-        showStatus('Подключение...');
+        if (conn && conn.open) {
+            const confirm = window.confirm('Уже есть подключение. Подключиться к новому игроку?');
+            if (!confirm) return;
+            conn.close();
+        }
+        
+        console.log('🔗 Connecting to:', remoteId);
+        showStatus('Подключение к ' + remoteId.substring(0, 8) + '...', '#ffaa00');
+        connectionAttempts++;
         
         try {
-            conn = peer.connect(remoteId);
+            conn = peer.connect(remoteId, {
+                reliable: true,
+                serialization: 'json'
+            });
+            
+            // Connection timeout
+            const timeout = setTimeout(() => {
+                if (conn && !conn.open) {
+                    console.error('⏱️ Connection timeout');
+                    showStatus('Таймаут подключения', '#ff0000');
+                    conn.close();
+                    alert('Не удалось подключиться.\n\nПричины:\n- Неверный ID\n- Игрок не в сети\n- Проблемы с сетью\n\nПопробуйте еще раз.');
+                }
+            }, 10000);
             
             conn.on('open', () => {
-                console.log('Connection opened!');
+                clearTimeout(timeout);
+                console.log('✅ Connection opened!');
                 isSolo = false;
                 updateUI('net');
                 setupConn();
-                showStatus('Подключен!');
+                showStatus('Подключено! Играем...', '#00ff00');
                 resetMatch();
             });
             
             conn.on('error', err => {
-                console.error('Connection error:', err);
-                alert('Ошибка подключения: ' + err);
-                showStatus('Ошибка!');
+                clearTimeout(timeout);
+                console.error('❌ Connection error:', err);
+                showStatus('Ошибка подключения', '#ff0000');
+                
+                if (connectionAttempts >= 3) {
+                    alert('Несколько неудачных попыток.\n\nСоветы:\n1. Проверьте, что ID скопирован полностью\n2. Убедитесь, что оба игрока онлайн\n3. Попробуйте другой браузер\n4. Проверьте интернет-соединение');
+                    connectionAttempts = 0;
+                }
             });
         } catch(e) {
-            console.error('Failed to connect:', e);
-            alert('Не удалось подключиться');
-            showStatus('Ошибка!');
+            console.error('💥 Failed to connect:', e);
+            showStatus('Ошибка!', '#ff0000');
+            alert('Не удалось подключиться: ' + e.message);
         }
     };
 
@@ -262,9 +361,23 @@ game_html = """
     document.getElementById('lim-5').onclick = () => setLimit(5);
     document.getElementById('lim-10').onclick = () => setLimit(10);
 
-    document.getElementById('mode-ai-easy').onclick = () => { isSolo=true; difficulty='easy'; updateUI('easy'); resetMatch(); };
-    document.getElementById('mode-ai-hard').onclick = () => { isSolo=true; difficulty='hard'; updateUI('hard'); resetMatch(); };
-    document.getElementById('mode-net').onclick = () => { updateUI('net'); };
+    document.getElementById('mode-ai-easy').onclick = () => { 
+        isSolo=true; 
+        difficulty='easy'; 
+        updateUI('easy'); 
+        if(conn && conn.open) conn.close();
+        resetMatch(); 
+    };
+    document.getElementById('mode-ai-hard').onclick = () => { 
+        isSolo=true; 
+        difficulty='hard'; 
+        updateUI('hard'); 
+        if(conn && conn.open) conn.close();
+        resetMatch(); 
+    };
+    document.getElementById('mode-net').onclick = () => { 
+        updateUI('net'); 
+    };
 
     const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'} });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
@@ -273,7 +386,13 @@ game_html = """
         if(e) { e.preventDefault(); e.stopPropagation(); }
         if(!gameActive || me.state !== 'alive') return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
-        if(conn && conn.open) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
+        if(conn && conn.open) {
+            try {
+                conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
+            } catch(e) {
+                console.error('Failed to send fire:', e);
+            }
+        }
     };
 
     const fBtn = document.getElementById('fireBtn');
@@ -381,7 +500,11 @@ game_html = """
 
         // Send state to opponent if connected
         if(conn && conn.open && !isSolo) {
-            conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
+            try {
+                conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
+            } catch(e) {
+                console.error('Failed to send state:', e);
+            }
         }
 
         if(isSolo) {
@@ -504,4 +627,4 @@ game_html = """
 </script>
 """
 
-components.html(game_html, height=600)
+components.html(game_html, height=650)
