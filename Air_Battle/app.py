@@ -222,17 +222,21 @@ game_html = """
     function update() {
         if(!gameActive) return;
         
-        // Вращаем пропеллер каждый кадр
-        propellerRotation += 0.5;
+        // Вращаем пропеллер быстрее, чтобы визуально соответствовать скорости
+        propellerRotation += 0.9; 
 
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
+        
         const wrap = (obj) => {
             if (obj.x < 0) obj.x = WORLD.w; if (obj.x > WORLD.w) obj.x = 0;
             if (obj.y < 0) obj.y = WORLD.h; if (obj.y > WORLD.h) obj.y = 0;
         };
+
+        // --- ЛОГИКА ИГРОКА ---
         if(me.state === 'alive') {
             let r = me.a * Math.PI/180;
-            me.x += Math.cos(r)*12; me.y += Math.sin(r)*12;
+            me.x += Math.cos(r) * 15; // Скорость игрока увеличена до 15
+            me.y += Math.sin(r) * 15;
             wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { me.state = 'falling'; me.dt = 120; opp.score++; checkWin(); }
@@ -240,15 +244,22 @@ game_html = """
             me.y += 8; me.a += 12; createPart(me.x, me.y, 'fire');
             if(--me.dt <= 0) respawn(me);
         }
+
+        // --- ЛОГИКА ПРОТИВНИКА (AI) ---
         if(isSolo) {
             if(opp.state === 'alive') {
                 let targetA = Math.atan2(me.y - opp.y, me.x - opp.x) * 180 / Math.PI;
                 let diff = targetA - opp.a;
                 while(diff < -180) diff += 360; while(diff > 180) diff -= 360;
-                opp.a += diff * (difficulty==='hard' ? 0.07 : 0.03);
+                
+                // Увеличена маневренность (0.12 и 0.06), чтобы бот мог поворачивать на скорости 15
+                opp.a += diff * (difficulty === 'hard' ? 0.12 : 0.06); 
+                
                 let r = opp.a * Math.PI/180;
-                opp.x += Math.cos(r)*(difficulty==='hard'?12:9.7);
-                opp.y += Math.sin(r)*(difficulty==='hard'?12:9.7);
+                // Скорость бота (15 для Аса, 12 для Курсанта)
+                opp.x += Math.cos(r) * (difficulty === 'hard' ? 15 : 12);
+                opp.y += Math.sin(r) * (difficulty === 'hard' ? 15 : 12);
+                
                 wrap(opp);
                 if(opp.hp < 3) createPart(opp.x, opp.y, 'smoke');
                 if(Math.random() < (difficulty==='hard'?0.04:0.015) && Math.abs(diff) < 20) bullets.push({x:opp.x, y:opp.y, a:opp.a, owner:'opp'});
@@ -258,17 +269,28 @@ game_html = """
                 if(--opp.dt <= 0) respawn(opp);
             }
         }
+
+        // --- ЧАСТИЦЫ ---
         particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life -= 0.025;
+            p.x += p.vx; p.y += p.vy; 
+            p.life -= 0.04; // Дым исчезает быстрее, чтобы хвост был плотнее
             if(p.life <= 0) particles.splice(i, 1);
-        });
-        bullets.forEach((b, i) => {
-            let r = b.a * Math.PI/180;
-            b.x += Math.cos(r)*16; b.y += Math.sin(r)*16;
-            if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
-            let target = b.owner === 'me' ? opp : me;
-            if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 55) {
-                target.hp--; bullets.splice(i, 1);
+    });
+
+    // --- ПУЛИ ---
+    bullets.forEach((b, i) => {
+        let r = b.a * Math.PI/180;
+        // Скорость пуль увеличена до 35, чтобы они улетали от самолета (который летит 15)
+        b.x += Math.cos(r) * 35; 
+        b.y += Math.sin(r) * 35;
+        
+        if (b.x < 0 || b.x > WORLD.w || b.y < 0 || b.y > WORLD.h) { bullets.splice(i, 1); return; }
+        
+        let target = b.owner === 'me' ? opp : me;
+        // Немного увеличен радиус попадания (до 65), так как объекты движутся очень быстро
+        if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 65) {
+            target.hp--; 
+            bullets.splice(i, 1);
             }
         });
     }
