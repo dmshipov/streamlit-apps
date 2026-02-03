@@ -66,9 +66,10 @@ game_html = """
         </div>
     </div>
     
-    <div id="net-controls" style="display: none; gap: 4px;">
-        <input type="text" id="remote-id" placeholder="ID" style="width: 40px; font-size: 9px;">
-        <button id="connect-btn" style="background:#28a745; color:white; border:none; padding:2px 5px;">OK</button>
+    <div id="net-controls" style="display: none; gap: 4px; align-items: center;">
+        <input type="text" id="remote-id" placeholder="ID противника" style="width: 80px; font-size: 9px; padding: 3px;">
+        <button id="connect-btn" style="background:#28a745; color:white; border:none; padding:4px 8px; font-size:9px; border-radius:3px; cursor:pointer;">OK</button>
+        <span id="connection-status" style="font-size:8px; color:#aaa;"></span>
     </div>
 
     <div style="text-align: center;">
@@ -116,7 +117,7 @@ game_html = """
     let totalWinsMe = 0;
     let totalWinsOpp = 0;
     let propellerRotation = 0;
-    let screenShake = 0; // Переменная для тряски
+    let screenShake = 0;
 
     let bullets = [];
     let particles = [];
@@ -128,6 +129,119 @@ game_html = """
 
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
+
+    // PeerJS setup
+    let peer = null;
+    let conn = null;
+    let myPeerId = '';
+
+    function showStatus(msg) {
+        const statusEl = document.getElementById('connection-status');
+        if (statusEl) {
+            statusEl.innerText = msg;
+            statusEl.style.color = '#00ff00';
+            setTimeout(() => {
+                statusEl.style.color = '#aaa';
+            }, 2000);
+        }
+    }
+
+    function initPeer() {
+        try {
+            peer = new Peer();
+            
+            peer.on('open', id => {
+                myPeerId = id;
+                document.getElementById('my-peer-id').innerText = id;
+                console.log('My peer ID:', id);
+                showStatus('Готов');
+            });
+            
+            peer.on('error', err => {
+                console.error('Peer error:', err);
+                alert('Ошибка PeerJS: ' + err.type);
+                showStatus('Ошибка!');
+            });
+            
+            peer.on('connection', c => {
+                console.log('Incoming connection from:', c.peer);
+                conn = c;
+                isSolo = false;
+                updateUI('net');
+                setupConn();
+                showStatus('Подключен: ' + c.peer.substring(0, 8));
+            });
+        } catch(e) {
+            console.error('Failed to initialize PeerJS:', e);
+            alert('Не удалось инициализировать PeerJS');
+        }
+    }
+
+    function setupConn() {
+        if (!conn) return;
+        
+        conn.on('open', () => {
+            console.log('Connection fully established');
+        });
+        
+        conn.on('data', d => {
+            if(d.t === 's') { 
+                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
+                opp.state = d.state; opp.score = d.score;
+            }
+            if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
+        });
+        
+        conn.on('close', () => {
+            console.log('Connection closed');
+            showStatus('Отключен');
+            isSolo = true;
+            updateUI('easy');
+        });
+        
+        conn.on('error', err => {
+            console.error('Connection error:', err);
+            showStatus('Ошибка связи!');
+        });
+    }
+
+    document.getElementById('connect-btn').onclick = () => {
+        const remoteId = document.getElementById('remote-id').value.trim();
+        if (!remoteId) {
+            alert('Введите ID противника');
+            return;
+        }
+        if (!peer) {
+            alert('PeerJS не инициализирован. Перезагрузите страницу.');
+            return;
+        }
+        
+        console.log('Connecting to:', remoteId);
+        showStatus('Подключение...');
+        
+        try {
+            conn = peer.connect(remoteId);
+            
+            conn.on('open', () => {
+                console.log('Connection opened!');
+                isSolo = false;
+                updateUI('net');
+                setupConn();
+                showStatus('Подключен!');
+                resetMatch();
+            });
+            
+            conn.on('error', err => {
+                console.error('Connection error:', err);
+                alert('Ошибка подключения: ' + err);
+                showStatus('Ошибка!');
+            });
+        } catch(e) {
+            console.error('Failed to connect:', e);
+            alert('Не удалось подключиться');
+            showStatus('Ошибка!');
+        }
+    };
 
     function updateUI(mode) {
         document.querySelectorAll('#mode-ai-easy, #mode-ai-hard, #mode-net').forEach(b => b.classList.remove('active-mode'));
@@ -150,23 +264,7 @@ game_html = """
 
     document.getElementById('mode-ai-easy').onclick = () => { isSolo=true; difficulty='easy'; updateUI('easy'); resetMatch(); };
     document.getElementById('mode-ai-hard').onclick = () => { isSolo=true; difficulty='hard'; updateUI('hard'); resetMatch(); };
-    document.getElementById('mode-net').onclick = () => { isSolo=false; updateUI('net'); resetMatch(); };
-
-    let peer = new Peer();
-    let conn = null;
-    peer.on('open', id => document.getElementById('my-peer-id').innerText = id);
-    peer.on('connection', c => { conn = c; isSolo = false; updateUI('net'); setupConn(); });
-    document.getElementById('connect-btn').onclick = () => { conn = peer.connect(document.getElementById('remote-id').value); setupConn(); };
-
-    function setupConn() {
-        conn.on('data', d => {
-            if(d.t === 's') { 
-                opp.x = d.x; opp.y = d.y; opp.a = d.a; opp.hp = d.hp; 
-                opp.state = d.state; opp.score = d.score;
-            }
-            if(d.t === 'f') bullets.push({ x: d.x, y: d.y, a: d.a, owner: 'opp' });
-        });
-    }
+    document.getElementById('mode-net').onclick = () => { updateUI('net'); };
 
     const joy = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: {left:'50%', top:'50%'} });
     joy.on('move', (e, d) => { if(d.angle && me.state === 'alive') me.a = -d.angle.degree; });
@@ -175,7 +273,7 @@ game_html = """
         if(e) { e.preventDefault(); e.stopPropagation(); }
         if(!gameActive || me.state !== 'alive') return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
-        if(conn) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
+        if(conn && conn.open) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
     };
 
     const fBtn = document.getElementById('fireBtn');
@@ -279,6 +377,11 @@ game_html = """
                 createPart(me.x, me.y, 'explode', me.color); 
                 respawn(me); 
             }
+        }
+
+        // Send state to opponent if connected
+        if(conn && conn.open && !isSolo) {
+            conn.send({ t: 's', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state, score: me.score });
         }
 
         if(isSolo) {
@@ -394,6 +497,9 @@ game_html = """
     }
 
     function loop() { update(); draw(); requestAnimationFrame(loop); }
+    
+    // Initialize PeerJS on load
+    initPeer();
     loop();
 </script>
 """
