@@ -222,10 +222,7 @@ game_html = """
         conn = peer.connect(remoteId, {
             reliable: true
         });
-
-        // Навешиваем обработчики на созданный объект мгновенно
-        setupConnHandlers(conn);
-            };
+            
             const timeout = setTimeout(() => {
                 if (conn && !conn.open) {
                     conn.close();
