@@ -144,54 +144,6 @@ game_html = """
         console.log('📡', msg);
     }
 
-    function initPeer() {
-        try {
-            peer = new Peer({
-                config: {
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:global.stun.twilio.com:3478' }
-                    ]
-                }
-            });
-            
-            peer.on('open', id => {
-                myPeerId = id;
-                document.getElementById('my-peer-id').innerText = id;
-                console.log('My peer ID:', id);
-                showStatus('Готов');
-            });
-            
-            peer.on('error', err => {
-                console.error('❌ Peer error:', err.type, err);
-                if (err.type === 'peer-unavailable') {
-                    showStatus('ID не найден!', '#ff0000');
-                    alert('Игрок не найден. Проверьте ID.');
-                } else {
-                    showStatus('Ошибка: ' + err.type, '#ff0000');
-                }
-            });
-            
-            peer.on('connection', c => {
-                console.log('📞 Входящее соединение от:', c.peer);
-                if (conn && conn.open) conn.close();
-                conn = c;
-                
-                c.on('open', () => {
-                    console.log('✅ Входящее соединение открыто');
-                    isSolo = false;
-                    updateUI('net');
-                    showStatus('Подключено!', '#00ff00');
-                    setupConn(); // Настраиваем обработчики данных
-                    resetMatch();
-                });
-            });
-        } catch(e) {
-            console.error('Failed to initialize PeerJS:', e);
-            alert('Не удалось инициализировать PeerJS');
-        }
-    }
-
     function setupConn() {
         if (!conn) return;
         
@@ -216,6 +168,56 @@ game_html = """
         });
     }
 
+    function initPeer() {
+        try {
+            peer = new Peer({
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:global.stun.twilio.com:3478' }
+                    ]
+                }
+            });
+            
+            peer.on('open', id => {
+                myPeerId = id;
+                document.getElementById('my-peer-id').innerText = id;
+                console.log('✅ Peer ID:', id);
+                showStatus('Готов', '#00ff00');
+            });
+            
+            peer.on('error', err => {
+                console.error('❌ Peer error:', err.type, err);
+                if (err.type === 'peer-unavailable') {
+                    showStatus('ID не найден!', '#ff0000');
+                    alert('Игрок не найден. Проверьте ID.');
+                } else {
+                    showStatus('Ошибка: ' + err.type, '#ff0000');
+                }
+            });
+            
+            peer.on('connection', c => {
+                console.log('📞 Входящее соединение от:', c.peer);
+                if (conn && conn.open) conn.close();
+                conn = c;
+                
+                // ВАЖНО: Регистрируем обработчики ДО события open
+                setupConn();
+                
+                c.on('open', () => {
+                    console.log('✅ Входящее соединение открыто');
+                    isSolo = false;
+                    updateUI('net');
+                    showStatus('Подключено!', '#00ff00');
+                    resetMatch();
+                });
+            });
+        } catch(e) {
+            console.error('💥 Init error:', e);
+            alert('Не удалось инициализировать PeerJS');
+        }
+    }
+
     document.getElementById('connect-btn').onclick = () => {
         const remoteId = document.getElementById('remote-id').value.trim();
         if (!remoteId) {
@@ -231,14 +233,21 @@ game_html = """
         showStatus('Подключение...', '#ffaa00');
         
         try {
+            // ВАЖНО: Создаем соединение
             conn = peer.connect(remoteId, {
-                reliable: true
+                reliable: true,
+                serialization: 'json'
             });
+            
+            // ВАЖНО: Регистрируем обработчики СРАЗУ после создания
+            setupConn();
             
             const timeout = setTimeout(() => {
                 if (conn && !conn.open) {
+                    console.error('⏱️ Таймаут подключения');
                     conn.close();
                     showStatus('Таймаут!', '#ff0000');
+                    alert('Не удалось подключиться за 10 сек.\\nПроверьте ID и попробуйте снова.');
                 }
             }, 10000);
             
@@ -248,19 +257,18 @@ game_html = """
                 isSolo = false;
                 updateUI('net');
                 showStatus('Подключено!', '#00ff00');
-                setupConn(); // Настраиваем обработчики данных
                 resetMatch();
             });
             
             conn.on('error', err => {
                 clearTimeout(timeout);
-                console.error('❌ Ошибка:', err);
+                console.error('❌ Ошибка подключения:', err);
                 showStatus('Ошибка!', '#ff0000');
             });
         } catch(e) {
-            console.error('Failed to connect:', e);
-            alert('Не удалось подключиться');
-            showStatus('Ошибка!');
+            console.error('💥 Ошибка connect:', e);
+            alert('Не удалось подключиться: ' + e.message);
+            showStatus('Ошибка!', '#ff0000');
         }
     };
 
@@ -294,7 +302,11 @@ game_html = """
         if(e) { e.preventDefault(); e.stopPropagation(); }
         if(!gameActive || me.state !== 'alive') return;
         bullets.push({ x: me.x, y: me.y, a: me.a, owner: 'me' });
-        if(conn && conn.open) conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
+        if(conn && conn.open) {
+            try {
+                conn.send({ t: 'f', x: me.x, y: me.y, a: me.a });
+            } catch(e) { console.error('Ошибка отправки fire:', e); }
+        }
     };
 
     const fBtn = document.getElementById('fireBtn');
