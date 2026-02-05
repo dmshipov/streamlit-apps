@@ -46,6 +46,7 @@ game_html = """
         color: white; border: none; font-weight: bold; font-size: 14px; 
         box-shadow: 0 5px #b33030; cursor: pointer; -webkit-tap-highlight-color: transparent;
         user-select: none; -webkit-user-select: none;
+        touch-action: none;
     }
     #fireBtn:active { transform: translateY(3px); box-shadow: 0 2px #b33030; }
 
