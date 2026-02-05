@@ -9,9 +9,9 @@ game_html = """
     body { margin: 0; padding: 5px; background: #111; font-family: sans-serif; overflow-x: hidden; color: white; }
     
     #top-bar { 
-        background: #222; padding: 8px; border-radius: 8px; 
+        background: #222; padding: 4px; border-radius: 6px; 
         display: flex; justify-content: space-between; align-items: center; 
-        gap: 5px; margin-bottom: 5px; font-size: 11px;
+        gap: 3px; margin-bottom: 3px; font-size: 9px;
     }
     
     #viewport-container { position: relative; width: 100%; margin: 0 auto; touch-action: none; }
@@ -160,9 +160,9 @@ game_html = """
         background: #444;
         color: white;
         border: 1px solid #666;
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 10px;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 9px;
         cursor: pointer;
         transition: all 0.2s;
     }
@@ -172,17 +172,17 @@ game_html = """
         background: #28a745;
         color: white;
         border: none;
-        padding: 8px 20px;
-        border-radius: 6px;
-        font-size: 14px;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 11px;
         font-weight: bold;
         cursor: pointer;
-        box-shadow: 0 3px #1e7e34;
+        box-shadow: 0 2px #1e7e34;
         transition: all 0.2s;
     }
     .btn-start-pause:hover { background: #218838; }
-    .btn-start-pause:active { transform: translateY(2px); box-shadow: 0 1px #1e7e34; }
-    .btn-start-pause.paused { background: #ffc107; box-shadow: 0 3px #d39e00; }
+    .btn-start-pause:active { transform: translateY(1px); box-shadow: 0 1px #1e7e34; }
+    .btn-start-pause.paused { background: #ffc107; box-shadow: 0 2px #d39e00; }
     .btn-start-pause.paused:hover { background: #e0a800; }
     
     #close-sidebar {
@@ -362,16 +362,19 @@ game_html = """
     <div class="setting-group">
         <label class="setting-label">Скорость самолетов</label>
         <div class="slider-container">
-            <input type="range" id="speed-slider" class="slider" min="5" max="25" value="15" step="1">
-            <span class="slider-value" id="speed-value">15</span>
+            <input type="range" id="speed-slider" class="slider" min="5" max="25" value="10" step="1">
+            <span class="slider-value" id="speed-value">10</span>
         </div>
     </div>
     
-    <div class="setting-group" id="precision-settings" style="display: none;">
-        <label class="setting-label">Дистанция для точности (метров)</label>
+    <div class="setting-group">
+        <label class="setting-label">Зум камеры</label>
         <div class="slider-container">
-            <input type="range" id="precision-distance-slider" class="slider" min="200" max="800" value="400" step="50">
-            <span class="slider-value" id="precision-distance-value">400</span>
+            <input type="range" id="zoom-slider" class="slider" min="0.5" max="2.0" value="1.0" step="0.1">
+            <span class="slider-value" id="zoom-value">1.0x</span>
+        </div>
+        <div style="font-size: 9px; color: #666; margin-top: 5px;">
+            Приближение/отдаление камеры
         </div>
     </div>
 </div>
@@ -433,7 +436,8 @@ game_html = """
     let totalWinsOpp = 0;
     let propellerRotation = 0;
     let screenShake = 0;
-    let planeSpeed = 15;
+    let planeSpeed = 10;
+    let cameraZoom = 1.0;
     let precisionDistance = 400;
     let precisionTolerance = 80;
 
@@ -496,12 +500,12 @@ game_html = """
         speedValue.textContent = planeSpeed;
     });
 
-    // Precision distance slider
-    const precisionSlider = document.getElementById('precision-distance-slider');
-    const precisionValue = document.getElementById('precision-distance-value');
-    precisionSlider.addEventListener('input', (e) => {
-        precisionDistance = parseInt(e.target.value);
-        precisionValue.textContent = precisionDistance;
+    // Zoom slider
+    const zoomSlider = document.getElementById('zoom-slider');
+    const zoomValue = document.getElementById('zoom-value');
+    zoomSlider.addEventListener('input', (e) => {
+        cameraZoom = parseFloat(e.target.value);
+        zoomValue.textContent = cameraZoom.toFixed(1) + 'x';
     });
 
     // Mode buttons
@@ -526,10 +530,6 @@ game_html = """
         
         if (mode === 'ai-easy') difficulty = 'easy';
         else if (mode === 'ai-hard') difficulty = 'hard';
-        
-        // Show/hide precision settings
-        document.getElementById('precision-settings').style.display = 
-            (['paratrooper', 'cargo'].includes(mode)) ? 'block' : 'none';
         
         // Show/hide timer
         document.getElementById('game-timer').style.display = 
@@ -674,7 +674,11 @@ game_html = """
 
     manager.on('move', (evt, data) => {
         if (!gameActive) return;
-        me.a = data.angle.degree;
+        // Инвертируем угол чтобы верх был вверх
+        // nipplejs возвращает угол где 0° = право, 90° = верх
+        // Нам нужно: 0° = верх, 90° = право, 180° = низ, 270° = лево
+        me.a = data.angle.degree - 90;
+        if (me.a < 0) me.a += 360;
     });
 
     document.getElementById('fireBtn').addEventListener('click', () => {
@@ -1230,7 +1234,16 @@ game_html = """
             screenShake *= 0.9;
         }
 
-        ctx.scale(canvas.width / WORLD.w, canvas.height / WORLD.h);
+        // Применяем зум камеры
+        const baseScale = canvas.width / WORLD.w;
+        ctx.scale(baseScale * cameraZoom, (canvas.height / WORLD.h) * cameraZoom);
+        
+        // Центрируем камеру на игроке при зуме
+        if (cameraZoom !== 1.0) {
+            const offsetX = (WORLD.w / 2 - me.x) * (cameraZoom - 1.0) / cameraZoom;
+            const offsetY = (WORLD.h / 2 - me.y) * (cameraZoom - 1.0) / cameraZoom;
+            ctx.translate(offsetX, offsetY);
+        }
         
         // Draw clouds
         clouds.forEach(c => {
