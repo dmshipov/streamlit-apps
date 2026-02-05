@@ -969,35 +969,45 @@ game_html = """
         lastHitTime = now;
     }
 
-    function update() {
-            if(!gameActive || gamePaused) return;
-            propellerRotation += 0.9; 
+    let netTick = 0; // Добавьте эту переменную вне функции update
 
-            // Update timer for timed modes
-            if (['balloon', 'rings', 'race'].includes(gameMode)) {
-                gameTimer -= 1/60;
-                document.getElementById('game-timer').textContent = Math.ceil(gameTimer);
-                if (gameTimer <= 0) {
-                    endGame('ВРЕМЯ ВЫШЛО!', `Ваш счет: ${me.score}`);
-                    return;
+    function update() {
+        if(!gameActive || gamePaused) return;
+        propellerRotation += 0.9; 
+
+        // Таймер
+        if (['balloon', 'rings', 'race'].includes(gameMode)) {
+            gameTimer -= 1/60;
+            const timerEl = document.getElementById('game-timer');
+            if (timerEl) timerEl.textContent = Math.ceil(gameTimer);
+            if (gameTimer <= 0) {
+                endGame('ВРЕМЯ ВЫШЛО!', `Ваш счет: ${me.score}`);
+                return;
+            }
+        }
+
+        // --- БЕЗОПАСНЫЙ БЛОК ОТПРАВКИ ---
+        netTick++;
+        // Отправляем данные каждый 2-й кадр (30 раз в сек вместо 60)
+        // Также проверяем, что объект 'me' существует
+        if (gameMode === 'net' && conn && conn.open && netTick % 2 === 0) {
+            if (me && typeof me.x !== 'undefined') {
+                try {
+                    conn.send({
+                        t: 's',
+                        x: me.x,
+                        y: me.y,
+                        a: me.a,
+                        hp: me.hp,
+                        state: me.state,
+                        score: me.score
+                    });
+                } catch (e) {
+                    console.error("Ошибка отправки данных:", e);
                 }
             }
-
-            // --- ДОБАВЛЕННЫЙ БЛОК ДЛЯ СЕТЕВОЙ ИГРЫ ---
-            // Отправляем свои координаты противнику 60 раз в секунду
-            if (gameMode === 'net' && conn && conn.open) {
-                conn.send({
-                    t: 's',          // тип сообщения: state
-                    x: me.x,         // позиция X
-                    y: me.y,         // позиция Y
-                    a: me.a,         // угол поворота
-                    hp: me.hp,       // здоровье
-                    state: me.state, // жив/мертв
-                    score: me.score  // текущий счет
-                });
-            }
-
         }
+    }
 
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
         
