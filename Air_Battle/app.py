@@ -390,7 +390,7 @@ game_html = """
 <div id="top-bar">
     <div style="display: flex; gap: 10px; align-items: center;">
         <button class="btn-settings" id="open-sidebar">⚙️ НАСТРОЙКИ</button>
-        <button class="btn-start-pause" id="start-pause-btn">▶ СТАРТ</button>
+        <button class="btn-start-pause" id="start-pause-btn">⏸ ПАУЗА</button>
     </div>
 
     <div style="text-align: center;">
@@ -399,7 +399,7 @@ game_html = """
     </div>
 
     <div style="text-align: right; padding-right: 20px; flex-shrink: 0; min-width: 100px;">
-        <div style="font-size: 12px;">ID: <span id="my-peer-id" style="color:#00d2ff">...</span></div>
+        <div style="font-size: 12px;"><button onclick="copyID()" style="background: #444; border: none; color: white; border-radius: 3px; padding: 1px 4px; cursor: pointer; font-size: 10px;">📋</button>ID: <span id="my-peer-id" style="color:#00d2ff">...</span></div>
         <div style="font-size: 18px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
     </div>
 </div>
@@ -438,8 +438,8 @@ game_html = """
     let difficulty = 'easy';
     let gameMode = 'ai-easy';
     let scoreLimit = 5;
-    let gameActive = false;
-    let gamePaused = true;
+    let gameActive = true;
+    let gamePaused = false;
     let totalWinsMe = 0;
     let totalWinsOpp = 0;
     let propellerRotation = 0;
@@ -945,7 +945,11 @@ game_html = """
             });
         }
     }
-
+    function copyID() {
+        const idText = document.getElementById('my-peer-id').innerText;
+        navigator.clipboard.writeText(idText);
+        alert("ID скопирован: " + idText);
+    }
     function updateCombo() {
         const now = Date.now();
         if (now - lastHitTime < 2000) {
