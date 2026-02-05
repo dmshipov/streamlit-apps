@@ -1007,7 +1007,7 @@ game_html = """
                 }
             }
         }
-    }
+    
 
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
         
