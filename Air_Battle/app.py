@@ -970,17 +970,33 @@ game_html = """
     }
 
     function update() {
-        if(!gameActive || gamePaused) return;
-        propellerRotation += 0.9; 
+            if(!gameActive || gamePaused) return;
+            propellerRotation += 0.9; 
 
-        // Update timer for timed modes
-        if (['balloon', 'rings', 'race'].includes(gameMode)) {
-            gameTimer -= 1/60;
-            document.getElementById('game-timer').textContent = Math.ceil(gameTimer);
-            if (gameTimer <= 0) {
-                endGame('ВРЕМЯ ВЫШЛО!', `Ваш счет: ${me.score}`);
-                return;
+            // Update timer for timed modes
+            if (['balloon', 'rings', 'race'].includes(gameMode)) {
+                gameTimer -= 1/60;
+                document.getElementById('game-timer').textContent = Math.ceil(gameTimer);
+                if (gameTimer <= 0) {
+                    endGame('ВРЕМЯ ВЫШЛО!', `Ваш счет: ${me.score}`);
+                    return;
+                }
             }
+
+            // --- ДОБАВЛЕННЫЙ БЛОК ДЛЯ СЕТЕВОЙ ИГРЫ ---
+            // Отправляем свои координаты противнику 60 раз в секунду
+            if (gameMode === 'net' && conn && conn.open) {
+                conn.send({
+                    t: 's',          // тип сообщения: state
+                    x: me.x,         // позиция X
+                    y: me.y,         // позиция Y
+                    a: me.a,         // угол поворота
+                    hp: me.hp,       // здоровье
+                    state: me.state, // жив/мертв
+                    score: me.score  // текущий счет
+                });
+            }
+
         }
 
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
