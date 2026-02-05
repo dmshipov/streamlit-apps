@@ -590,15 +590,16 @@ game_html = """
     function initPeer() {
         try {
             peer = new Peer({
-                host: '0.peerjs.com',
-                port: 443,
-                secure: true,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
                         { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                }
+                    ],
+                    // Это заставляет браузер пробовать все возможные пути, 
+                    // игнорируя локальные ошибки на старте
+                    'iceCandidatePoolSize': 10 
+                },
+                debug: 1 // Показывать только критические ошибки
             });
             
             peer.on('open', id => {
@@ -633,8 +634,13 @@ game_html = """
     }
 
     function connectToPeer(remoteId) {
-        if (!peer) {
-            alert('PeerJS не инициализирован');
+        // Если старое соединение зависло — принудительно убиваем его перед новым
+        if (conn) {
+            conn.close();
+        }
+        
+        if (!peer || peer.destroyed) {
+            alert('Связь с сервером потеряна. Перезагрузите страницу.');
             return;
         }
         showStatus('Подключение...', '#ffaa00');
