@@ -9,9 +9,16 @@ game_html = """
     body { margin: 0; padding: 5px; background: #111; font-family: sans-serif; overflow-x: hidden; color: white; }
     
     #top-bar { 
-        background: #222; padding: 4px; border-radius: 6px; 
-        display: flex; justify-content: space-between; align-items: center; 
-        gap: 3px; margin-bottom: 3px; font-size: 9px;
+        background: #222; 
+        padding: 6px 12px; /* Добавили отступы по бокам */
+        border-radius: 6px; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        gap: 10px; 
+        margin-bottom: 3px; 
+        font-size: 9px;
+        box-sizing: border-box; /* Чтобы padding не раздувал ширину */
     }
     
     #viewport-container { position: relative; width: 100%; margin: 0 auto; touch-action: none; }
@@ -390,8 +397,8 @@ game_html = """
         <div style="font-size: 16px; font-weight: bold; color: #fbff00;"><span id="wins-me">0</span> : <span id="wins-opp">0</span></div>
     </div>
 
-    <div style="text-align: right;">
-        <div style="font-size: 10px;">ID: <span id="my-peer-id" style="color:#00d2ff">...</span></div>
+    <div style="text-align: right; padding-right: 20px; flex-shrink: 0; min-width: 100px;">
+        <div style="font-size: 12px;">ID: <span id="my-peer-id" style="color:#00d2ff">...</span></div>
         <div style="font-size: 18px; font-weight: bold;"><span id="sc-me" style="color:#ff4b4b">0</span> : <span id="sc-opp" style="color:#00d2ff">0</span></div>
     </div>
 </div>
@@ -674,11 +681,17 @@ game_html = """
 
     manager.on('move', (evt, data) => {
         if (!gameActive) return;
-        // Инвертируем угол чтобы верх был вверх
-        // nipplejs возвращает угол где 0° = право, 90° = верх
-        // Нам нужно: 0° = верх, 90° = право, 180° = низ, 270° = лево
-        me.a = data.angle.degree - 90;
-        if (me.a < 0) me.a += 360;
+
+        // В nipplejs 0 градусов — это вправо, а нам нужно, 
+        // чтобы при движении стика вверх самолет летел вверх.
+        // Вычитаем 90 градусов или просто инвертируем угол в зависимости от вашей логики отрисовки:
+        
+        me.a = -data.angle.degree; 
+        
+        // Теперь:
+        // Стик Вверх = -90 (вверх на холсте)
+        // Стик Вниз = -270 / 90 (вниз на холсте)
+        // Стик Вправо = 0 (вправо на холсте)
     });
 
     document.getElementById('fireBtn').addEventListener('click', () => {
