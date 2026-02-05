@@ -695,7 +695,23 @@ game_html = """
         // Стик Вправо = 0 (вправо на холсте)
     });
 
-    document.getElementById('fireBtn').addEventListener('click', () => {
+    // Используем touchstart для мгновенной реакции и поддержки мультитача
+    document.getElementById('fireBtn').addEventListener('touchstart', (e) => {
+        // Предотвращаем стандартное поведение (скролл/зум), чтобы не блокировать мультитач
+        e.preventDefault(); 
+        
+        if (!gameActive || me.state !== 'alive') return;
+        
+        bullets.push({x: me.x, y: me.y, a: me.a, owner: 'me'});
+        
+        if (conn && conn.open) {
+            conn.send({t: 'b', x: me.x, y: me.y, a: me.a});
+        }
+    }, { passive: false });
+
+    // Оставляем mousedown для игры мышкой с компьютера (необязательно, но полезно)
+    document.getElementById('fireBtn').addEventListener('mousedown', (e) => {
+        if ('ontouchstart' in window) return; // Если это сенсорный экран, игнорируем мышь
         if (!gameActive || me.state !== 'alive') return;
         
         bullets.push({x: me.x, y: me.y, a: me.a, owner: 'me'});
