@@ -496,7 +496,7 @@ game_html = """
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
 
     // Loop animation variables
-    let isLooping = false;
+    let isDoingLoop = false;
     let loopProgress = 0;
     let loopStartAngle = 0;
     let loopScale = 1.0;
@@ -535,11 +535,11 @@ game_html = """
     const loopBtn = document.getElementById('loopBtn');
     loopBtn.addEventListener('click', () => {
         console.log('Loop button clicked!');
-        console.log('isLooping:', isLooping, 'me.state:', me.state, 'gameActive:', gameActive);
+        console.log('isDoingLoop:', isDoingLoop, 'me.state:', me.state, 'gameActive:', gameActive);
         
-        if (!isLooping && me.state === 'alive') {
+        if (!isDoingLoop && me.state === 'alive') {
             console.log('Starting loop animation');
-            isLooping = true;
+            isDoingLoop = true;
             loopProgress = 0;
             loopStartAngle = me.a;
             loopBtn.disabled = true;
@@ -746,7 +746,7 @@ game_html = """
     });
 
     manager.on('move', (evt, data) => {
-        if (!gameActive || isLooping) return; // Блокируем управление во время петли
+        if (!gameActive || isDoingLoop) return; // Блокируем управление во время петли
 
         // В nipplejs 0 градусов — это вправо, а нам нужно, 
         // чтобы при движении стика вверх самолет летел вверх.
@@ -1080,12 +1080,12 @@ game_html = """
 
         if(me.state === 'alive') {
             // Loop animation
-            if (isLooping) {
+            if (isDoingLoop) {
                 loopProgress += 0.015; // Скорость анимации петли
                 
                 if (loopProgress >= 1.0) {
                     // Завершение петли
-                    isLooping = false;
+                    isDoingLoop = false;
                     loopProgress = 0;
                     loopScale = 1.0;
                     loopPitch = 0;
@@ -1541,7 +1541,7 @@ game_html = """
             ctx.rotate(p.a * Math.PI / 180);
             
             // Применяем 3D эффект для мертвой петли
-            const isPlayerLooping = (p === me && isLooping);
+            const isPlayerLooping = (p === me && isDoingLoop);
             if (isPlayerLooping) {
                 // Масштабирование (эффект приближения)
                 ctx.scale(loopScale, loopScale);
