@@ -763,8 +763,7 @@ game_html = """
             const targetRad = opp.a * Math.PI / 180;
             brTargetX = opp.x - Math.cos(targetRad) * 220;
             brTargetY = opp.y - Math.sin(targetRad) * 220;
-        });
-    }
+        };
 
         
             
