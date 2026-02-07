@@ -481,6 +481,7 @@ game_html = """
     // Barrel roll variables
     let isBarrelRolling = false;
     let barrelRollCooldown = 0;
+    let barrelRollRotation = 0; // Дополнительное вращение для эффекта переворота
     let barrelRollScale = 1.0; // Масштаб для эффекта удаления/приближения
     const BARREL_ROLL_COOLDOWN = 180; // 3 seconds at 60fps
     let screenShake = 0;
@@ -755,6 +756,7 @@ game_html = """
             // Начинаем мёртвую петлю
             isBarrelRolling = true;
             barrelRollCooldown = BARREL_ROLL_COOLDOWN;
+            barrelRollRotation = 0;
             
             // Сохраняем начальную позицию
             const startX = me.x;
@@ -767,12 +769,13 @@ game_html = """
             const targetY = opp.y - Math.sin(targetRad) * 250;
             
             let loopProgress = 0;
-            const loopDuration = 80; // frames
+            const loopDuration = 120; // Медленнее - 2 секунды
             
             const loopInterval = setInterval(() => {
                 if (!gameActive) {
                     clearInterval(loopInterval);
                     isBarrelRolling = false;
+                    barrelRollRotation = 0;
                     barrelRollScale = 1.0;
                     return;
                 }
@@ -780,40 +783,36 @@ game_html = """
                 loopProgress++;
                 const progress = loopProgress / loopDuration;
                 
-                // Вертикальная петля - самолёт уходит "из экрана" и возвращается
-                // 0-25%: уход вверх и "от экрана" (уменьшение)
-                // 25-50%: верхняя точка петли
-                // 50-75%: возврат "к экрану" (увеличение)
-                // 75-100%: спуск и позиционирование
+                // Плавная функция для красивой анимации (easing)
+                const easeProgress = progress < 0.5 
+                    ? 2 * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
                 
-                const loopAngle = progress * 360; // градусы петли
-                const loopRad = loopAngle * Math.PI / 180;
+                // Вертикальная петля СВЕРХУ-ВНИЗ:
+                // 0-50%: Переворот (увеличение масштаба, самолёт приближается "из экрана")
+                // 50-100%: Возврат (уменьшение масштаба, самолёт отдаляется "в экран")
                 
-                // Масштаб самолёта для эффекта глубины (удаление/приближение)
-                if (progress < 0.25) {
-                    // Уход от экрана - уменьшение
-                    barrelRollScale = 1.0 - progress * 2; // от 1.0 до 0.5
-                } else if (progress < 0.5) {
-                    // В самой дальней точке
-                    barrelRollScale = 0.5;
-                } else if (progress < 0.75) {
-                    // Возврат к экрану - увеличение
-                    barrelRollScale = 0.5 + (progress - 0.5) * 2; // от 0.5 до 1.0
+                if (progress < 0.5) {
+                    // Первая половина - переворот вверх ногами, приближение
+                    barrelRollScale = 1.0 + progress * 1.0; // от 1.0 до 1.5
+                    barrelRollRotation = progress * 180; // от 0° до 180° (переворот)
                 } else {
-                    barrelRollScale = 1.0;
+                    // Вторая половина - возврат в нормальное положение, отдаление
+                    barrelRollScale = 1.5 - (progress - 0.5) * 1.0; // от 1.5 до 1.0
+                    barrelRollRotation = 180 + (progress - 0.5) * 180; // от 180° до 360°
                 }
                 
                 // Движение от стартовой к целевой позиции
-                const moveProgress = Math.min(1, progress * 1.2);
-                me.x = startX + (targetX - startX) * moveProgress;
-                me.y = startY + (targetY - startY) * moveProgress;
+                me.x = startX + (targetX - startX) * easeProgress;
+                me.y = startY + (targetY - startY) * easeProgress;
                 
-                // Вращение самолёта во время петли
-                me.a = startAngle + loopAngle;
+                // Базовый угол самолёта плавно меняется к углу противника
+                me.a = startAngle + (opp.a - startAngle) * easeProgress;
                 
                 if (loopProgress >= loopDuration) {
                     clearInterval(loopInterval);
                     isBarrelRolling = false;
+                    barrelRollRotation = 0;
                     barrelRollScale = 1.0;
                     
                     // Финальное позиционирование за хвостом
@@ -1122,7 +1121,7 @@ game_html = """
         
         // Неуязвимость и регенерация во время петли
         if (isBarrelRolling && me.state === 'alive') {
-            me.hp = Math.min(me.max, me.hp + 0.2);
+            me.hp = Math.min(me.max, me.hp + 0.15);
         } 
 
         // Таймер
@@ -1592,12 +1591,17 @@ game_html = """
             ctx.save();
             ctx.translate(p.x, p.y);
             
-            // Применяем масштаб для эффекта глубины во время мёртвой петли
-            if (p === me && isBarrelRolling) {
-                ctx.scale(barrelRollScale, barrelRollScale);
-            }
-            
+            // Базовый поворот самолёта
             ctx.rotate(p.a * Math.PI / 180);
+            
+            // Применяем эффекты мёртвой петли для игрока
+            if (p === me && isBarrelRolling) {
+                // Масштаб для эффекта приближения/отдаления
+                ctx.scale(barrelRollScale, barrelRollScale);
+                
+                // Дополнительное вращение для переворота (вертикальная петля)
+                ctx.rotate(barrelRollRotation * Math.PI / 180);
+            }
             
             ctx.fillStyle = "rgba(0,0,0,0.2)";
             ctx.beginPath(); ctx.ellipse(0, 15, 50, 15, 0, 0, Math.PI * 2); ctx.fill();
