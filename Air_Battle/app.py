@@ -534,7 +534,11 @@ game_html = """
     // Loop button
     const loopBtn = document.getElementById('loopBtn');
     loopBtn.addEventListener('click', () => {
-        if (!isLooping && me.state === 'alive' && gameActive) {
+        console.log('Loop button clicked!');
+        console.log('isLooping:', isLooping, 'me.state:', me.state, 'gameActive:', gameActive);
+        
+        if (!isLooping && me.state === 'alive') {
+            console.log('Starting loop animation');
             isLooping = true;
             loopProgress = 0;
             loopStartAngle = me.a;
@@ -543,7 +547,10 @@ game_html = """
             // Анимация будет длиться около 3 секунд
             setTimeout(() => {
                 loopBtn.disabled = false;
+                console.log('Loop button enabled again');
             }, 3000);
+        } else {
+            console.log('Loop not started. Conditions not met.');
         }
     });
 
