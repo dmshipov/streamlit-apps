@@ -54,6 +54,29 @@ game_html = """
     #hp-bar-container { width: 130px; height: 16px; background: #444; border-radius: 8px; overflow: hidden; border: 1px solid #000; }
     #hp-fill { width: 100%; height: 100%; background: #28a745; transition: 0.3s; }
     .hp-label { font-size: 10px; color: #aaa; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+    
+    #loopBtn {
+        background: #9b59b6;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 3px #6c3483;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 5px;
+    }
+    #loopBtn:hover { background: #8e44ad; }
+    #loopBtn:active { transform: translateY(2px); box-shadow: 0 1px #6c3483; }
+    #loopBtn:disabled {
+        background: #555;
+        cursor: not-allowed;
+        box-shadow: 0 3px #333;
+    }
 
     #joy-zone { flex: 1; display: flex; justify-content: flex-end; align-items: flex-end; }
     #joystick-zone { width: 110px; height: 110px; background: rgba(255,255,255,0.05); border-radius: 50%; position: relative; }
@@ -421,6 +444,7 @@ game_html = """
     <div id="hp-zone">
         <div class="hp-label">HP PILOT</div>
         <div id="hp-bar-container"><div id="hp-fill"></div></div>
+        <button id="loopBtn">🔄 LOOP</button>
     </div>
     <div id="joy-zone"><div id="joystick-zone"></div></div>
 </div>
@@ -471,6 +495,13 @@ game_html = """
     let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
     let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
 
+    // Loop animation variables
+    let isLooping = false;
+    let loopProgress = 0;
+    let loopStartAngle = 0;
+    let loopScale = 1.0;
+    let loopPitch = 0; // Угол наклона для 3D эффекта
+
     let peer = null;
     let conn = null;
     let myPeerId = '';
@@ -497,6 +528,22 @@ game_html = """
             startPauseBtn.textContent = '⏸ ПАУЗА';
             startPauseBtn.classList.remove('paused');
             if (isArcadeMode()) initArcadeMode();
+        }
+    });
+
+    // Loop button
+    const loopBtn = document.getElementById('loopBtn');
+    loopBtn.addEventListener('click', () => {
+        if (!isLooping && me.state === 'alive' && gameActive) {
+            isLooping = true;
+            loopProgress = 0;
+            loopStartAngle = me.a;
+            loopBtn.disabled = true;
+            
+            // Анимация будет длиться около 3 секунд
+            setTimeout(() => {
+                loopBtn.disabled = false;
+            }, 3000);
         }
     });
 
@@ -692,7 +739,7 @@ game_html = """
     });
 
     manager.on('move', (evt, data) => {
-        if (!gameActive) return;
+        if (!gameActive || isLooping) return; // Блокируем управление во время петли
 
         // В nipplejs 0 градусов — это вправо, а нам нужно, 
         // чтобы при движении стика вверх самолет летел вверх.
@@ -1019,15 +1066,51 @@ game_html = """
 
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
         
+        // Loop animation
+        if (isLooping) {
+            loopProgress += 0.015; // Скорость анимации петли
+            
+            if (loopProgress >= 1.0) {
+                // Завершение петли
+                isLooping = false;
+                loopProgress = 0;
+                loopScale = 1.0;
+                loopPitch = 0;
+                me.a = loopStartAngle; // Возвращаем к исходному углу
+            } else {
+                // Анимация петли с 3D эффектом
+                const t = loopProgress;
+                
+                // Вращение на 360 градусов
+                me.a = loopStartAngle + (t * 360);
+                
+                // Эффект увеличения/уменьшения (приближение/удаление)
+                // Увеличивается в начале и в конце петли, уменьшается в середине
+                loopScale = 1.0 + Math.sin(t * Math.PI) * 0.8;
+                
+                // 3D pitch эффект (показываем брюхо самолета)
+                // В верхней точке петли (t=0.5) показываем низ самолета
+                loopPitch = Math.sin(t * Math.PI * 2) * 90;
+                
+                // Небольшое движение вперед во время петли
+                let r = me.a * Math.PI/180;
+                me.x += Math.cos(r) * planeSpeed * 1.2;
+                me.y += Math.sin(r) * planeSpeed * 1.2;
+            }
+        }
+        
         const wrap = (obj) => {
             if (obj.x < 0) obj.x = WORLD.w; if (obj.x > WORLD.w) obj.x = 0;
             if (obj.y < 0) obj.y = WORLD.h; if (obj.y > WORLD.h) obj.y = 0;
         };
 
         if(me.state === 'alive') {
-            let r = me.a * Math.PI/180;
-            me.x += Math.cos(r) * planeSpeed;
-            me.y += Math.sin(r) * planeSpeed;
+            // Обычное движение только если не выполняется петля
+            if (!isLooping) {
+                let r = me.a * Math.PI/180;
+                me.x += Math.cos(r) * planeSpeed;
+                me.y += Math.sin(r) * planeSpeed;
+            }
             wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { 
@@ -1451,6 +1534,22 @@ game_html = """
             ctx.translate(p.x, p.y);
             ctx.rotate(p.a * Math.PI / 180);
             
+            // Применяем 3D эффект для мертвой петли
+            const isPlayerLooping = (p === me && isLooping);
+            if (isPlayerLooping) {
+                // Масштабирование (эффект приближения)
+                ctx.scale(loopScale, loopScale);
+                
+                // 3D pitch эффект - сжимаем по вертикали для создания иллюзии наклона
+                const pitchFactor = Math.cos(loopPitch * Math.PI / 180);
+                ctx.scale(1, Math.abs(pitchFactor) < 0.1 ? 0.1 : Math.abs(pitchFactor));
+                
+                // Если pitch отрицательный, отражаем по вертикали (показываем брюхо)
+                if (pitchFactor < 0) {
+                    ctx.scale(1, -1);
+                }
+            }
+            
             ctx.fillStyle = "rgba(0,0,0,0.2)";
             ctx.beginPath(); ctx.ellipse(0, 15, 50, 15, 0, 0, Math.PI * 2); ctx.fill();
 
@@ -1467,6 +1566,35 @@ game_html = """
 
             ctx.fillStyle = col;
             ctx.beginPath(); ctx.roundRect(-8, -65, 25, 130, 8); ctx.fill();
+            
+            // Рисуем колесики шасси когда видим брюхо (во время петли)
+            if (isPlayerLooping && pitchFactor < 0) {
+                ctx.fillStyle = "#222";
+                // Левое колесо
+                ctx.beginPath();
+                ctx.arc(-15, 20, 6, 0, Math.PI * 2);
+                ctx.fill();
+                // Правое колесо
+                ctx.beginPath();
+                ctx.arc(-15, -20, 6, 0, Math.PI * 2);
+                ctx.fill();
+                // Переднее колесо
+                ctx.beginPath();
+                ctx.arc(30, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Стойки шасси
+                ctx.strokeStyle = "#444";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-10, 20);
+                ctx.lineTo(0, 10);
+                ctx.moveTo(-10, -20);
+                ctx.lineTo(0, -10);
+                ctx.moveTo(25, 0);
+                ctx.lineTo(15, 0);
+                ctx.stroke();
+            }
 
             if (p.state === 'alive') {
                 ctx.save();
