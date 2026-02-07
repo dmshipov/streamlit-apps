@@ -8,99 +8,6 @@ game_html = """
 <style>
     body { margin: 0; padding: 5px; background: #111; font-family: sans-serif; overflow-x: hidden; color: white; }
     
-
-    /* START SCREEN */
-    #start-screen {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 150;
-        border-radius: 8px;
-    }
-    
-    #start-screen h1 {
-        font-size: 36px;
-        margin-bottom: 20px;
-        color: #00d2ff;
-        text-shadow: 0 0 20px #00d2ff;
-        animation: pulseGlow 2s infinite;
-    }
-    
-    @keyframes pulseGlow {
-        0%, 100% { opacity: 1; text-shadow: 0 0 20px #00d2ff; }
-        50% { opacity: 0.8; text-shadow: 0 0 30px #00d2ff, 0 0 40px #00d2ff; }
-    }
-    
-    #start-btn {
-        width: 200px;
-        height: 60px;
-        background: linear-gradient(145deg, #ff4b4b, #ff6b6b);
-        color: white;
-        border: none;
-        border-radius: 30px;
-        font-size: 24px;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 8px 15px rgba(255, 75, 75, 0.4);
-        transition: all 0.3s;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-    
-    #start-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 20px rgba(255, 75, 75, 0.6);
-    }
-    
-    #start-btn:active {
-        transform: translateY(0);
-        box-shadow: 0 5px 10px rgba(255, 75, 75, 0.4);
-    }
-
-    /* BARREL ROLL BUTTON */
-    #barrel-roll-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 8px;
-    }
-    
-    #barrel-roll-btn {
-        background: linear-gradient(145deg, #9b59b6, #8e44ad);
-        color: white;
-        border: none;
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 4px #6c3483;
-        transition: all 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    #barrel-roll-btn:hover {
-        background: linear-gradient(145deg, #a569bd, #9b59b6);
-    }
-    
-    #barrel-roll-btn:active {
-        transform: translateY(2px);
-        box-shadow: 0 2px #6c3483;
-    }
-    
-    #barrel-roll-btn:disabled {
-        background: #555;
-        cursor: not-allowed;
-        box-shadow: 0 2px #333;
-    }
-    
     #top-bar { 
         background: #222; 
         padding: 6px 12px; /* Добавили отступы по бокам */
@@ -380,6 +287,99 @@ game_html = """
         animation: pulse 0.5s ease-in-out infinite;
     }
     
+
+    /* START SCREEN */
+    #start-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 150;
+        border-radius: 8px;
+    }
+    
+    #start-screen h1 {
+        font-size: 36px;
+        margin-bottom: 20px;
+        color: #00d2ff;
+        text-shadow: 0 0 20px #00d2ff;
+        animation: pulseGlow 2s infinite;
+    }
+    
+    @keyframes pulseGlow {
+        0%, 100% { opacity: 1; text-shadow: 0 0 20px #00d2ff; }
+        50% { opacity: 0.8; text-shadow: 0 0 30px #00d2ff, 0 0 40px #00d2ff; }
+    }
+    
+    #start-btn {
+        width: 200px;
+        height: 60px;
+        background: linear-gradient(145deg, #ff4b4b, #ff6b6b);
+        color: white;
+        border: none;
+        border-radius: 30px;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 8px 15px rgba(255, 75, 75, 0.4);
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    
+    #start-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 20px rgba(255, 75, 75, 0.6);
+    }
+    
+    #start-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 5px 10px rgba(255, 75, 75, 0.4);
+    }
+
+    /* BARREL ROLL BUTTON */
+    #barrel-roll-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 8px;
+    }
+    
+    #barrel-roll-btn {
+        background: linear-gradient(145deg, #9b59b6, #8e44ad);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px #6c3483;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    #barrel-roll-btn:hover {
+        background: linear-gradient(145deg, #a569bd, #9b59b6);
+    }
+    
+    #barrel-roll-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px #6c3483;
+    }
+    
+    #barrel-roll-btn:disabled {
+        background: #555;
+        cursor: not-allowed;
+        box-shadow: 0 2px #333;
+    }
+
     @keyframes pulse {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
@@ -804,25 +804,18 @@ game_html = """
         if (me.state !== 'alive') return;
         if (isBarrelRolling || barrelRollCooldown > 0) return;
         
-        // Выполняем мертвую петлю
         isBarrelRolling = true;
         barrelRollCooldown = BARREL_ROLL_COOLDOWN;
         
-        // Облетаем противника
         const targetX = opp.x;
         const targetY = opp.y;
-        
-        // Рассчитываем маршрут петли
         const dx = targetX - me.x;
         const dy = targetY - me.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Поворачиваем самолет на 180 градусов для петли
         const angleToTarget = Math.atan2(dy, dx) * 180 / Math.PI;
         
-        // Анимация петли
         let loopProgress = 0;
-        const loopDuration = 60; // frames
+        const loopDuration = 60;
         
         const loopInterval = setInterval(() => {
             if (!gameActive || !gameStarted) {
@@ -833,20 +826,17 @@ game_html = """
             
             loopProgress++;
             const progress = loopProgress / loopDuration;
-            
-            // Движение по дуге вокруг цели
             const radius = distance * 0.7;
             const angle = angleToTarget + (progress * 360);
             const rad = angle * Math.PI / 180;
             
             me.x = targetX + Math.cos(rad) * radius;
             me.y = targetY + Math.sin(rad) * radius;
-            me.a = angle + 90; // Направление самолета
+            me.a = angle + 90;
             
             if (loopProgress >= loopDuration) {
                 clearInterval(loopInterval);
                 isBarrelRolling = false;
-                // Позиционируем за хвостом противника
                 const oppRad = opp.a * Math.PI / 180;
                 me.x = opp.x - Math.cos(oppRad) * 150;
                 me.y = opp.y - Math.sin(oppRad) * 150;
@@ -1150,21 +1140,27 @@ game_html = """
     let netTick = 0; // Добавьте эту переменную вне функции update
 
     function update() {
-                if(!gameActive || gamePaused) return;
+        if(!gameActive || gamePaused) return;
         
         // Update barrel roll cooldown
         if (barrelRollCooldown > 0) {
             barrelRollCooldown--;
-            barrelRollBtn.disabled = true;
-            barrelRollBtn.innerText = `🔄 ${Math.ceil(barrelRollCooldown / 60)}s`;
+            const barrelRollBtn = document.getElementById('barrel-roll-btn');
+            if (barrelRollBtn) {
+                barrelRollBtn.disabled = true;
+                barrelRollBtn.innerText = `🔄 ${Math.ceil(barrelRollCooldown / 60)}s`;
+            }
         } else {
-            barrelRollBtn.disabled = false;
-            barrelRollBtn.innerText = '🔄 МЁРТВАЯ ПЕТЛЯ';
+            const barrelRollBtn = document.getElementById('barrel-roll-btn');
+            if (barrelRollBtn) {
+                barrelRollBtn.disabled = false;
+                barrelRollBtn.innerText = '🔄 МЁРТВАЯ ПЕТЛЯ';
+            }
         }
         
         // Barrel roll invincibility
         if (isBarrelRolling && me.state === 'alive') {
-            me.hp = Math.min(me.max, me.hp + 0.1); // Regenerate HP during barrel roll
+            me.hp = Math.min(me.max, me.hp + 0.1);
         }
         propellerRotation += 0.9; 
 
@@ -1616,6 +1612,24 @@ game_html = """
             });
         }
 
+        // Draw escort target
+        if (gameMode === 'escort' && escortTarget && escortTarget.state === 'alive') {
+            drawPlane({x: escortTarget.x, y: escortTarget.y, a: escortTarget.a, state: 'alive'}, escortTarget.color);
+            
+            // HP bar
+            ctx.fillStyle = '#444';
+            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100, 10);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100 * (escortTarget.hp / escortTarget.maxHp), 10);
+        }
+
+        // Draw enemies
+        enemies.forEach(e => {
+            if (e.state === 'alive') {
+                drawPlane(e, e.color);
+            }
+        });
+
         const drawPlane = (p, col) => {
             if(p.state !== 'alive' && (!p.dt || p.dt <= 0)) return;
             ctx.save();
@@ -1648,24 +1662,6 @@ game_html = """
             }
             ctx.restore();
         };
-        
-        // Draw escort target
-        if (gameMode === 'escort' && escortTarget && escortTarget.state === 'alive') {
-            drawPlane({x: escortTarget.x, y: escortTarget.y, a: escortTarget.a, state: 'alive'}, escortTarget.color);
-            
-            // HP bar
-            ctx.fillStyle = '#444';
-            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100, 10);
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100 * (escortTarget.hp / escortTarget.maxHp), 10);
-        }
-
-        // Draw enemies
-        enemies.forEach(e => {
-            if (e.state === 'alive') {
-                drawPlane(e, e.color);
-            }
-        });
 
         drawPlane(me, me.color);
         if (!isArcadeMode()) drawPlane(opp, opp.color);
