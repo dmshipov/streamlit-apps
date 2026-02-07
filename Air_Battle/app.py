@@ -480,15 +480,12 @@ game_html = """
     
     // Barrel roll variables
     let isBarrelRolling = false;
-    let barrelRollCooldown = 0;
-    let barrelRollRotation = 0; // Дополнительное вращение для эффекта переворота
-    let barrelRollScale = 1.0; // Масштаб для эффекта удаления/приближения
-    const BARREL_ROLL_COOLDOWN = 180; // 3 seconds at 60fps
-    let screenShake = 0;
-    let planeSpeed = 10;
-    let cameraZoom = 1.0;
-    let precisionDistance = 400;
-    let precisionTolerance = 80;
+    let barrelRollTimer = 0;
+    const BARREL_ROLL_DURATION = 90; // Длительность (1.5 сек)
+    let barrelRollRotation = 0;
+    let barrelRollScale = 1.0;
+    // Координаты для маневра
+    let brStartX, brStartY, brStartAngle, brTargetX, brTargetY;
 
     // Arcade mode variables
     let arcadeTargets = [];
@@ -747,16 +744,29 @@ game_html = """
         // Стик Вправо = 0 (вправо на холсте)
     });
     // BARREL ROLL BUTTON
+    // НАЙДИ И ЗАМЕНИ ЭТОТ БЛОК:
+    const barrelRollBtn = document.getElementById('barrel-roll-btn');
     const barrelRollBtn = document.getElementById('barrel-roll-btn');
     if (barrelRollBtn) {
         barrelRollBtn.addEventListener('click', () => {
-            if (!gameActive || gamePaused || me.state !== 'alive') return;
-            if (isBarrelRolling || barrelRollCooldown > 0) return;
+            if (!gameActive || gamePaused || me.state !== 'alive' || isBarrelRolling || barrelRollCooldown > 0) return;
             
-            // Начинаем мёртвую петлю
             isBarrelRolling = true;
+            barrelRollTimer = 0;
             barrelRollCooldown = BARREL_ROLL_COOLDOWN;
-            barrelRollRotation = 0;
+            
+            brStartX = me.x; 
+            brStartY = me.y; 
+            brStartAngle = me.a;
+            
+            // Цель — точка за хвостом противника
+            const targetRad = opp.a * Math.PI / 180;
+            brTargetX = opp.x - Math.cos(targetRad) * 220;
+            brTargetY = opp.y - Math.sin(targetRad) * 220;
+        });
+    }
+
+        
             
             // Сохраняем начальную позицию
             const startX = me.x;
@@ -1120,19 +1130,36 @@ game_html = """
         }
         
         // Неуязвимость и регенерация во время петли
-        if (isBarrelRolling && me.state === 'alive') {
-            me.hp = Math.min(me.max, me.hp + 0.15);
-        } 
+        if (isBarrelRolling) {
+        barrelRollTimer++;
+        let progress = barrelRollTimer / BARREL_ROLL_DURATION;
+        
+        // Плавное ускорение и замедление (Easing)
+        let ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-        // Таймер
-        if (['balloon', 'rings', 'race'].includes(gameMode)) {
-            gameTimer -= 1/60;
-            const timerEl = document.getElementById('game-timer');
-            if (timerEl) timerEl.textContent = Math.ceil(gameTimer);
-            if (gameTimer <= 0) {
-                endGame('ВРЕМЯ ВЫШЛО!', `Ваш счет: ${me.score}`);
-                return;
-            }
+        // Движение к цели
+        me.x = brStartX + (brTargetX - brStartX) * ease;
+        me.y = brStartY + (brTargetY - brStartY) * ease;
+        
+        // Плавный поворот носа
+        let angleDiff = opp.a - brStartAngle;
+        while(angleDiff < -180) angleDiff += 360; 
+        while(angleDiff > 180) angleDiff -= 360;
+        me.a = brStartAngle + angleDiff * ease;
+
+        // САМА ПЕТЛЯ: Ровно 360 градусов вращения
+        barrelRollRotation = progress * 360;
+        
+        // Визуальный подлет (масштаб)
+        barrelRollScale = 1.0 + Math.sin(progress * Math.PI) * 0.4;
+
+        if (barrelRollTimer >= BARREL_ROLL_DURATION) {
+            isBarrelRolling = false;
+            barrelRollRotation = 0;
+            barrelRollScale = 1.0;
+        }
+        return; // Пропускаем обычное управление, пока идет петля
+    }
         }
 
         // --- БЕЗОПАСНЫЙ БЛОК ОТПРАВКИ ---
@@ -1596,12 +1623,17 @@ game_html = """
             
             // Применяем эффекты мёртвой петли для игрока
             if (p === me && isBarrelRolling) {
-                // Масштаб для эффекта приближения/отдаления
-                ctx.scale(barrelRollScale, barrelRollScale);
-                
-                // Дополнительное вращение для переворота (вертикальная петля)
-                ctx.rotate(barrelRollRotation * Math.PI / 180);
+            ctx.scale(barrelRollScale, barrelRollScale);
+            ctx.rotate(barrelRollRotation * Math.PI / 180);
+            
+            // Если самолет перевернут "брюхом" к нам (от 90 до 270 градусов)
+            let normRot = barrelRollRotation % 360;
+            if (normRot > 90 && normRot < 270) {
+                ctx.fillStyle = "#222"; // Цвет колес
+                ctx.fillRect(-15, -30, 8, 8); // Левое колесо
+                ctx.fillRect(-15, 22, 8, 8);  // Правое колесо
             }
+        }
             
             ctx.fillStyle = "rgba(0,0,0,0.2)";
             ctx.beginPath(); ctx.ellipse(0, 15, 50, 15, 0, 0, Math.PI * 2); ctx.fill();
