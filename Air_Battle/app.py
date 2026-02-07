@@ -291,39 +291,6 @@ game_html = """
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
     }
-
-    /* BARREL ROLL BUTTON */
-    #barrel-roll-btn {
-        background: linear-gradient(145deg, #9b59b6, #8e44ad);
-        color: white;
-        border: none;
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 4px #6c3483;
-        transition: all 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 5px;
-    }
-    
-    #barrel-roll-btn:hover {
-        background: linear-gradient(145deg, #a569bd, #9b59b6);
-    }
-    
-    #barrel-roll-btn:active {
-        transform: translateY(2px);
-        box-shadow: 0 2px #6c3483;
-    }
-    
-    #barrel-roll-btn:disabled {
-        background: #555;
-        cursor: not-allowed;
-        box-shadow: 0 2px #333;
-    }
-
 </style>
 
 <div id="sidebar">
@@ -452,7 +419,6 @@ game_html = """
 <div id="lower-area">
     <div id="fire-zone"><button id="fireBtn">ОГОНЬ</button></div>
     <div id="hp-zone">
-        <button id="barrel-roll-btn">🔄 МЁРТВАЯ ПЕТЛЯ</button>
         <div class="hp-label">HP PILOT</div>
         <div id="hp-bar-container"><div id="hp-fill"></div></div>
     </div>
@@ -477,15 +443,11 @@ game_html = """
     let totalWinsMe = 0;
     let totalWinsOpp = 0;
     let propellerRotation = 0;
-    
-    // Barrel roll variables
-    let isBarrelRolling = false;
-    let barrelRollTimer = 0;
-    const BARREL_ROLL_DURATION = 90; // Длительность (1.5 сек)
-    let barrelRollRotation = 0;
-    let barrelRollScale = 1.0;
-    // Координаты для маневра
-    let brStartX, brStartY, brStartAngle, brTargetX, brTargetY;
+    let screenShake = 0;
+    let planeSpeed = 10;
+    let cameraZoom = 1.0;
+    let precisionDistance = 400;
+    let precisionTolerance = 80;
 
     // Arcade mode variables
     let arcadeTargets = [];
@@ -506,19 +468,12 @@ game_html = """
         clouds.push({ x: Math.random()*WORLD.w, y: Math.random()*WORLD.h, s: 0.5 + Math.random(), op: 0.3 + Math.random()*0.4 });
     }
 
-    // Состояние игрока и мира
-    let me = { x: 400, y: 400, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive', dt: 0 };
-    let opp = { x: 2600, y: 1600, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive', dt: 0 };
+    let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
+    let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
 
-    // НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ МЕРТВОЙ ПЕТЛИ
-    let isBarrelRolling = false;
-    let barrelRollTimer = 0;
-    const BARREL_ROLL_DURATION = 90; // 1.5 сек при 60fps
-    let barrelRollRotation = 0;
-    let barrelRollScale = 1.0;
-    let barrelRollCooldown = 0;
-    const BARREL_ROLL_COOLDOWN_VAL = 180; 
-    let brStartX, brStartY, brStartAngle, brTargetX, brTargetY;
+    let peer = null;
+    let conn = null;
+    let myPeerId = '';
 
     // Sidebar controls
     document.getElementById('open-sidebar').addEventListener('click', () => {
@@ -750,97 +705,6 @@ game_html = """
         // Стик Вниз = -270 / 90 (вниз на холсте)
         // Стик Вправо = 0 (вправо на холсте)
     });
-    // BARREL ROLL BUTTON
-    // НАЙДИ И ЗАМЕНИ ЭТОТ БЛОК:
-    // --- ИСПРАВЛЕННЫЙ БЛОК МЕРТВОЙ ПЕТЛИ ---
-    const barrelRollBtn = document.getElementById('barrel-roll-btn');
-    if (barrelRollBtn) {
-        barrelRollBtn.addEventListener('click', () => {
-            if (!gameActive || gamePaused || me.state !== 'alive' || isBarrelRolling || barrelRollCooldown > 0) return;
-            
-            isBarrelRolling = true;
-            barrelRollTimer = 0;
-            barrelRollCooldown = BARREL_ROLL_COOLDOWN_VAL;
-            
-            brStartX = me.x; brStartY = me.y; brStartAngle = me.a;
-            
-            // Расчет позиции "за хвостом"
-            const targetRad = opp.a * Math.PI / 180;
-            brTargetX = opp.x - Math.cos(targetRad) * 250;
-            brTargetY = opp.y - Math.sin(targetRad) * 250;
-        });
-    }
-    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
-
-        
-            
-            // Сохраняем начальную позицию
-            const startX = me.x;
-            const startY = me.y;
-            const startAngle = me.a;
-            
-            // Целевая позиция - за хвостом противника
-            const targetRad = opp.a * Math.PI / 180;
-            const targetX = opp.x - Math.cos(targetRad) * 250;
-            const targetY = opp.y - Math.sin(targetRad) * 250;
-            
-            let loopProgress = 0;
-            const loopDuration = 120; // Медленнее - 2 секунды
-            
-            const loopInterval = setInterval(() => {
-                if (!gameActive) {
-                    clearInterval(loopInterval);
-                    isBarrelRolling = false;
-                    barrelRollRotation = 0;
-                    barrelRollScale = 1.0;
-                    return;
-                }
-                
-                loopProgress++;
-                const progress = loopProgress / loopDuration;
-                
-                // Плавная функция для красивой анимации (easing)
-                const easeProgress = progress < 0.5 
-                    ? 2 * progress * progress 
-                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-                
-                // Вертикальная петля СВЕРХУ-ВНИЗ:
-                // 0-50%: Переворот (увеличение масштаба, самолёт приближается "из экрана")
-                // 50-100%: Возврат (уменьшение масштаба, самолёт отдаляется "в экран")
-                
-                if (progress < 0.5) {
-                    // Первая половина - переворот вверх ногами, приближение
-                    barrelRollScale = 1.0 + progress * 1.0; // от 1.0 до 1.5
-                    barrelRollRotation = progress * 180; // от 0° до 180° (переворот)
-                } else {
-                    // Вторая половина - возврат в нормальное положение, отдаление
-                    barrelRollScale = 1.5 - (progress - 0.5) * 1.0; // от 1.5 до 1.0
-                    barrelRollRotation = 180 + (progress - 0.5) * 180; // от 180° до 360°
-                }
-                
-                // Движение от стартовой к целевой позиции
-                me.x = startX + (targetX - startX) * easeProgress;
-                me.y = startY + (targetY - startY) * easeProgress;
-                
-                // Базовый угол самолёта плавно меняется к углу противника
-                me.a = startAngle + (opp.a - startAngle) * easeProgress;
-                
-                if (loopProgress >= loopDuration) {
-                    clearInterval(loopInterval);
-                    isBarrelRolling = false;
-                    barrelRollRotation = 0;
-                    barrelRollScale = 1.0;
-                    
-                    // Финальное позиционирование за хвостом
-                    me.x = targetX;
-                    me.y = targetY;
-                    me.a = opp.a;
-                }
-            }, 1000 / 60);
-        });
-    }
-
-
 
     // Используем touchstart для мгновенной реакции и поддержки мультитача
     document.getElementById('fireBtn').addEventListener('touchstart', (e) => {
@@ -1117,39 +981,17 @@ game_html = """
 
     function update() {
         if(!gameActive || gamePaused) return;
-        propellerRotation += 0.9;
-        
-        // Обновление кулдауна мёртвой петли
-        if (barrelRollCooldown > 0) barrelRollCooldown--;
+        propellerRotation += 0.9; 
 
-        if (isBarrelRolling) {
-            barrelRollTimer++;
-            let progress = barrelRollTimer / BARREL_ROLL_DURATION;
-            let ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-            // Движение и разворот
-            me.x = brStartX + (brTargetX - brStartX) * ease;
-            me.y = brStartY + (brTargetY - brStartY) * ease;
-            
-            let angleDiff = opp.a - brStartAngle;
-            while(angleDiff < -180) angleDiff += 360; 
-            while(angleDiff > 180) angleDiff -= 360;
-            me.a = brStartAngle + angleDiff * ease;
-
-            // Визуальный переворот 360 градусов
-            barrelRollRotation = progress * 360;
-            barrelRollScale = 1.0 + Math.sin(progress * Math.PI) * 0.4;
-
-            if (barrelRollTimer >= BARREL_ROLL_DURATION) {
-                isBarrelRolling = false;
-                barrelRollRotation = 0;
-                barrelRollScale = 1.0;
+        // Таймер
+        if (['balloon', 'rings', 'race'].includes(gameMode)) {
+            gameTimer -= 1/60;
+            const timerEl = document.getElementById('game-timer');
+            if (timerEl) timerEl.textContent = Math.ceil(gameTimer);
+            if (gameTimer <= 0) {
+                endGame('ВРЕМЯ ВЫШЛО!', `Ваш счет: ${me.score}`);
+                return;
             }
-            // Отправляем данные в сеть и выходим из update, чтобы не срабатывало обычное управление
-            if (conn && conn.open) {
-                conn.send({ type: 'move', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state });
-            }
-            return; 
         }
 
         // --- БЕЗОПАСНЫЙ БЛОК ОТПРАВКИ ---
@@ -1608,21 +1450,6 @@ game_html = """
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.a * Math.PI / 180);
-
-            // Если это наш самолет и он в петле
-            if (p === me && isBarrelRolling) {
-                ctx.scale(barrelRollScale, barrelRollScale);
-                ctx.rotate(barrelRollRotation * Math.PI / 180);
-                
-                // Рисуем шасси, когда самолет перевернут (от 90 до 270 градусов)
-                let normRot = barrelRollRotation % 360;
-                if (normRot > 90 && normRot < 270) {
-                    ctx.fillStyle = "#222";
-                    ctx.fillRect(-15, -25, 10, 10); // Колесо левое
-                    ctx.fillRect(-15, 15, 10, 10);  // Колесо правое
-                }
-            }
-            // Дальше твой старый код отрисовки крыльев и хвоста...
             
             ctx.fillStyle = "rgba(0,0,0,0.2)";
             ctx.beginPath(); ctx.ellipse(0, 15, 50, 15, 0, 0, Math.PI * 2); ctx.fill();
