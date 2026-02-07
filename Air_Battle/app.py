@@ -533,26 +533,31 @@ game_html = """
 
     // Loop button
     const loopBtn = document.getElementById('loopBtn');
-    loopBtn.addEventListener('click', () => {
-        console.log('Loop button clicked!');
-        console.log('isDoingLoop:', isDoingLoop, 'me.state:', me.state, 'gameActive:', gameActive);
-        
-        if (!isDoingLoop && me.state === 'alive') {
-            console.log('Starting loop animation');
-            isDoingLoop = true;
-            loopProgress = 0;
-            loopStartAngle = me.a;
-            loopBtn.disabled = true;
+    if (!loopBtn) {
+        console.error('Loop button not found in DOM!');
+    } else {
+        console.log('Loop button found successfully');
+        loopBtn.addEventListener('click', () => {
+            console.log('Loop button clicked!');
+            console.log('isDoingLoop:', isDoingLoop, 'me.state:', me.state, 'gameActive:', gameActive);
             
-            // Анимация будет длиться около 3 секунд
-            setTimeout(() => {
-                loopBtn.disabled = false;
-                console.log('Loop button enabled again');
-            }, 3000);
-        } else {
-            console.log('Loop not started. Conditions not met.');
-        }
-    });
+            if (!isDoingLoop && me.state === 'alive') {
+                console.log('Starting loop animation');
+                isDoingLoop = true;
+                loopProgress = 0;
+                loopStartAngle = me.a;
+                loopBtn.disabled = true;
+                
+                // Анимация будет длиться около 3 секунд
+                setTimeout(() => {
+                    loopBtn.disabled = false;
+                    console.log('Loop button enabled again');
+                }, 3000);
+            } else {
+                console.log('Loop not started. Conditions not met.');
+            }
+        });
+    }
 
     // Speed slider
     const speedSlider = document.getElementById('speed-slider');
@@ -1034,8 +1039,9 @@ game_html = """
     let netTick = 0; // Добавьте эту переменную вне функции update
 
     function update() {
-        if(!gameActive || gamePaused) return;
-        propellerRotation += 0.9; 
+        try {
+            if(!gameActive || gamePaused) return;
+            propellerRotation += 0.9; 
 
         // Таймер
         if (['balloon', 'rings', 'race'].includes(gameMode)) {
@@ -1081,10 +1087,14 @@ game_html = """
         if(me.state === 'alive') {
             // Loop animation
             if (isDoingLoop) {
+                if (loopProgress === 0) {
+                    console.log('Loop animation started in update()');
+                }
                 loopProgress += 0.015; // Скорость анимации петли
                 
                 if (loopProgress >= 1.0) {
                     // Завершение петли
+                    console.log('Loop animation completed');
                     isDoingLoop = false;
                     loopProgress = 0;
                     loopScale = 1.0;
@@ -1383,11 +1393,15 @@ game_html = """
                 }
             }
         });
+        } catch (error) {
+            console.error('Error in update():', error);
+        }
     }
 
     function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
+        try {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
         
         if(screenShake > 1) {
             ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
@@ -1627,6 +1641,9 @@ game_html = """
         document.getElementById('sc-me').innerText = me.score;
         if (!isArcadeMode()) {
             document.getElementById('sc-opp').innerText = opp.score;
+        }
+        } catch (error) {
+            console.error('Error in draw():', error);
         }
     }
 
