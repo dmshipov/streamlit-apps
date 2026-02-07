@@ -745,7 +745,7 @@ game_html = """
     });
     // BARREL ROLL BUTTON
     // НАЙДИ И ЗАМЕНИ ЭТОТ БЛОК:
-    const barrelRollBtn = document.getElementById('barrel-roll-btn');
+    // --- ИСПРАВЛЕННЫЙ БЛОК МЕРТВОЙ ПЕТЛИ ---
     const barrelRollBtn = document.getElementById('barrel-roll-btn');
     if (barrelRollBtn) {
         barrelRollBtn.addEventListener('click', () => {
@@ -753,17 +753,19 @@ game_html = """
             
             isBarrelRolling = true;
             barrelRollTimer = 0;
-            barrelRollCooldown = BARREL_ROLL_COOLDOWN;
+            barrelRollCooldown = 180; // 3 секунды кулдауна при 60 FPS
             
             brStartX = me.x; 
             brStartY = me.y; 
             brStartAngle = me.a;
             
-            // Цель — точка за хвостом противника
+            // Расчет точки за хвостом противника
             const targetRad = opp.a * Math.PI / 180;
             brTargetX = opp.x - Math.cos(targetRad) * 220;
             brTargetY = opp.y - Math.sin(targetRad) * 220;
-        };
+        });
+    }
+    // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
         
             
