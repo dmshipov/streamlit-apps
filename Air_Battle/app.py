@@ -203,17 +203,20 @@ game_html = """
         background: #28a745;
         color: white;
         border: none;
-        padding: 4px 12px;
-        border-radius: 4px;
-        font-size: 11px;
+        padding: 6px 14px;
+        border-radius: 5px;
+        font-size: 10px;
         font-weight: bold;
         cursor: pointer;
-        box-shadow: 0 2px #1e7e34;
+        box-shadow: 0 3px #1e7e34;
         transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
     }
     .btn-start-pause:hover { background: #218838; }
-    .btn-start-pause:active { transform: translateY(1px); box-shadow: 0 1px #1e7e34; }
-    .btn-start-pause.paused { background: #ffc107; box-shadow: 0 2px #d39e00; }
+    .btn-start-pause:active { transform: translateY(2px); box-shadow: 0 1px #1e7e34; }
+    .btn-start-pause.paused { background: #ffc107; box-shadow: 0 3px #d39e00; }
     .btn-start-pause.paused:hover { background: #e0a800; }
     
     #close-sidebar {
@@ -413,7 +416,6 @@ game_html = """
 <div id="top-bar">
     <div style="display: flex; gap: 10px; align-items: center;">
         <button class="btn-settings" id="open-sidebar">⚙️ НАСТРОЙКИ</button>
-        <button class="btn-start-pause" id="start-pause-btn">⏸ ПАУЗА</button>
     </div>
 
     <div style="text-align: center;">
@@ -442,6 +444,7 @@ game_html = """
 <div id="lower-area">
     <div id="fire-zone"><button id="fireBtn">ОГОНЬ</button></div>
     <div id="hp-zone">
+        <button class="btn-start-pause" id="start-pause-btn">⏸ ПАУЗА</button>
         <div class="hp-label">HP PILOT</div>
         <div id="hp-bar-container"><div id="hp-fill"></div></div>
         <button id="loopBtn">🔄 LOOP</button>
@@ -1049,7 +1052,7 @@ game_html = """
                 if (loopProgress === 0) {
                     console.log('Loop animation RUNNING in update(), gameActive:', gameActive, 'gamePaused:', gamePaused);
                 }
-                loopProgress += 0.010; // Скорость анимации петли
+                loopProgress += 0.015; // Скорость анимации петли
                 
                 if (loopProgress >= 1.0) {
                     // Завершение петли
@@ -1542,24 +1545,7 @@ game_html = """
             });
         }
 
-        // Draw escort target
-        if (gameMode === 'escort' && escortTarget && escortTarget.state === 'alive') {
-            drawPlane({x: escortTarget.x, y: escortTarget.y, a: escortTarget.a, state: 'alive'}, escortTarget.color);
-            
-            // HP bar
-            ctx.fillStyle = '#444';
-            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100, 10);
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100 * (escortTarget.hp / escortTarget.maxHp), 10);
-        }
-
-        // Draw enemies
-        enemies.forEach(e => {
-            if (e.state === 'alive') {
-                drawPlane(e, e.color);
-            }
-        });
-
+        // Объявление функции drawPlane (должно быть ДО использования)
         const drawPlane = (p, col) => {
             if(p.state !== 'alive' && (!p.dt || p.dt <= 0)) return;
             ctx.save();
@@ -1639,6 +1625,24 @@ game_html = """
             }
             ctx.restore();
         };
+
+        // Draw escort target
+        if (gameMode === 'escort' && escortTarget && escortTarget.state === 'alive') {
+            drawPlane({x: escortTarget.x, y: escortTarget.y, a: escortTarget.a, state: 'alive'}, escortTarget.color);
+            
+            // HP bar
+            ctx.fillStyle = '#444';
+            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100, 10);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100 * (escortTarget.hp / escortTarget.maxHp), 10);
+        }
+
+        // Draw enemies
+        enemies.forEach(e => {
+            if (e.state === 'alive') {
+                drawPlane(e, e.color);
+            }
+        });
 
         drawPlane(me, me.color);
         if (!isArcadeMode()) drawPlane(opp, opp.color);
