@@ -1066,51 +1066,50 @@ game_html = """
 
         clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
         
-        // Loop animation
-        if (isLooping) {
-            loopProgress += 0.015; // Скорость анимации петли
-            
-            if (loopProgress >= 1.0) {
-                // Завершение петли
-                isLooping = false;
-                loopProgress = 0;
-                loopScale = 1.0;
-                loopPitch = 0;
-                me.a = loopStartAngle; // Возвращаем к исходному углу
-            } else {
-                // Анимация петли с 3D эффектом
-                const t = loopProgress;
-                
-                // Вращение на 360 градусов
-                me.a = loopStartAngle + (t * 360);
-                
-                // Эффект увеличения/уменьшения (приближение/удаление)
-                // Увеличивается в начале и в конце петли, уменьшается в середине
-                loopScale = 1.0 + Math.sin(t * Math.PI) * 0.8;
-                
-                // 3D pitch эффект (показываем брюхо самолета)
-                // В верхней точке петли (t=0.5) показываем низ самолета
-                loopPitch = Math.sin(t * Math.PI * 2) * 90;
-                
-                // Небольшое движение вперед во время петли
-                let r = me.a * Math.PI/180;
-                me.x += Math.cos(r) * planeSpeed * 1.2;
-                me.y += Math.sin(r) * planeSpeed * 1.2;
-            }
-        }
-        
         const wrap = (obj) => {
             if (obj.x < 0) obj.x = WORLD.w; if (obj.x > WORLD.w) obj.x = 0;
             if (obj.y < 0) obj.y = WORLD.h; if (obj.y > WORLD.h) obj.y = 0;
         };
 
         if(me.state === 'alive') {
-            // Обычное движение только если не выполняется петля
-            if (!isLooping) {
+            // Loop animation
+            if (isLooping) {
+                loopProgress += 0.015; // Скорость анимации петли
+                
+                if (loopProgress >= 1.0) {
+                    // Завершение петли
+                    isLooping = false;
+                    loopProgress = 0;
+                    loopScale = 1.0;
+                    loopPitch = 0;
+                    me.a = loopStartAngle; // Возвращаем к исходному углу
+                } else {
+                    // Анимация петли с 3D эффектом
+                    const t = loopProgress;
+                    
+                    // Вращение на 360 градусов
+                    me.a = loopStartAngle + (t * 360);
+                    
+                    // Эффект увеличения/уменьшения (приближение/удаление)
+                    // Увеличивается в начале и в конце петли, уменьшается в середине
+                    loopScale = 1.0 + Math.sin(t * Math.PI) * 0.8;
+                    
+                    // 3D pitch эффект (показываем брюхо самолета)
+                    // В верхней точке петли (t=0.5) показываем низ самолета
+                    loopPitch = Math.sin(t * Math.PI * 2) * 90;
+                    
+                    // Небольшое движение вперед во время петли
+                    let r = me.a * Math.PI/180;
+                    me.x += Math.cos(r) * planeSpeed * 1.2;
+                    me.y += Math.sin(r) * planeSpeed * 1.2;
+                }
+            } else {
+                // Обычное движение только если не выполняется петля
                 let r = me.a * Math.PI/180;
                 me.x += Math.cos(r) * planeSpeed;
                 me.y += Math.sin(r) * planeSpeed;
             }
+            
             wrap(me);
             if(me.hp < 3) createPart(me.x, me.y, 'smoke');
             if(me.hp <= 0) { 
