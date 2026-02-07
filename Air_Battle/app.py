@@ -506,12 +506,19 @@ game_html = """
         clouds.push({ x: Math.random()*WORLD.w, y: Math.random()*WORLD.h, s: 0.5 + Math.random(), op: 0.3 + Math.random()*0.4 });
     }
 
-    let me = { x: 500, y: 500, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive' };
-    let opp = { x: 2500, y: 1500, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive' };
+    // Состояние игрока и мира
+    let me = { x: 400, y: 400, a: 0, hp: 5, max: 5, score: 0, color: '#ff4b4b', state: 'alive', dt: 0 };
+    let opp = { x: 2600, y: 1600, a: 180, hp: 5, max: 5, score: 0, color: '#00d2ff', state: 'alive', dt: 0 };
 
-    let peer = null;
-    let conn = null;
-    let myPeerId = '';
+    // НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ МЕРТВОЙ ПЕТЛИ
+    let isBarrelRolling = false;
+    let barrelRollTimer = 0;
+    const BARREL_ROLL_DURATION = 90; // 1.5 сек при 60fps
+    let barrelRollRotation = 0;
+    let barrelRollScale = 1.0;
+    let barrelRollCooldown = 0;
+    const BARREL_ROLL_COOLDOWN_VAL = 180; 
+    let brStartX, brStartY, brStartAngle, brTargetX, brTargetY;
 
     // Sidebar controls
     document.getElementById('open-sidebar').addEventListener('click', () => {
@@ -753,16 +760,14 @@ game_html = """
             
             isBarrelRolling = true;
             barrelRollTimer = 0;
-            barrelRollCooldown = 180; // 3 секунды кулдауна при 60 FPS
+            barrelRollCooldown = BARREL_ROLL_COOLDOWN_VAL;
             
-            brStartX = me.x; 
-            brStartY = me.y; 
-            brStartAngle = me.a;
+            brStartX = me.x; brStartY = me.y; brStartAngle = me.a;
             
-            // Расчет точки за хвостом противника
+            // Расчет позиции "за хвостом"
             const targetRad = opp.a * Math.PI / 180;
-            brTargetX = opp.x - Math.cos(targetRad) * 220;
-            brTargetY = opp.y - Math.sin(targetRad) * 220;
+            brTargetX = opp.x - Math.cos(targetRad) * 250;
+            brTargetY = opp.y - Math.sin(targetRad) * 250;
         });
     }
     // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
@@ -1115,52 +1120,36 @@ game_html = """
         propellerRotation += 0.9;
         
         // Обновление кулдауна мёртвой петли
-        if (barrelRollCooldown > 0) {
-            barrelRollCooldown--;
-            const btn = document.getElementById('barrel-roll-btn');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = `🔄 ${Math.ceil(barrelRollCooldown / 60)}s`;
-            }
-        } else {
-            const btn = document.getElementById('barrel-roll-btn');
-            if (btn && !isBarrelRolling) {
-                btn.disabled = false;
-                btn.innerText = '🔄 МЁРТВАЯ ПЕТЛЯ';
-            }
-        }
-        
-        // Неуязвимость и регенерация во время петли
+        if (barrelRollCooldown > 0) barrelRollCooldown--;
+
         if (isBarrelRolling) {
-        barrelRollTimer++;
-        let progress = barrelRollTimer / BARREL_ROLL_DURATION;
-        
-        // Плавное ускорение и замедление (Easing)
-        let ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            barrelRollTimer++;
+            let progress = barrelRollTimer / BARREL_ROLL_DURATION;
+            let ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-        // Движение к цели
-        me.x = brStartX + (brTargetX - brStartX) * ease;
-        me.y = brStartY + (brTargetY - brStartY) * ease;
-        
-        // Плавный поворот носа
-        let angleDiff = opp.a - brStartAngle;
-        while(angleDiff < -180) angleDiff += 360; 
-        while(angleDiff > 180) angleDiff -= 360;
-        me.a = brStartAngle + angleDiff * ease;
+            // Движение и разворот
+            me.x = brStartX + (brTargetX - brStartX) * ease;
+            me.y = brStartY + (brTargetY - brStartY) * ease;
+            
+            let angleDiff = opp.a - brStartAngle;
+            while(angleDiff < -180) angleDiff += 360; 
+            while(angleDiff > 180) angleDiff -= 360;
+            me.a = brStartAngle + angleDiff * ease;
 
-        // САМА ПЕТЛЯ: Ровно 360 градусов вращения
-        barrelRollRotation = progress * 360;
-        
-        // Визуальный подлет (масштаб)
-        barrelRollScale = 1.0 + Math.sin(progress * Math.PI) * 0.4;
+            // Визуальный переворот 360 градусов
+            barrelRollRotation = progress * 360;
+            barrelRollScale = 1.0 + Math.sin(progress * Math.PI) * 0.4;
 
-        if (barrelRollTimer >= BARREL_ROLL_DURATION) {
-            isBarrelRolling = false;
-            barrelRollRotation = 0;
-            barrelRollScale = 1.0;
-        }
-        return; // Пропускаем обычное управление, пока идет петля
-    }
+            if (barrelRollTimer >= BARREL_ROLL_DURATION) {
+                isBarrelRolling = false;
+                barrelRollRotation = 0;
+                barrelRollScale = 1.0;
+            }
+            // Отправляем данные в сеть и выходим из update, чтобы не срабатывало обычное управление
+            if (conn && conn.open) {
+                conn.send({ type: 'move', x: me.x, y: me.y, a: me.a, hp: me.hp, state: me.state });
+            }
+            return; 
         }
 
         // --- БЕЗОПАСНЫЙ БЛОК ОТПРАВКИ ---
@@ -1618,23 +1607,22 @@ game_html = """
             if(p.state !== 'alive' && (!p.dt || p.dt <= 0)) return;
             ctx.save();
             ctx.translate(p.x, p.y);
-            
-            // Базовый поворот самолёта
             ctx.rotate(p.a * Math.PI / 180);
-            
-            // Применяем эффекты мёртвой петли для игрока
+
+            // Если это наш самолет и он в петле
             if (p === me && isBarrelRolling) {
-            ctx.scale(barrelRollScale, barrelRollScale);
-            ctx.rotate(barrelRollRotation * Math.PI / 180);
-            
-            // Если самолет перевернут "брюхом" к нам (от 90 до 270 градусов)
-            let normRot = barrelRollRotation % 360;
-            if (normRot > 90 && normRot < 270) {
-                ctx.fillStyle = "#222"; // Цвет колес
-                ctx.fillRect(-15, -30, 8, 8); // Левое колесо
-                ctx.fillRect(-15, 22, 8, 8);  // Правое колесо
+                ctx.scale(barrelRollScale, barrelRollScale);
+                ctx.rotate(barrelRollRotation * Math.PI / 180);
+                
+                // Рисуем шасси, когда самолет перевернут (от 90 до 270 градусов)
+                let normRot = barrelRollRotation % 360;
+                if (normRot > 90 && normRot < 270) {
+                    ctx.fillStyle = "#222";
+                    ctx.fillRect(-15, -25, 10, 10); // Колесо левое
+                    ctx.fillRect(-15, 15, 10, 10);  // Колесо правое
+                }
             }
-        }
+            // Дальше твой старый код отрисовки крыльев и хвоста...
             
             ctx.fillStyle = "rgba(0,0,0,0.2)";
             ctx.beginPath(); ctx.ellipse(0, 15, 50, 15, 0, 0, Math.PI * 2); ctx.fill();
