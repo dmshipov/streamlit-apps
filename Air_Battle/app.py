@@ -1049,7 +1049,7 @@ game_html = """
                 if (loopProgress === 0) {
                     console.log('Loop animation RUNNING in update(), gameActive:', gameActive, 'gamePaused:', gamePaused);
                 }
-                loopProgress += 0.015; // Скорость анимации петли
+                loopProgress += 0.010; // Скорость анимации петли
                 
                 if (loopProgress >= 1.0) {
                     // Завершение петли
