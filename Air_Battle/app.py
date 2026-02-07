@@ -8,99 +8,6 @@ game_html = """
 <style>
     body { margin: 0; padding: 5px; background: #111; font-family: sans-serif; overflow-x: hidden; color: white; }
     
-
-    /* START SCREEN */
-    #start-screen {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 150;
-        border-radius: 8px;
-    }
-    
-    #start-screen h1 {
-        font-size: 36px;
-        margin-bottom: 20px;
-        color: #00d2ff;
-        text-shadow: 0 0 20px #00d2ff;
-        animation: pulseGlow 2s infinite;
-    }
-    
-    @keyframes pulseGlow {
-        0%, 100% { opacity: 1; text-shadow: 0 0 20px #00d2ff; }
-        50% { opacity: 0.8; text-shadow: 0 0 30px #00d2ff, 0 0 40px #00d2ff; }
-    }
-    
-    #start-btn {
-        width: 200px;
-        height: 60px;
-        background: linear-gradient(145deg, #ff4b4b, #ff6b6b);
-        color: white;
-        border: none;
-        border-radius: 30px;
-        font-size: 24px;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 8px 15px rgba(255, 75, 75, 0.4);
-        transition: all 0.3s;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-    
-    #start-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 20px rgba(255, 75, 75, 0.6);
-    }
-    
-    #start-btn:active {
-        transform: translateY(0);
-        box-shadow: 0 5px 10px rgba(255, 75, 75, 0.4);
-    }
-
-    /* BARREL ROLL BUTTON */
-    #barrel-roll-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 8px;
-    }
-    
-    #barrel-roll-btn {
-        background: linear-gradient(145deg, #9b59b6, #8e44ad);
-        color: white;
-        border: none;
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 4px #6c3483;
-        transition: all 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    #barrel-roll-btn:hover {
-        background: linear-gradient(145deg, #a569bd, #9b59b6);
-    }
-    
-    #barrel-roll-btn:active {
-        transform: translateY(2px);
-        box-shadow: 0 2px #6c3483;
-    }
-    
-    #barrel-roll-btn:disabled {
-        background: #555;
-        cursor: not-allowed;
-        box-shadow: 0 2px #333;
-    }
-    
     #top-bar { 
         background: #222; 
         padding: 6px 12px; /* Добавили отступы по бокам */
@@ -384,6 +291,39 @@ game_html = """
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
     }
+
+    /* BARREL ROLL BUTTON */
+    #barrel-roll-btn {
+        background: linear-gradient(145deg, #9b59b6, #8e44ad);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px #6c3483;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 5px;
+    }
+    
+    #barrel-roll-btn:hover {
+        background: linear-gradient(145deg, #a569bd, #9b59b6);
+    }
+    
+    #barrel-roll-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px #6c3483;
+    }
+    
+    #barrel-roll-btn:disabled {
+        background: #555;
+        cursor: not-allowed;
+        box-shadow: 0 2px #333;
+    }
+
 </style>
 
 <div id="sidebar">
@@ -512,9 +452,7 @@ game_html = """
 <div id="lower-area">
     <div id="fire-zone"><button id="fireBtn">ОГОНЬ</button></div>
     <div id="hp-zone">
-        <div id="barrel-roll-container">
-            <button id="barrel-roll-btn">🔄 МЁРТВАЯ ПЕТЛЯ</button>
-        </div>
+        <button id="barrel-roll-btn">🔄 МЁРТВАЯ ПЕТЛЯ</button>
         <div class="hp-label">HP PILOT</div>
         <div id="hp-bar-container"><div id="hp-fill"></div></div>
     </div>
@@ -539,6 +477,12 @@ game_html = """
     let totalWinsMe = 0;
     let totalWinsOpp = 0;
     let propellerRotation = 0;
+    
+    // Barrel roll variables
+    let isBarrelRolling = false;
+    let barrelRollCooldown = 0;
+    let barrelRollScale = 1.0; // Масштаб для эффекта удаления/приближения
+    const BARREL_ROLL_COOLDOWN = 180; // 3 seconds at 60fps
     let screenShake = 0;
     let planeSpeed = 10;
     let cameraZoom = 1.0;
@@ -781,80 +725,6 @@ game_html = """
         });
     }
 
-
-    // START SCREEN HANDLER
-    const startScreen = document.getElementById('start-screen');
-    const startBtn = document.getElementById('start-btn');
-    
-    startBtn.addEventListener('click', () => {
-        startScreen.style.display = 'none';
-        gameStarted = true;
-        if (!gameActive) {
-            gameActive = true;
-            gamePaused = false;
-            startPauseBtn.textContent = '⏸ ПАУЗА';
-            startPauseBtn.classList.remove('paused');
-        }
-    });
-    
-    // BARREL ROLL BUTTON HANDLER
-    const barrelRollBtn = document.getElementById('barrel-roll-btn');
-    barrelRollBtn.addEventListener('click', () => {
-        if (!gameStarted || !gameActive || gamePaused) return;
-        if (me.state !== 'alive') return;
-        if (isBarrelRolling || barrelRollCooldown > 0) return;
-        
-        // Выполняем мертвую петлю
-        isBarrelRolling = true;
-        barrelRollCooldown = BARREL_ROLL_COOLDOWN;
-        
-        // Облетаем противника
-        const targetX = opp.x;
-        const targetY = opp.y;
-        
-        // Рассчитываем маршрут петли
-        const dx = targetX - me.x;
-        const dy = targetY - me.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Поворачиваем самолет на 180 градусов для петли
-        const angleToTarget = Math.atan2(dy, dx) * 180 / Math.PI;
-        
-        // Анимация петли
-        let loopProgress = 0;
-        const loopDuration = 60; // frames
-        
-        const loopInterval = setInterval(() => {
-            if (!gameActive || !gameStarted) {
-                clearInterval(loopInterval);
-                isBarrelRolling = false;
-                return;
-            }
-            
-            loopProgress++;
-            const progress = loopProgress / loopDuration;
-            
-            // Движение по дуге вокруг цели
-            const radius = distance * 0.7;
-            const angle = angleToTarget + (progress * 360);
-            const rad = angle * Math.PI / 180;
-            
-            me.x = targetX + Math.cos(rad) * radius;
-            me.y = targetY + Math.sin(rad) * radius;
-            me.a = angle + 90; // Направление самолета
-            
-            if (loopProgress >= loopDuration) {
-                clearInterval(loopInterval);
-                isBarrelRolling = false;
-                // Позиционируем за хвостом противника
-                const oppRad = opp.a * Math.PI / 180;
-                me.x = opp.x - Math.cos(oppRad) * 150;
-                me.y = opp.y - Math.sin(oppRad) * 150;
-                me.a = opp.a;
-            }
-        }, 1000 / 60);
-    });
-
     const manager = nipplejs.create({
         zone: document.getElementById('joystick-zone'),
         mode: 'static', position: {left: '50%', top: '50%'},
@@ -875,6 +745,87 @@ game_html = """
         // Стик Вниз = -270 / 90 (вниз на холсте)
         // Стик Вправо = 0 (вправо на холсте)
     });
+    // BARREL ROLL BUTTON
+    const barrelRollBtn = document.getElementById('barrel-roll-btn');
+    if (barrelRollBtn) {
+        barrelRollBtn.addEventListener('click', () => {
+            if (!gameActive || gamePaused || me.state !== 'alive') return;
+            if (isBarrelRolling || barrelRollCooldown > 0) return;
+            
+            // Начинаем мёртвую петлю
+            isBarrelRolling = true;
+            barrelRollCooldown = BARREL_ROLL_COOLDOWN;
+            
+            // Сохраняем начальную позицию
+            const startX = me.x;
+            const startY = me.y;
+            const startAngle = me.a;
+            
+            // Целевая позиция - за хвостом противника
+            const targetRad = opp.a * Math.PI / 180;
+            const targetX = opp.x - Math.cos(targetRad) * 250;
+            const targetY = opp.y - Math.sin(targetRad) * 250;
+            
+            let loopProgress = 0;
+            const loopDuration = 80; // frames
+            
+            const loopInterval = setInterval(() => {
+                if (!gameActive) {
+                    clearInterval(loopInterval);
+                    isBarrelRolling = false;
+                    barrelRollScale = 1.0;
+                    return;
+                }
+                
+                loopProgress++;
+                const progress = loopProgress / loopDuration;
+                
+                // Вертикальная петля - самолёт уходит "из экрана" и возвращается
+                // 0-25%: уход вверх и "от экрана" (уменьшение)
+                // 25-50%: верхняя точка петли
+                // 50-75%: возврат "к экрану" (увеличение)
+                // 75-100%: спуск и позиционирование
+                
+                const loopAngle = progress * 360; // градусы петли
+                const loopRad = loopAngle * Math.PI / 180;
+                
+                // Масштаб самолёта для эффекта глубины (удаление/приближение)
+                if (progress < 0.25) {
+                    // Уход от экрана - уменьшение
+                    barrelRollScale = 1.0 - progress * 2; // от 1.0 до 0.5
+                } else if (progress < 0.5) {
+                    // В самой дальней точке
+                    barrelRollScale = 0.5;
+                } else if (progress < 0.75) {
+                    // Возврат к экрану - увеличение
+                    barrelRollScale = 0.5 + (progress - 0.5) * 2; // от 0.5 до 1.0
+                } else {
+                    barrelRollScale = 1.0;
+                }
+                
+                // Движение от стартовой к целевой позиции
+                const moveProgress = Math.min(1, progress * 1.2);
+                me.x = startX + (targetX - startX) * moveProgress;
+                me.y = startY + (targetY - startY) * moveProgress;
+                
+                // Вращение самолёта во время петли
+                me.a = startAngle + loopAngle;
+                
+                if (loopProgress >= loopDuration) {
+                    clearInterval(loopInterval);
+                    isBarrelRolling = false;
+                    barrelRollScale = 1.0;
+                    
+                    // Финальное позиционирование за хвостом
+                    me.x = targetX;
+                    me.y = targetY;
+                    me.a = opp.a;
+                }
+            }, 1000 / 60);
+        });
+    }
+
+
 
     // Используем touchstart для мгновенной реакции и поддержки мультитача
     document.getElementById('fireBtn').addEventListener('touchstart', (e) => {
@@ -1150,23 +1101,29 @@ game_html = """
     let netTick = 0; // Добавьте эту переменную вне функции update
 
     function update() {
-                if(!gameActive || gamePaused) return;
+        if(!gameActive || gamePaused) return;
+        propellerRotation += 0.9;
         
-        // Update barrel roll cooldown
+        // Обновление кулдауна мёртвой петли
         if (barrelRollCooldown > 0) {
             barrelRollCooldown--;
-            barrelRollBtn.disabled = true;
-            barrelRollBtn.innerText = `🔄 ${Math.ceil(barrelRollCooldown / 60)}s`;
+            const btn = document.getElementById('barrel-roll-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = `🔄 ${Math.ceil(barrelRollCooldown / 60)}s`;
+            }
         } else {
-            barrelRollBtn.disabled = false;
-            barrelRollBtn.innerText = '🔄 МЁРТВАЯ ПЕТЛЯ';
+            const btn = document.getElementById('barrel-roll-btn');
+            if (btn && !isBarrelRolling) {
+                btn.disabled = false;
+                btn.innerText = '🔄 МЁРТВАЯ ПЕТЛЯ';
+            }
         }
         
-        // Barrel roll invincibility
+        // Неуязвимость и регенерация во время петли
         if (isBarrelRolling && me.state === 'alive') {
-            me.hp = Math.min(me.max, me.hp + 0.1); // Regenerate HP during barrel roll
-        }
-        propellerRotation += 0.9; 
+            me.hp = Math.min(me.max, me.hp + 0.2);
+        } 
 
         // Таймер
         if (['balloon', 'rings', 'race'].includes(gameMode)) {
@@ -1440,17 +1397,13 @@ game_html = """
                     }
                 });
                 
-                // Check enemies in survival/escort modes
-                if (gameMode === 'survival' || gameMode === 'escort') {
-                    enemies.forEach((e, ei) => {
-                        if (e.state === 'alive' && Math.hypot(b.x - e.x, b.y - e.y) < 65) {
-                            e.hp--;
-                            bullets.splice(i, 1);
-                            createPart(b.x, b.y, 'fire');
-                            screenShake = 5;
-                        }
-                    });
-                }
+                // Check enemies
+                enemies.forEach((e, ei) => {
+                    if (e.state === 'alive' && Math.hypot(b.x - e.x, b.y - e.y) < 65) {
+                        e.hp--;
+                        bullets.splice(i, 1);
+                    }
+                });
             }
             
             // Check PvP targets
@@ -1616,10 +1569,34 @@ game_html = """
             });
         }
 
+        // Draw escort target
+        if (gameMode === 'escort' && escortTarget && escortTarget.state === 'alive') {
+            drawPlane({x: escortTarget.x, y: escortTarget.y, a: escortTarget.a, state: 'alive'}, escortTarget.color);
+            
+            // HP bar
+            ctx.fillStyle = '#444';
+            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100, 10);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100 * (escortTarget.hp / escortTarget.maxHp), 10);
+        }
+
+        // Draw enemies
+        enemies.forEach(e => {
+            if (e.state === 'alive') {
+                drawPlane(e, e.color);
+            }
+        });
+
         const drawPlane = (p, col) => {
             if(p.state !== 'alive' && (!p.dt || p.dt <= 0)) return;
             ctx.save();
             ctx.translate(p.x, p.y);
+            
+            // Применяем масштаб для эффекта глубины во время мёртвой петли
+            if (p === me && isBarrelRolling) {
+                ctx.scale(barrelRollScale, barrelRollScale);
+            }
+            
             ctx.rotate(p.a * Math.PI / 180);
             
             ctx.fillStyle = "rgba(0,0,0,0.2)";
@@ -1648,24 +1625,6 @@ game_html = """
             }
             ctx.restore();
         };
-        
-        // Draw escort target
-        if (gameMode === 'escort' && escortTarget && escortTarget.state === 'alive') {
-            drawPlane({x: escortTarget.x, y: escortTarget.y, a: escortTarget.a, state: 'alive'}, escortTarget.color);
-            
-            // HP bar
-            ctx.fillStyle = '#444';
-            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100, 10);
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(escortTarget.x - 50, escortTarget.y - 100, 100 * (escortTarget.hp / escortTarget.maxHp), 10);
-        }
-
-        // Draw enemies
-        enemies.forEach(e => {
-            if (e.state === 'alive') {
-                drawPlane(e, e.color);
-            }
-        });
 
         drawPlane(me, me.color);
         if (!isArcadeMode()) drawPlane(opp, opp.color);
