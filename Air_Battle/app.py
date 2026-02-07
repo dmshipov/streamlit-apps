@@ -539,7 +539,7 @@ game_html = """
         console.log('Loop button found successfully');
         loopBtn.addEventListener('click', () => {
             console.log('Loop button clicked!');
-            console.log('isDoingLoop:', isDoingLoop, 'me.state:', me.state, 'gameActive:', gameActive);
+            console.log('isDoingLoop:', isDoingLoop, 'me.state:', me.state, 'gameActive:', gameActive, 'gamePaused:', gamePaused);
             
             if (!isDoingLoop && me.state === 'alive') {
                 console.log('Starting loop animation');
@@ -554,7 +554,7 @@ game_html = """
                     console.log('Loop button enabled again');
                 }, 3000);
             } else {
-                console.log('Loop not started. Conditions not met.');
+                console.log('Loop not started. isDoingLoop:', isDoingLoop, 'me.state:', me.state);
             }
         });
     }
@@ -1040,8 +1040,57 @@ game_html = """
 
     function update() {
         try {
-            if(!gameActive || gamePaused) return;
-            propellerRotation += 0.9; 
+            // Критичные обновления которые должны работать ВСЕГДА
+            propellerRotation += 0.9;
+            clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
+            
+            // Loop animation - выполняется ВСЕГДА, даже если игра на паузе
+            if (isDoingLoop && me.state === 'alive') {
+                if (loopProgress === 0) {
+                    console.log('Loop animation RUNNING in update(), gameActive:', gameActive, 'gamePaused:', gamePaused);
+                }
+                loopProgress += 0.015; // Скорость анимации петли
+                
+                if (loopProgress >= 1.0) {
+                    // Завершение петли
+                    console.log('Loop animation completed');
+                    isDoingLoop = false;
+                    loopProgress = 0;
+                    loopScale = 1.0;
+                    loopPitch = 0;
+                    me.a = loopStartAngle; // Возвращаем к исходному углу
+                } else {
+                    // Анимация петли с 3D эффектом
+                    const t = loopProgress;
+                    
+                    // Вращение на 360 градусов
+                    me.a = loopStartAngle + (t * 360);
+                    
+                    // Эффект увеличения/уменьшения (приближение/удаление)
+                    loopScale = 1.0 + Math.sin(t * Math.PI) * 0.8;
+                    
+                    // 3D pitch эффект (показываем брюхо самолета)
+                    loopPitch = Math.sin(t * Math.PI * 2) * 90;
+                    
+                    // Небольшое движение вперед во время петли
+                    let r = me.a * Math.PI/180;
+                    me.x += Math.cos(r) * planeSpeed * 1.2;
+                    me.y += Math.sin(r) * planeSpeed * 1.2;
+                    
+                    // Обновляем wrap для самолета во время петли
+                    if (me.x < 0) me.x = WORLD.w; 
+                    if (me.x > WORLD.w) me.x = 0;
+                    if (me.y < 0) me.y = WORLD.h; 
+                    if (me.y > WORLD.h) me.y = 0;
+                }
+            }
+            
+            if(!gameActive || gamePaused) {
+                if (isDoingLoop) {
+                    console.log('WARNING: gameActive/gamePaused check blocking update but loop is active!');
+                }
+                return; 
+            } 
 
         // Таймер
         if (['balloon', 'rings', 'race'].includes(gameMode)) {
@@ -1077,51 +1126,14 @@ game_html = """
         }
     
 
-        clouds.forEach(c => { c.x -= 0.6 * c.s; if(c.x < -200) c.x = WORLD.w + 200; });
-        
         const wrap = (obj) => {
             if (obj.x < 0) obj.x = WORLD.w; if (obj.x > WORLD.w) obj.x = 0;
             if (obj.y < 0) obj.y = WORLD.h; if (obj.y > WORLD.h) obj.y = 0;
         };
 
         if(me.state === 'alive') {
-            // Loop animation
-            if (isDoingLoop) {
-                if (loopProgress === 0) {
-                    console.log('Loop animation started in update()');
-                }
-                loopProgress += 0.015; // Скорость анимации петли
-                
-                if (loopProgress >= 1.0) {
-                    // Завершение петли
-                    console.log('Loop animation completed');
-                    isDoingLoop = false;
-                    loopProgress = 0;
-                    loopScale = 1.0;
-                    loopPitch = 0;
-                    me.a = loopStartAngle; // Возвращаем к исходному углу
-                } else {
-                    // Анимация петли с 3D эффектом
-                    const t = loopProgress;
-                    
-                    // Вращение на 360 градусов
-                    me.a = loopStartAngle + (t * 360);
-                    
-                    // Эффект увеличения/уменьшения (приближение/удаление)
-                    // Увеличивается в начале и в конце петли, уменьшается в середине
-                    loopScale = 1.0 + Math.sin(t * Math.PI) * 0.8;
-                    
-                    // 3D pitch эффект (показываем брюхо самолета)
-                    // В верхней точке петли (t=0.5) показываем низ самолета
-                    loopPitch = Math.sin(t * Math.PI * 2) * 90;
-                    
-                    // Небольшое движение вперед во время петли
-                    let r = me.a * Math.PI/180;
-                    me.x += Math.cos(r) * planeSpeed * 1.2;
-                    me.y += Math.sin(r) * planeSpeed * 1.2;
-                }
-            } else {
-                // Обычное движение только если не выполняется петля
+            // Обычное движение только если не выполняется петля
+            if (!isDoingLoop) {
                 let r = me.a * Math.PI/180;
                 me.x += Math.cos(r) * planeSpeed;
                 me.y += Math.sin(r) * planeSpeed;
@@ -1556,12 +1568,14 @@ game_html = """
             
             // Применяем 3D эффект для мертвой петли
             const isPlayerLooping = (p === me && isDoingLoop);
+            let pitchFactor = 1; // По умолчанию
+            
             if (isPlayerLooping) {
                 // Масштабирование (эффект приближения)
                 ctx.scale(loopScale, loopScale);
                 
                 // 3D pitch эффект - сжимаем по вертикали для создания иллюзии наклона
-                const pitchFactor = Math.cos(loopPitch * Math.PI / 180);
+                pitchFactor = Math.cos(loopPitch * Math.PI / 180);
                 ctx.scale(1, Math.abs(pitchFactor) < 0.1 ? 0.1 : Math.abs(pitchFactor));
                 
                 // Если pitch отрицательный, отражаем по вертикали (показываем брюхо)
