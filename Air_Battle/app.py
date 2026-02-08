@@ -1257,7 +1257,8 @@ game_html = """
 
     function createPart(x, y, type, color = null) {
         if (type === 'explode') {
-            screenShake = 25;
+            // Тряска экрана ОТКЛЮЧЕНА чтобы избежать проблем
+            // screenShake = Math.min(screenShake + 8, 15);
             for(let i=0; i<60; i++) {
                 particles.push({
                     x, y, 
@@ -1330,7 +1331,7 @@ game_html = """
                 if (loopProgress === 0) {
                     console.log('Loop animation RUNNING in update(), gameActive:', gameActive, 'gamePaused:', gamePaused);
                 }
-                loopProgress += 0.015; // Скорость анимации петли
+                loopProgress += 0.005; // Скорость анимации петли
                 
                 if (loopProgress >= 1.0) {
                     // Завершение петли
@@ -1807,9 +1808,11 @@ game_html = """
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
         
-        if(screenShake > 1) {
+        if(screenShake > 0.3) {
             ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
-            screenShake *= 0.9;
+            screenShake *= 0.75; // Ещё быстрее затухает (было 0.85)
+        } else {
+            screenShake = 0; // Полностью сбрасываем когда тряска слабая
         }
 
         // Применяем зум камеры
