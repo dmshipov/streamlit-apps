@@ -317,6 +317,103 @@ game_html = """
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
     }
+    
+    /* Team mode scoreboard */
+    #team-scoreboard {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.85);
+        border: 2px solid #444;
+        border-radius: 8px;
+        padding: 15px;
+        z-index: 60;
+        display: none;
+        min-width: 500px;
+    }
+    
+    #team-scoreboard.collapsed {
+        padding: 8px 15px;
+        min-width: auto;
+    }
+    
+    #team-scoreboard.collapsed .team-score,
+    #team-scoreboard.collapsed .stats-table {
+        display: none;
+    }
+    
+    #toggle-scoreboard {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: #444;
+        border: none;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 24px;
+        padding: 0;
+        transition: background 0.2s;
+    }
+    
+    #toggle-scoreboard:hover {
+        background: #555;
+    }
+    
+    .team-header {
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #00d2ff;
+        padding-right: 30px;
+    }
+    
+    .team-score {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 15px;
+        font-size: 24px;
+        font-weight: bold;
+    }
+    
+    .team-red { color: #ff4b4b; }
+    .team-blue { color: #4b9fff; }
+    
+    .stats-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+    }
+    
+    .stats-table th {
+        background: #333;
+        color: #aaa;
+        padding: 5px;
+        text-align: left;
+        border-bottom: 1px solid #555;
+    }
+    
+    .stats-table td {
+        padding: 4px 5px;
+        border-bottom: 1px solid #333;
+    }
+    
+    .stats-table tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .player-name {
+        font-weight: bold;
+    }
+    
+    .stat-kills { color: #4CAF50; }
+    .stat-deaths { color: #f44336; }
+    .stat-kd { color: #ffd700; }
 </style>
 
 <div id="sidebar">
@@ -334,6 +431,19 @@ game_html = """
             <span class="mode-icon">⚔️</span>АС
         </button>
         <div class="mode-description">AI противник (сложный уровень)</div>
+        
+        <button id="mode-team" class="btn-mode">
+            <span class="mode-icon">👥</span>КОМАНДНЫЕ БОИ
+        </button>
+        <div class="mode-description">Режим 2v2 - 4v4 с таблицей статистики</div>
+        
+        <div id="team-controls" style="display: none; margin-top: 10px;">
+            <label class="setting-label" style="margin-top: 10px;">Игроков в команде (1-4)</label>
+            <div class="slider-container">
+                <input type="range" class="slider" id="team-size-slider" min="1" max="4" value="2">
+                <span class="slider-value" id="team-size-value">2</span>
+            </div>
+        </div>
         
         <button id="mode-net" class="btn-mode">
             <span class="mode-icon">🌐</span>СЕТЕВАЯ ИГРА
@@ -434,6 +544,30 @@ game_html = """
         <canvas id="gameCanvas" width="1200" height="700"></canvas>
         <div class="game-timer" id="game-timer">60</div>
         <div class="combo-indicator" id="combo-indicator">COMBO x2!</div>
+        
+        <!-- Team mode scoreboard -->
+        <div id="team-scoreboard">
+            <button id="toggle-scoreboard" title="Свернуть/Развернуть">−</button>
+            <div class="team-header">🎮 КОМАНДНЫЕ БОИ</div>
+            <div class="team-score">
+                <span class="team-red">КРАСНЫЕ: <span id="red-wins">0</span></span>
+                <span class="team-blue">СИНИЕ: <span id="blue-wins">0</span></span>
+            </div>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>ИГРОК</th>
+                        <th>КОМАНДА</th>
+                        <th>KILLS</th>
+                        <th>DEATHS</th>
+                        <th>K/D</th>
+                    </tr>
+                </thead>
+                <tbody id="stats-tbody">
+                </tbody>
+            </table>
+        </div>
+        
         <div id="overlay">
             <h2 id="result-text">ПОБЕДА!</h2>
             <p id="result-subtext">Следующий раунд через 3 сек...</p>
@@ -476,6 +610,12 @@ game_html = """
     let precisionDistance = 400;
     let precisionTolerance = 80;
 
+    // Team mode variables
+    let teamSize = 2; // Игроков в каждой команде
+    let teamPlayers = []; // Массив всех игроков
+    let redTeamWins = 0;
+    let blueTeamWins = 0;
+    
     // Arcade mode variables
     let arcadeTargets = [];
     let gameTimer = 0;
@@ -579,7 +719,7 @@ game_html = """
     });
 
     // Mode buttons
-    const modes = ['ai-easy', 'ai-hard', 'net', 'paratrooper', 'balloon', 'cargo', 'rings', 'survival', 'escort', 'race'];
+    const modes = ['ai-easy', 'ai-hard', 'team', 'net', 'paratrooper', 'balloon', 'cargo', 'rings', 'survival', 'escort', 'race'];
     modes.forEach(mode => {
         const btn = document.getElementById('mode-' + mode);
         if (btn) {
@@ -589,6 +729,29 @@ game_html = """
             });
         }
     });
+    
+    // Team size slider
+    const teamSizeSlider = document.getElementById('team-size-slider');
+    const teamSizeValue = document.getElementById('team-size-value');
+    if (teamSizeSlider) {
+        teamSizeSlider.addEventListener('input', (e) => {
+            teamSize = parseInt(e.target.value);
+            teamSizeValue.textContent = teamSize;
+            if (gameMode === 'team') {
+                initTeamMode();
+            }
+        });
+    }
+
+    // Toggle scoreboard button
+    const toggleScoreboardBtn = document.getElementById('toggle-scoreboard');
+    if (toggleScoreboardBtn) {
+        toggleScoreboardBtn.addEventListener('click', () => {
+            const scoreboard = document.getElementById('team-scoreboard');
+            scoreboard.classList.toggle('collapsed');
+            toggleScoreboardBtn.textContent = scoreboard.classList.contains('collapsed') ? '+' : '−';
+        });
+    }
 
     function isArcadeMode() {
         return ['paratrooper', 'balloon', 'cargo', 'rings', 'survival', 'escort', 'race'].includes(gameMode);
@@ -596,7 +759,7 @@ game_html = """
 
     function setGameMode(mode) {
         gameMode = mode;
-        isSolo = (mode !== 'net');
+        isSolo = (mode !== 'net' && mode !== 'team');
         
         if (mode === 'ai-easy') difficulty = 'easy';
         else if (mode === 'ai-hard') difficulty = 'hard';
@@ -604,6 +767,14 @@ game_html = """
         // Show/hide timer
         document.getElementById('game-timer').style.display = 
             (['balloon', 'rings', 'race'].includes(mode)) ? 'block' : 'none';
+        
+        // Show/hide team scoreboard
+        document.getElementById('team-scoreboard').style.display = 
+            (mode === 'team') ? 'block' : 'none';
+        
+        if (mode === 'team') {
+            initTeamMode();
+        }
         
         resetRound();
     }
@@ -617,6 +788,7 @@ game_html = """
         if (activeBtn) activeBtn.classList.add('active-mode');
         
         document.getElementById('net-controls').style.display = (mode === 'net') ? 'block' : 'none';
+        document.getElementById('team-controls').style.display = (mode === 'team') ? 'block' : 'none';
     }
 
     // Score limit buttons
@@ -976,6 +1148,103 @@ game_html = """
         if (obj === me) { obj.x = 500; obj.y = 500; obj.a = 0; }
         else { obj.x = 2500; obj.y = 1500; obj.a = 180; }
     }
+    
+    // Team mode functions
+    function initTeamMode() {
+        teamPlayers = [];
+        
+        // Генерируем AI имена
+        const names = ['Maverick', 'Iceman', 'Viper', 'Goose', 'Jester', 'Cougar', 'Merlin', 'Hollywood'];
+        
+        // Создаем команды
+        for (let i = 0; i < teamSize * 2; i++) {
+            const team = i < teamSize ? 'red' : 'blue';
+            const isPlayer = (i === 0); // Первый игрок - это мы
+            
+            teamPlayers.push({
+                name: isPlayer ? 'YOU' : names[i % names.length] + (i > 7 ? (i-7) : ''),
+                team: team,
+                kills: 0,
+                deaths: 0,
+                isPlayer: isPlayer,
+                x: team === 'red' ? 400 + Math.random()*200 : 2400 + Math.random()*200,
+                y: 800 + Math.random()*400,
+                a: team === 'red' ? 0 : 180,
+                hp: 5,
+                max: 5,
+                state: 'alive',
+                color: team === 'red' ? '#ff4b4b' : '#4b9fff',
+                dt: 0
+            });
+        }
+        
+        updateTeamScoreboard();
+    }
+    
+    function updateTeamScoreboard() {
+        const tbody = document.getElementById('stats-tbody');
+        tbody.innerHTML = '';
+        
+        // Сортируем по K/D
+        const sorted = [...teamPlayers].sort((a, b) => {
+            const kdA = a.deaths === 0 ? a.kills : a.kills / a.deaths;
+            const kdB = b.deaths === 0 ? b.kills : b.kills / b.deaths;
+            return kdB - kdA;
+        });
+        
+        sorted.forEach(player => {
+            const kd = player.deaths === 0 ? player.kills.toFixed(2) : (player.kills / player.deaths).toFixed(2);
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="player-name" style="color: ${player.team === 'red' ? '#ff4b4b' : '#4b9fff'}">${player.name}</td>
+                <td style="color: ${player.team === 'red' ? '#ff4b4b' : '#4b9fff'}">${player.team === 'red' ? 'КРАСНЫЕ' : 'СИНИЕ'}</td>
+                <td class="stat-kills">${player.kills}</td>
+                <td class="stat-deaths">${player.deaths}</td>
+                <td class="stat-kd">${kd}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Обновляем счет команд
+        document.getElementById('red-wins').textContent = redTeamWins;
+        document.getElementById('blue-wins').textContent = blueTeamWins;
+    }
+    
+    function checkTeamWin() {
+        if (gameMode !== 'team') return;
+        
+        const redAlive = teamPlayers.filter(p => p.team === 'red' && p.state === 'alive').length;
+        const blueAlive = teamPlayers.filter(p => p.team === 'blue' && p.state === 'alive').length;
+        
+        if (redAlive === 0) {
+            blueTeamWins++;
+            endGame('СИНИЕ ПОБЕДИЛИ!', `Счёт: ${redTeamWins} - ${blueTeamWins}`);
+            setTimeout(() => {
+                resetTeamRound();
+            }, 3000);
+        } else if (blueAlive === 0) {
+            redTeamWins++;
+            endGame('КРАСНЫЕ ПОБЕДИЛИ!', `Счёт: ${redTeamWins} - ${blueTeamWins}`);
+            setTimeout(() => {
+                resetTeamRound();
+            }, 3000);
+        }
+    }
+    
+    function resetTeamRound() {
+        // Возрождаем всех игроков
+        teamPlayers.forEach(player => {
+            player.state = 'alive';
+            player.hp = player.max;
+            player.x = player.team === 'red' ? 400 + Math.random()*200 : 2400 + Math.random()*200;
+            player.y = 800 + Math.random()*400;
+            player.a = player.team === 'red' ? 0 : 180;
+        });
+        
+        updateTeamScoreboard();
+        document.getElementById('overlay').style.display = 'none';
+        gameActive = true;
+    }
 
     function createPart(x, y, type, color = null) {
         if (type === 'explode') {
@@ -1326,6 +1595,87 @@ game_html = """
                 }
             }
         }
+        
+        // Team mode AI and logic
+        if (gameMode === 'team' && teamPlayers.length > 0) {
+            teamPlayers.forEach((player, idx) => {
+                if (player.isPlayer) {
+                    // Это наш игрок - управляется джойстиком
+                    player.x = me.x;
+                    player.y = me.y;
+                    player.a = me.a;
+                    player.hp = me.hp;
+                    player.state = me.state;
+                    return;
+                }
+                
+                if (player.state === 'alive') {
+                    // AI логика
+                    const enemies = teamPlayers.filter(p => p.team !== player.team && p.state === 'alive');
+                    if (enemies.length > 0) {
+                        // Находим ближайшего врага
+                        let nearest = enemies[0];
+                        let minDist = Math.hypot(nearest.x - player.x, nearest.y - player.y);
+                        enemies.forEach(e => {
+                            const dist = Math.hypot(e.x - player.x, e.y - player.y);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                nearest = e;
+                            }
+                        });
+                        
+                        // Поворачиваем к врагу
+                        const dx = nearest.x - player.x;
+                        const dy = nearest.y - player.y;
+                        let targetAngle = Math.atan2(dy, dx) * 180/Math.PI;
+                        let diff = targetAngle - player.a;
+                        while(diff < -180) diff += 360;
+                        while(diff > 180) diff -= 360;
+                        
+                        player.a += diff * 0.08;
+                        
+                        // Движение
+                        let r = player.a * Math.PI/180;
+                        player.x += Math.cos(r) * planeSpeed * 0.9;
+                        player.y += Math.sin(r) * planeSpeed * 0.9;
+                        
+                        // Wrap
+                        if (player.x < 0) player.x = WORLD.w;
+                        if (player.x > WORLD.w) player.x = 0;
+                        if (player.y < 0) player.y = WORLD.h;
+                        if (player.y > WORLD.h) player.y = 0;
+                        
+                        // Дым если поврежден
+                        if (player.hp < 3) createPart(player.x, player.y, 'smoke');
+                        
+                        // Стрельба
+                        if (Math.random() < 0.02 && Math.abs(diff) < 25) {
+                            bullets.push({x: player.x, y: player.y, a: player.a, owner: player.team});
+                        }
+                    }
+                    
+                    // Проверка смерти
+                    if (player.hp <= 0) {
+                        player.state = 'falling';
+                        player.dt = 90;
+                        
+                        // Увеличиваем deaths
+                        player.deaths++;
+                        updateTeamScoreboard();
+                        checkTeamWin();
+                    }
+                } else if (gameActive) {
+                    // Падение
+                    player.y += 10;
+                    player.a += 12;
+                    createPart(player.x, player.y, 'fire');
+                    if (--player.dt <= 0) {
+                        createPart(player.x, player.y, 'explode', player.color);
+                        // В командном режиме не возрождаемся до конца раунда
+                    }
+                }
+            });
+        }
 
         particles.forEach((p, i) => {
             p.x += p.vx; p.y += p.vy; 
@@ -1379,12 +1729,42 @@ game_html = """
             }
             
             // Check PvP targets
-            if (!isArcadeMode()) {
+            if (!isArcadeMode() && gameMode !== 'team') {
                 let target = b.owner === 'me' ? opp : me;
                 if(target.state === 'alive' && Math.hypot(b.x-target.x, b.y-target.y) < 65) {
                     target.hp--;
                     bullets.splice(i, 1);
                 }
+            }
+            
+            // Check team mode hits
+            if (gameMode === 'team') {
+                teamPlayers.forEach(player => {
+                    if (player.state === 'alive') {
+                        // Проверяем попадания
+                        const isHit = Math.hypot(b.x - player.x, b.y - player.y) < 65;
+                        const isFriendlyFire = (b.owner === player.team);
+                        const isPlayerShot = (b.owner === 'me' && player.isPlayer);
+                        
+                        if (isHit && !isFriendlyFire && !isPlayerShot) {
+                            player.hp--;
+                            bullets.splice(i, 1);
+                            
+                            // Находим стрелявшего и добавляем kill
+                            if (player.hp <= 0) {
+                                const shooter = teamPlayers.find(p => p.team === b.owner);
+                                if (shooter) {
+                                    shooter.kills++;
+                                }
+                                // Если убили игрока
+                                if (player.isPlayer && b.owner === 'me') {
+                                    const ourPlayer = teamPlayers.find(p => p.isPlayer);
+                                    if (ourPlayer) ourPlayer.kills++;
+                                }
+                            }
+                        }
+                    }
+                });
             }
             
             // Check escort target and enemies hitting player/escort
@@ -1644,11 +2024,26 @@ game_html = """
             }
         });
 
+        // Draw team players
+        if (gameMode === 'team') {
+            teamPlayers.forEach(player => {
+                if (!player.isPlayer) {
+                    drawPlane(player, player.color);
+                }
+            });
+        }
+
         drawPlane(me, me.color);
-        if (!isArcadeMode()) drawPlane(opp, opp.color);
+        if (!isArcadeMode() && gameMode !== 'team') drawPlane(opp, opp.color);
         
         bullets.forEach(b => { 
-            ctx.fillStyle = b.owner === 'enemy' ? '#ff00ff' : 'yellow'; 
+            // Цвет пули зависит от владельца
+            let bulletColor = 'yellow';
+            if (b.owner === 'enemy') bulletColor = '#ff00ff';
+            else if (b.owner === 'red') bulletColor = '#ff4b4b';
+            else if (b.owner === 'blue') bulletColor = '#4b9fff';
+            
+            ctx.fillStyle = bulletColor;
             ctx.beginPath(); 
             ctx.arc(b.x, b.y, 12, 0, 7); 
             ctx.fill(); 
