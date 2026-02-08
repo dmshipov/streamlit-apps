@@ -324,61 +324,55 @@ game_html = """
         top: 10px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.85);
+        background: rgba(0, 0, 0, 0.9);
         border: 2px solid #444;
         border-radius: 8px;
-        padding: 15px;
+        padding: 10px;
         z-index: 60;
         display: none;
-        min-width: 500px;
+        min-width: 300px;
+        max-width: 95vw;
+        box-sizing: border-box;
     }
     
-    #team-scoreboard.collapsed {
-        padding: 8px 15px;
-        min-width: auto;
-    }
-    
-    #team-scoreboard.collapsed .team-score,
-    #team-scoreboard.collapsed .stats-table {
-        display: none;
-    }
-    
-    #toggle-scoreboard {
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        background: #444;
-        border: none;
-        color: white;
-        width: 24px;
-        height: 24px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        line-height: 24px;
-        padding: 0;
-        transition: background 0.2s;
-    }
-    
-    #toggle-scoreboard:hover {
-        background: #555;
+    @media (max-width: 600px) {
+        #team-scoreboard {
+            top: 50px;
+            font-size: 11px;
+            padding: 8px;
+            min-width: auto;
+            width: 95vw;
+        }
     }
     
     .team-header {
         text-align: center;
-        font-size: 18px;
+        font-size: 14px;
         font-weight: bold;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         color: #00d2ff;
-        padding-right: 30px;
+    }
+    
+    @media (max-width: 600px) {
+        .team-header {
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
     }
     
     .team-score {
         display: flex;
         justify-content: space-around;
-        margin-bottom: 15px;
-        font-size: 24px;
+        margin-bottom: 10px;
+        font-size: 16px;
         font-weight: bold;
+    }
+    
+    @media (max-width: 600px) {
+        .team-score {
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
     }
     
     .team-red { color: #ff4b4b; }
@@ -387,19 +381,26 @@ game_html = """
     .stats-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 11px;
+        font-size: 10px;
+        overflow-x: auto;
+    }
+    
+    @media (max-width: 600px) {
+        .stats-table {
+            font-size: 8px;
+        }
     }
     
     .stats-table th {
         background: #333;
         color: #aaa;
-        padding: 5px;
+        padding: 4px 2px;
         text-align: left;
         border-bottom: 1px solid #555;
     }
     
     .stats-table td {
-        padding: 4px 5px;
+        padding: 3px 2px;
         border-bottom: 1px solid #333;
     }
     
@@ -526,6 +527,7 @@ game_html = """
 <div id="top-bar">
     <div style="display: flex; gap: 10px; align-items: center;">
         <button class="btn-settings" id="open-sidebar">⚙️ НАСТРОЙКИ</button>
+        <button class="btn-settings" id="show-stats" style="display: none;">📊 СТАТИСТИКА</button>
     </div>
 
     <div style="text-align: center;">
@@ -547,7 +549,6 @@ game_html = """
         
         <!-- Team mode scoreboard -->
         <div id="team-scoreboard">
-            <button id="toggle-scoreboard" title="Свернуть/Развернуть">−</button>
             <div class="team-header">🎮 КОМАНДНЫЕ БОИ</div>
             <div class="team-score">
                 <span class="team-red">КРАСНЫЕ: <span id="red-wins">0</span></span>
@@ -743,13 +744,16 @@ game_html = """
         });
     }
 
-    // Toggle scoreboard button
-    const toggleScoreboardBtn = document.getElementById('toggle-scoreboard');
-    if (toggleScoreboardBtn) {
-        toggleScoreboardBtn.addEventListener('click', () => {
+    // Show/hide stats button
+    const showStatsBtn = document.getElementById('show-stats');
+    if (showStatsBtn) {
+        showStatsBtn.addEventListener('click', () => {
             const scoreboard = document.getElementById('team-scoreboard');
-            scoreboard.classList.toggle('collapsed');
-            toggleScoreboardBtn.textContent = scoreboard.classList.contains('collapsed') ? '+' : '−';
+            if (scoreboard.style.display === 'none' || scoreboard.style.display === '') {
+                scoreboard.style.display = 'block';
+            } else {
+                scoreboard.style.display = 'none';
+            }
         });
     }
 
@@ -768,12 +772,17 @@ game_html = """
         document.getElementById('game-timer').style.display = 
             (['balloon', 'rings', 'race'].includes(mode)) ? 'block' : 'none';
         
-        // Show/hide team scoreboard
-        document.getElementById('team-scoreboard').style.display = 
-            (mode === 'team') ? 'block' : 'none';
+        // Show/hide stats button and scoreboard
+        const showStatsBtn = document.getElementById('show-stats');
+        const scoreboard = document.getElementById('team-scoreboard');
         
         if (mode === 'team') {
+            showStatsBtn.style.display = 'inline-block';
+            scoreboard.style.display = 'none'; // Скрыто по умолчанию
             initTeamMode();
+        } else {
+            showStatsBtn.style.display = 'none';
+            scoreboard.style.display = 'none';
         }
         
         resetRound();
