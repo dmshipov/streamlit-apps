@@ -1259,7 +1259,9 @@ game_html = """
         if (type === 'explode') {
             // Тряска экрана ОТКЛЮЧЕНА чтобы избежать проблем
             // screenShake = Math.min(screenShake + 8, 15);
-            for(let i=0; i<60; i++) {
+            
+            // Создаём меньше частиц для производительности
+            for(let i=0; i<30; i++) { // Было 60
                 particles.push({
                     x, y, 
                     vx: (Math.random()-0.5)*30, 
@@ -1269,7 +1271,7 @@ game_html = """
                     size: 10 + Math.random()*35
                 });
             }
-            for(let i=0; i<10; i++) {
+            for(let i=0; i<5; i++) { // Было 10
                 particles.push({
                     x, y, 
                     vx: (Math.random()-0.5)*15, 
@@ -1282,6 +1284,12 @@ game_html = """
                     size: 15 + Math.random()*25
                 });
             }
+            
+            // Ограничиваем общее количество частиц
+            if (particles.length > 500) {
+                particles = particles.slice(-500); // Оставляем только последние 500
+            }
+            
             return;
         }
         
@@ -1687,12 +1695,14 @@ game_html = """
             });
         }
 
-        particles.forEach((p, i) => {
+        // Обновляем частицы (обратный цикл для безопасного удаления)
+        for(let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
             p.x += p.vx; p.y += p.vy; 
             if(p.type === 'debris') { p.a += p.va; p.vy += 0.4; }
             p.life -= (p.type === 'debris' ? 0.015 : 0.04);
             if(p.life <= 0) particles.splice(i, 1);
-        });
+        }
 
         bullets.forEach((b, i) => {
             let r = b.a * Math.PI/180;
